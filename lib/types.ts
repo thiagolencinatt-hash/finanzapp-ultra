@@ -121,6 +121,52 @@ export interface AiMemory {
   created_at: string;
 }
 
+export interface CategoryBudget {
+  id: string;
+  category_id: string;
+  monthly_limit: number;
+  currency: string;
+  created_at: string;
+  updated_at: string;
+  // Computed
+  category?: Category;
+  spent_this_month?: number;
+  remaining?: number;
+  percentage?: number;
+  is_over_budget?: boolean;
+}
+
+export interface Subscription {
+  id: string;
+  user_id: string;
+  name: string;
+  amount: number;
+  currency: string;
+  billing_cycle: "monthly" | "yearly";
+  renewal_day: number;
+  category_id?: string | null;
+  account_id?: string | null;
+  is_active: boolean;
+  icon?: string;
+  color?: string;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+  // Computed
+  days_until_renewal?: number;
+  category?: Category;
+  account?: Account;
+}
+
+export interface FinancialHealthMetrics {
+  score: number; // 0 - 100
+  status: "excelente" | "saludable" | "atencion" | "critico";
+  savings_rate: number; // percentage
+  runway_months: number; // months of survival
+  free_cash_flow: number; // income - expenses - installments - savings
+  debt_ratio: number; // monthly debt / monthly income
+}
+
 // ---- API Response Types ----
 
 export interface FinancialSummary {
@@ -145,6 +191,10 @@ export interface FinancialSummary {
     count: number;
   }>;
   savings_goals: SavingsGoal[];
+  category_budgets?: CategoryBudget[];
+  subscriptions?: Subscription[];
+  total_subscriptions_monthly?: number;
+  health_metrics?: FinancialHealthMetrics;
 }
 
 export interface ChatMessage {

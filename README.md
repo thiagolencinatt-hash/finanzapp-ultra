@@ -1,168 +1,113 @@
-# 💰 FinanzApp — Control de Gastos Personal
+# 💎 FinanzApp Ultra — Finanzas Personales & Control Pro
 
-> App financiera personal inteligente construida con Next.js 16, diseño premium "Nano Banana" (dark + dorado eléctrico), ventanas flotantes arrastrables, cotizaciones del dólar en tiempo real y asistente IA integrado.
+> Plataforma minimalista, moderna y profesional de finanzas personales, inspirada en los mejores referentes fintech mundiales (**Copilot Money, Monarch, Apple Wallet**). Diseñada para darte claridad total sobre tu dinero en cualquier dispositivo (iPhone, Android, tablet o PC) con soporte PWA nativo y despliegue en 1 clic.
 
-![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fthiagolencinatt-hash%2Ffinanzapp-ultra)
+![Next.js 16](https://img.shields.io/badge/Next.js-16.3.3-black?logo=next.js)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)
-![Framer Motion](https://img.shields.io/badge/Framer_Motion-11-purple?logo=framer)
-![License](https://img.shields.io/badge/license-MIT-green)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-38bdf8?logo=tailwindcss)
+![PWA Ready](https://img.shields.io/badge/PWA-Ready-10b981?logo=pwa)
+![License](https://img.shields.io/badge/license-MIT-yellow)
 
 ---
 
-## ✨ Funcionalidades
+## 📱 ¿Cómo usarla en cualquier dispositivo?
 
-### 📊 Dashboard Central (Todo en 1 Página)
-- **Balance general** editable con 1 clic — saldo real, ingresos y gastos
-- **Configuración de sueldo mensual** — ingresá tu sueldo y día de cobro
-- **Cotización dólar en vivo** — Blue, MEP, Oficial y Crypto (fuentes argentinas)
-- **Cuentas y billeteras** — Santander, Mercado Pago, crypto, efectivo USD
-- **Gráfico de gastos** por categoría
-- **Transacciones recientes** editables directamente desde el dashboard
+### Opción 1: Despliegue en 1 Clic en Vercel (Gratis y Permanente)
+1. Haz clic en el botón de arriba **"Deploy with Vercel"** o entra a [vercel.com/new](https://vercel.com/new) e importa este repositorio (`thiagolencinatt-hash/finanzapp-ultra`).
+2. Haz clic en **Deploy**. En 60 segundos tendrás tu propia URL pública (ejemplo: `https://tu-finanzapp.vercel.app`).
+3. Abre esa URL en tu celular o computadora ¡y listo!
 
-### 🎯 Metas & Ahorros con Asignación Inteligente
-- Crear/editar/borrar metas de ahorro y wishlist
-- **Distribuir sueldo entre metas** — porcentaje rápido (10%, 20%, 30%) o monto exacto
-- **Priorización** ⭐ Alta / Media / Baja
-- **Proyección**: "¡A este ritmo alcanzás la meta en X meses!"
-- Botones rápidos +$20k / +$50k para sumar ahorros
-- **"Borrar Todo"** para limpiar metas ficticias con 1 clic
-
-### 💳 Cuotas & Tarjetas
-- Registrar compras en cuotas con cálculo automático de valor por cuota
-- Toggle sin interés / con interés + CFT
-- Marcar cuotas como pagas con 1 clic
-- Calculadora de cuotas vs inflación
-- Proyección futura de compromisos mensuales
-- **"Borrar Todo"** para empezar en limpio
-
-### 🤖 Asistente IA (Gemini)
-- Chat inteligente sobre tus finanzas
-- Análisis de hábitos de gasto
-- Sugerencias de ahorro personalizadas
-
-### 🎨 Diseño Premium
-- Tema "Nano Banana" — fondo oscuro `#0f172a` con acento dorado eléctrico
-- **Ventanas flotantes arrastrables** (Framer Motion drag)
-- Botones 3D con feedback físico (`btn-3d`)
-- Glassmorphism con backdrop-blur
-- Animaciones suaves de entrada (`animate-slide-up`, `animate-fade-in`)
-- **100% responsivo** — mobile-first para iOS y Android
+### Opción 2: Instalar como App Nativa (PWA en Celulares)
+- **En iPhone (iOS Safari):**
+  1. Abre tu URL en Safari.
+  2. Toca el botón **Compartir** (icono de cuadro con flecha hacia arriba).
+  3. Selecciona **"Agregar a pantalla de inicio"** (Add to Home Screen).
+  4. Se instalará con su icono exclusivo, pantalla completa sin barras del navegador y rendimiento fluido a 120Hz.
+- **En Android (Google Chrome):**
+  1. Abre tu URL en Chrome.
+  2. Toca el menú de tres puntos (arriba a la derecha).
+  3. Selecciona **"Instalar aplicación"** o **"Agregar a pantalla principal"**.
 
 ---
 
-## 📱 Optimizado para Móvil (iOS / Android)
+## ✨ Nuevas Funcionalidades Pro
 
-- Layout `dvh` (dynamic viewport height) para evitar problemas con la barra del navegador
-- Barra de navegación inferior nativa con iconos grandes
-- Touch targets ≥ 44px para accesibilidad táctil
-- Ventanas arrastrables con drag constraints responsivos
-- PWA-ready con `manifest.json` y meta tags de Apple
+### 1. 🛡️ Indicador de Salud Financiera Pro (Score 0 a 100)
+- **Puntuación en tiempo real:** Evaluación automática de la estabilidad de tus finanzas.
+- **Tasa de Ahorro Real (%):** Porcentaje del sueldo destinado a ahorro e inversión.
+- **Runway (Colchón de Emergencia):** Meses de supervivencia cubiertos con tu saldo disponible.
+- **Flujo de Caja Libre:** Dinero neto que te queda tras cubrir gastos fijos, cuotas de tarjetas y metas.
+- **Ratio de Endeudamiento:** Porcentaje del ingreso comprometido en cuotas mensuales.
+
+### 2. 📊 Presupuestos Mensuales Inteligentes (Category Budgets)
+- Define topes máximos de gasto por rubro (Supermercado, Salidas, Servicios, etc.).
+- Barras de progreso dinámicas con semáforo visual:
+  - **Verde (< 80%):** En presupuesto saludable.
+  - **Ámbar (80% - 100%):** Alerta de gasto cercano al límite.
+  - **Rojo (> 100%):** Alerta de sobregasto con monto excedido exacto.
+- Indicador instantáneo de **"Restante disponible este mes"**.
+
+### 3. 🔁 Control de Suscripciones y Gastos Fijos
+- Administra tus pagos periódicos (Netflix, Spotify, Gimnasio, Alquiler, Internet, Cloud).
+- Contador inteligente: **"Vence en X días"** o alerta si vence hoy.
+- Switch de activación/pausa para auditar y recortar gastos vampiro.
+- Proyección consolidada del gasto mensual y costo anualizado.
+
+### 4. ⚡ Registro Rápido con Botón Flotante Central
+- Botón táctil elevado en la barra inferior para registrar un gasto o ingreso en **3 segundos** desde el celular.
+- Pantalla táctil con selector rápido de categoría y cuenta.
+
+### 5. 💾 Copia de Seguridad & Restauración Universal (JSON)
+- **Exportación en 1 clic:** Descarga todos tus presupuestos, suscripciones, movimientos, metas y cuentas en un archivo JSON seguro.
+- **Importación instantánea:** Sube tu archivo JSON en cualquier celular o computadora y tus datos se restaurarán automáticamente.
+
+### 6. 💵 Cotizaciones del Dólar en Vivo (Argentina)
+- Cotizaciones actualizadas de Dólar Blue, MEP, Oficial y Tarjeta en tiempo real con cálculo automático de conversiones.
+
+### 7. 🎯 Metas & Wishlist con Asignador de Sueldo
+- Divide tu sueldo con porcentajes rápidos (10%, 20%, 30%) hacia tus metas de ahorro prioritarias.
+- Proyección de tiempo estimado para cumplir cada meta.
+
+### 8. 💳 Cuotas y Deudas
+- Gestión completa de compras en cuotas con y sin interés.
+- Botón para marcar cuotas como pagas con actualización de saldos.
+- Proyección de compromisos en los próximos meses.
 
 ---
 
-## 🚀 Instalación y Desarrollo
+## 🛠️ Tecnologías Utilizadas
 
-### Requisitos
-- **Node.js** ≥ 18
-- **npm** ≥ 9
+- **Core:** Next.js 16 (App Router + Turbopack) & React 19
+- **Lenguaje:** TypeScript 5
+- **Estilos:** Tailwind CSS v4 con paleta personalizada "Nano Banana" minimalista
+- **Animaciones:** Framer Motion
+- **Gráficos:** Recharts
+- **Iconografía:** Lucide React
+- **PWA:** Manifest v3, Apple Web App Meta, Safe Area Insets (`dvh` & `env(safe-area-inset-*)`)
+- **Backend / Persistencia:** API Routes integradas en Next.js con soporte para almacenamiento local offline y Supabase.
 
-### Setup
+---
+
+## 🚀 Ejecución Local
 
 ```bash
-# Clonar el repositorio
-git clone https://github.com/TU_USUARIO/control-gastos-app.git
-cd control-gastos-app
+# 1. Clonar el repositorio
+git clone https://github.com/thiagolencinatt-hash/finanzapp-ultra.git
+cd finanzapp-ultra
 
-# Instalar dependencias
+# 2. Instalar dependencias
 npm install
 
-# Configurar variables de entorno
-cp .env.local.example .env.local
-# Editar .env.local con tus keys de Supabase y Gemini
-
-# Ejecutar en modo desarrollo
+# 3. Iniciar el servidor de desarrollo
 npm run dev
+
+# 4. Abrir en el navegador
+# http://localhost:3000
 ```
-
-Abrí **http://localhost:3000** en tu navegador o celular (mismo WiFi).
-
-### Variables de Entorno
-
-Crear `.env.local` con:
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://tu-proyecto.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=tu-anon-key
-SUPABASE_SERVICE_ROLE_KEY=tu-service-role-key
-GEMINI_API_KEY=tu-api-key-de-gemini
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-```
-
-> ⚠️ **Nota**: La app funciona perfectamente en modo demo sin configurar Supabase. Los datos se gestionan en memoria.
-
----
-
-## 🏗️ Arquitectura del Proyecto
-
-```
-finance-app/
-├── app/
-│   ├── (dashboard)/          # Páginas del panel principal
-│   │   ├── page.tsx          # Dashboard central (TODO en 1 página)
-│   │   ├── goals/            # Metas y ahorros
-│   │   ├── installments/     # Cuotas y deudas
-│   │   ├── transactions/     # Historial de movimientos
-│   │   ├── ai-assistant/     # Chat IA financiero
-│   │   └── settings/         # Configuración
-│   ├── api/                  # API Routes (Next.js)
-│   │   ├── accounts/
-│   │   ├── goals/
-│   │   ├── installments/
-│   │   ├── transactions/
-│   │   ├── summary/
-│   │   ├── rates/            # Cotizaciones del dólar
-│   │   ├── finances/         # Ajuste rápido de finanzas
-│   │   └── ai-assistant/     # Endpoint del asistente IA
-│   ├── login/                # Página de login
-│   ├── globals.css           # Tema Nano Banana + utilidades
-│   └── layout.tsx            # Root layout con providers
-├── components/
-│   ├── dashboard/            # Componentes del dashboard
-│   ├── goals/                # Formularios y tarjetas de metas
-│   ├── installments/         # Formularios y tarjetas de cuotas
-│   ├── transactions/         # Formularios y filtros
-│   ├── layout/               # Header, Sidebar, BottomNav
-│   ├── ui/                   # DraggableWindow y primitivas
-│   └── providers/            # ThemeProvider
-├── lib/
-│   ├── demo-data.ts          # Estado en memoria (modo demo)
-│   ├── types.ts              # TypeScript types
-│   ├── supabase/             # Clientes Supabase
-│   ├── gemini/               # Cliente y prompts Gemini IA
-│   └── utils/                # Formateo de monedas, cn()
-├── public/                   # Assets estáticos + manifest PWA
-└── supabase/
-    └── schema.sql            # Esquema de base de datos
-```
-
----
-
-## 🛠️ Stack Tecnológico
-
-| Categoría | Tecnología |
-|-----------|-----------|
-| **Framework** | Next.js 16 (App Router + Turbopack) |
-| **Lenguaje** | TypeScript 5 |
-| **Estilos** | CSS Variables + Custom Properties + Glassmorphism |
-| **Animaciones** | Framer Motion 11 (drag, layout, AnimatePresence) |
-| **Base de datos** | Supabase (PostgreSQL) / Demo en memoria |
-| **IA** | Google Gemini API |
-| **Cotizaciones** | DolarAPI.com (Blue, MEP, Oficial, Crypto) |
-| **Icons** | Lucide React |
-| **Fechas** | date-fns con locale `es` |
 
 ---
 
 ## 📄 Licencia
 
-MIT © 2026
+Distribuido bajo la Licencia MIT. Consulta el archivo `LICENSE` para más detalles.

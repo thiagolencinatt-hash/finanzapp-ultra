@@ -10,12 +10,14 @@ import {
   Sun,
   Laptop,
   Download,
+  Upload,
   CheckCircle2,
   AlertCircle,
   Tag,
   Plus,
   Trash2,
   Sparkles,
+  RefreshCw,
 } from "lucide-react";
 import type { Category } from "@/lib/types";
 
@@ -55,13 +57,18 @@ export default function SettingsPage() {
     setNewCatName("");
   }
 
+  const [importing, setImporting] = useState(false);
+  const [importSuccess, setImportSuccess] = useState(false);
+
   async function handleExportData() {
     try {
-      const [txRes, accRes, instRes, goalsRes] = await Promise.all([
+      const [txRes, accRes, instRes, goalsRes, bgtRes, subsRes] = await Promise.all([
         fetch("/api/transactions?limit=1000"),
         fetch("/api/accounts"),
         fetch("/api/installments"),
         fetch("/api/goals"),
+        fetch("/api/budgets"),
+        fetch("/api/subscriptions"),
       ]);
 
       const data = {
@@ -70,19 +77,51 @@ export default function SettingsPage() {
         accounts: await accRes.json(),
         installments: await instRes.json(),
         goals: await goalsRes.json(),
+        budgets: await bgtRes.json(),
+        subscriptions: await subsRes.json(),
       };
 
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `finance_ai_backup_${new Date().toISOString().split("T")[0]}.json`;
+      a.download = `finanzapp_backup_${new Date().toISOString().split("T")[0]}.json`;
       a.click();
       URL.revokeObjectURL(url);
       setExported(true);
       setTimeout(() => setExported(false), 3000);
     } catch {
       alert("Error al exportar los datos");
+    }
+  }
+
+  async function handleImportData(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    try {
+      const text = await file.text();
+      const json = JSON.parse(text);
+
+      const res = await fetch("/api/restore", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(json),
+      });
+
+      if (res.ok) {
+        setImportSuccess(true);
+        setTimeout(() => setImportSuccess(false), 4000);
+        window.dispatchEvent(new Event("finance-refresh"));
+      } else {
+        alert("El archivo no tiene el formato esperado.");
+      }
+    } catch {
+      alert("Error al procesar el archivo JSON.");
+    } finally {
+      setImporting(false);
+      e.target.value = "";
     }
   }
 
@@ -222,22 +261,50 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between p-4 rounded-xl" style={{ background: "hsl(var(--muted))" }}>
+          <div className="flex items-center justify-between p-4 rounded-xl mb-3" style={{ background: "hsl(var(--muted))" }}>
             <div>
               <p className="text-sm font-semibold" style={{ color: "hsl(var(--foreground))" }}>
                 Exportar base de datos completa
               </p>
               <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
-                Incluye transacciones, cuentas, cuotas y metas
+                Incluye presupuestos, suscripciones, transacciones, cuentas y cuotas
               </p>
             </div>
             <button
               onClick={handleExportData}
-              className="px-4 py-2 rounded-xl text-xs font-bold text-white gradient-primary flex items-center gap-2 shadow-sm"
+              className="px-4 py-2 rounded-xl text-xs font-bold text-white gradient-primary flex items-center gap-2 shadow-sm cursor-pointer"
             >
               {exported ? <CheckCircle2 className="w-4 h-4" /> : <Download className="w-4 h-4" />}
               {exported ? "¡Descargado!" : "Exportar JSON"}
             </button>
+          </div>
+
+          {/* Importar y Restaurar Backup */}
+          <div className="flex items-center justify-between p-4 rounded-xl border border-dashed border-white/20" style={{ background: "hsl(var(--card))" }}>
+            <div>
+              <p className="text-sm font-semibold" style={{ color: "hsl(var(--foreground))" }}>
+                Restaurar o Importar Copia de Seguridad
+              </p>
+              <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
+                Sube tu archivo JSON para sincronizar tu cuenta en este dispositivo
+              </p>
+              {importSuccess && (
+                <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-400 mt-1">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> ¡Copia de seguridad restaurada exitosamente!
+                </span>
+              )}
+            </div>
+            <label className="px-4 py-2 rounded-xl text-xs font-bold text-foreground bg-white/10 hover:bg-white/15 border border-white/10 flex items-center gap-2 shadow-sm cursor-pointer transition-colors">
+              {importing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+              <span>{importing ? "Restaurando..." : "Subir JSON"}</span>
+              <input
+                type="file"
+                accept=".json"
+                onChange={handleImportData}
+                disabled={importing}
+                className="hidden"
+              />
+            </label>
           </div>
         </section>
       </div>

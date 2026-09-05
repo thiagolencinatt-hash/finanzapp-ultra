@@ -1,4 +1,4 @@
-import type { Account, Category, FinancialSummary, Installment, SavingsGoal, Transaction } from "./types";
+import type { Account, Category, FinancialSummary, Installment, SavingsGoal, Transaction, CategoryBudget, Subscription, FinancialHealthMetrics } from "./types";
 
 const nowIso = new Date().toISOString();
 
@@ -253,6 +253,140 @@ export let demoGoals: SavingsGoal[] = [
 ];
 
 export const DEMO_GOALS = demoGoals;
+
+export let demoBudgets: CategoryBudget[] = [
+  {
+    id: "bgt-1",
+    category_id: "cat-2", // Supermercado y Alimentos
+    monthly_limit: 120000,
+    currency: "ARS",
+    created_at: nowIso,
+    updated_at: nowIso,
+  },
+  {
+    id: "bgt-2",
+    category_id: "cat-3", // Servicios e Impuestos
+    monthly_limit: 95000,
+    currency: "ARS",
+    created_at: nowIso,
+    updated_at: nowIso,
+  },
+  {
+    id: "bgt-3",
+    category_id: "cat-4", // Salidas y Restaurantes
+    monthly_limit: 60000,
+    currency: "ARS",
+    created_at: nowIso,
+    updated_at: nowIso,
+  },
+  {
+    id: "bgt-4",
+    category_id: "cat-5", // Transporte y Nafta
+    monthly_limit: 50000,
+    currency: "ARS",
+    created_at: nowIso,
+    updated_at: nowIso,
+  },
+  {
+    id: "bgt-5",
+    category_id: "cat-6", // Salud y Gimnasio
+    monthly_limit: 40000,
+    currency: "ARS",
+    created_at: nowIso,
+    updated_at: nowIso,
+  },
+];
+
+export let demoSubscriptions: Subscription[] = [
+  {
+    id: "sub-1",
+    user_id: "demo-user",
+    name: "Netflix 4K HDR",
+    amount: 11500,
+    currency: "ARS",
+    billing_cycle: "monthly",
+    renewal_day: 14,
+    category_id: "cat-7",
+    account_id: "acc-1",
+    is_active: true,
+    icon: "Tv",
+    color: "#E50914",
+    notes: "Plan Premium 4 pantallas",
+    created_at: nowIso,
+    updated_at: nowIso,
+  },
+  {
+    id: "sub-2",
+    user_id: "demo-user",
+    name: "Spotify Premium",
+    amount: 4500,
+    currency: "ARS",
+    billing_cycle: "monthly",
+    renewal_day: 8,
+    category_id: "cat-7",
+    account_id: "acc-2",
+    is_active: true,
+    icon: "Music",
+    color: "#1DB954",
+    notes: "Música sin anuncios",
+    created_at: nowIso,
+    updated_at: nowIso,
+  },
+  {
+    id: "sub-3",
+    user_id: "demo-user",
+    name: "Gimnasio Pase Libre",
+    amount: 32000,
+    currency: "ARS",
+    billing_cycle: "monthly",
+    renewal_day: 1,
+    category_id: "cat-6",
+    account_id: "acc-1",
+    is_active: true,
+    icon: "Dumbbell",
+    color: "#10B981",
+    notes: "Musculación + Pileta",
+    created_at: nowIso,
+    updated_at: nowIso,
+  },
+  {
+    id: "sub-4",
+    user_id: "demo-user",
+    name: "Internet Fibra 300MB",
+    amount: 26000,
+    currency: "ARS",
+    billing_cycle: "monthly",
+    renewal_day: 20,
+    category_id: "cat-3",
+    account_id: "acc-1",
+    is_active: true,
+    icon: "Wifi",
+    color: "#3B82F6",
+    notes: "Personal Flow / Hogar",
+    created_at: nowIso,
+    updated_at: nowIso,
+  },
+  {
+    id: "sub-5",
+    user_id: "demo-user",
+    name: "Google One (2TB Cloud)",
+    amount: 3200,
+    currency: "ARS",
+    billing_cycle: "monthly",
+    renewal_day: 28,
+    category_id: "cat-7",
+    account_id: "acc-2",
+    is_active: true,
+    icon: "Cloud",
+    color: "#F59E0B",
+    notes: "Copia fotos y Google Drive",
+    created_at: nowIso,
+    updated_at: nowIso,
+  },
+];
+
+export const DEMO_BUDGETS = demoBudgets;
+export const DEMO_SUBSCRIPTIONS = demoSubscriptions;
 
 // Mutaciones en memoria para Cuentas
 export function getDemoAccounts() {
@@ -690,7 +824,170 @@ export function setDirectFinances({
   return getDemoSummary();
 }
 
-// Resumen financiero dinámico
+// Gestión de Presupuestos Mensuales
+export function getDemoBudgets(): CategoryBudget[] {
+  return demoBudgets.map((b) => {
+    const cat = demoCategories.find((c) => c.id === b.category_id);
+    const spentThisMonth = demoTransactions
+      .filter((t) => t.type === "expense" && t.category_id === b.category_id)
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const remaining = Math.max(0, b.monthly_limit - spentThisMonth);
+    const percentage = b.monthly_limit > 0 ? Math.min(200, Math.round((spentThisMonth / b.monthly_limit) * 100)) : 0;
+    const isOver = spentThisMonth > b.monthly_limit;
+
+    return {
+      ...b,
+      category: cat,
+      spent_this_month: spentThisMonth,
+      remaining,
+      percentage,
+      is_over_budget: isOver,
+    };
+  });
+}
+
+export function setDemoBudget({
+  category_id,
+  monthly_limit,
+  currency = "ARS",
+}: {
+  category_id: string;
+  monthly_limit: number;
+  currency?: string;
+}): CategoryBudget {
+  const existingIndex = demoBudgets.findIndex((b) => b.category_id === category_id);
+  const now = new Date().toISOString();
+
+  if (existingIndex >= 0) {
+    demoBudgets[existingIndex] = {
+      ...demoBudgets[existingIndex],
+      monthly_limit: Number(monthly_limit),
+      currency,
+      updated_at: now,
+    };
+    return demoBudgets[existingIndex];
+  } else {
+    const newBudget: CategoryBudget = {
+      id: "bgt-" + Date.now(),
+      category_id,
+      monthly_limit: Number(monthly_limit),
+      currency,
+      created_at: now,
+      updated_at: now,
+    };
+    demoBudgets.push(newBudget);
+    return newBudget;
+  }
+}
+
+export function deleteDemoBudget(id: string) {
+  demoBudgets = demoBudgets.filter((b) => b.id !== id && b.category_id !== id);
+  return { success: true };
+}
+
+// Gestión de Suscripciones y Gastos Recurrentes
+export function getDemoSubscriptions(): Subscription[] {
+  const today = new Date();
+  const currentDay = today.getDate();
+
+  return demoSubscriptions.map((sub) => {
+    let daysUntil = sub.renewal_day - currentDay;
+    if (daysUntil < 0) {
+      // Siguiente mes
+      const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      daysUntil += nextMonth.getDate();
+    }
+
+    const cat = demoCategories.find((c) => c.id === sub.category_id);
+    const acc = demoAccounts.find((a) => a.id === sub.account_id);
+
+    return {
+      ...sub,
+      days_until_renewal: daysUntil,
+      category: cat,
+      account: acc,
+    };
+  });
+}
+
+export function addDemoSubscription(data: Partial<Subscription>): Subscription {
+  const now = new Date().toISOString();
+  const newSub: Subscription = {
+    id: "sub-" + Date.now(),
+    user_id: "demo-user",
+    name: data.name || "Nueva Suscripción",
+    amount: Number(data.amount) || 0,
+    currency: data.currency || "ARS",
+    billing_cycle: data.billing_cycle || "monthly",
+    renewal_day: Number(data.renewal_day) || 1,
+    category_id: data.category_id || null,
+    account_id: data.account_id || null,
+    is_active: data.is_active !== undefined ? data.is_active : true,
+    icon: data.icon || "CreditCard",
+    color: data.color || "#6366F1",
+    notes: data.notes || null,
+    created_at: now,
+    updated_at: now,
+  };
+
+  demoSubscriptions = [newSub, ...demoSubscriptions];
+  return newSub;
+}
+
+export function toggleDemoSubscription(id: string): Subscription | null {
+  const sub = demoSubscriptions.find((s) => s.id === id);
+  if (!sub) return null;
+  sub.is_active = !sub.is_active;
+  sub.updated_at = new Date().toISOString();
+  return sub;
+}
+
+export function deleteDemoSubscription(id: string) {
+  demoSubscriptions = demoSubscriptions.filter((s) => s.id !== id);
+  return { success: true };
+}
+
+// Restauración de Copia de Seguridad completa (Import JSON)
+export function restoreDatabaseBackup(backup: {
+  transactions?: Transaction[];
+  accounts?: Account[];
+  installments?: Installment[];
+  goals?: SavingsGoal[];
+  budgets?: CategoryBudget[];
+  subscriptions?: Subscription[];
+  configuredSalary?: number;
+  salaryPayDay?: number;
+}) {
+  if (Array.isArray(backup.accounts) && backup.accounts.length > 0) {
+    demoAccounts = [...backup.accounts];
+  }
+  if (Array.isArray(backup.transactions)) {
+    demoTransactions = [...backup.transactions];
+  }
+  if (Array.isArray(backup.installments)) {
+    demoInstallments = [...backup.installments];
+  }
+  if (Array.isArray(backup.goals)) {
+    demoGoals = [...backup.goals];
+  }
+  if (Array.isArray(backup.budgets)) {
+    demoBudgets = [...backup.budgets];
+  }
+  if (Array.isArray(backup.subscriptions)) {
+    demoSubscriptions = [...backup.subscriptions];
+  }
+  if (typeof backup.configuredSalary === "number") {
+    configuredSalary = backup.configuredSalary;
+  }
+  if (typeof backup.salaryPayDay === "number") {
+    salaryPayDay = backup.salaryPayDay;
+  }
+
+  return getDemoSummary();
+}
+
+// Resumen financiero dinámico con Salud Financiera, Presupuestos y Suscripciones
 export function getDemoSummary(): FinancialSummary {
   const activeAccounts = getDemoAccounts();
   const totalBalance = activeAccounts.reduce((sum, a) => sum + (a.currency === "ARS" ? a.balance : 0), 0);
@@ -698,6 +995,9 @@ export function getDemoSummary(): FinancialSummary {
   const income30d = demoTransactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
   const expense30d = demoTransactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
   const monthlyInstallments = demoInstallments.reduce((s, i) => s + i.installment_amount, 0);
+
+  const activeSubscriptions = getDemoSubscriptions().filter((s) => s.is_active);
+  const totalSubscriptionsMonthly = activeSubscriptions.reduce((s, sub) => s + sub.amount, 0);
 
   const catMap: Record<string, { category_name: string; total: number; count: number }> = {};
   demoTransactions.filter((t) => t.type === "expense").forEach((t) => {
@@ -708,6 +1008,45 @@ export function getDemoSummary(): FinancialSummary {
   });
 
   const topCategories = Object.values(catMap).sort((a, b) => b.total - a.total);
+  const budgetsWithProgress = getDemoBudgets();
+  const allSubscriptions = getDemoSubscriptions();
+
+  // Métricas de Salud Financiera
+  const monthlyIncome = income30d > 0 ? income30d : configuredSalary;
+  const monthlySavingsContributions = demoGoals.reduce((s, g) => s + (g.monthly_contribution || 0), 0);
+  const monthlyBurn = expense30d + monthlyInstallments + totalSubscriptionsMonthly;
+  const freeCashFlow = monthlyIncome - monthlyBurn - monthlySavingsContributions;
+  const savingsRate = monthlyIncome > 0 ? Math.round(((monthlySavingsContributions + Math.max(0, freeCashFlow)) / monthlyIncome) * 100) : 0;
+  const runwayMonths = monthlyBurn > 0 ? Number((totalBalance / monthlyBurn).toFixed(1)) : 12;
+  const debtRatio = monthlyIncome > 0 ? Math.round((monthlyInstallments / monthlyIncome) * 100) : 0;
+
+  let healthScore = 70;
+  if (savingsRate >= 20) healthScore += 15;
+  else if (savingsRate >= 10) healthScore += 8;
+  else if (savingsRate < 0) healthScore -= 15;
+
+  if (runwayMonths >= 4) healthScore += 15;
+  else if (runwayMonths >= 2) healthScore += 8;
+  else if (runwayMonths < 1) healthScore -= 15;
+
+  if (debtRatio > 40) healthScore -= 20;
+  else if (debtRatio > 25) healthScore -= 10;
+  else healthScore += 5;
+
+  if (freeCashFlow < 0) healthScore -= 10;
+  healthScore = Math.max(15, Math.min(99, healthScore));
+
+  const healthStatus: FinancialHealthMetrics["status"] =
+    healthScore >= 80 ? "excelente" : healthScore >= 65 ? "saludable" : healthScore >= 45 ? "atencion" : "critico";
+
+  const healthMetrics: FinancialHealthMetrics = {
+    score: healthScore,
+    status: healthStatus,
+    savings_rate: savingsRate,
+    runway_months: runwayMonths,
+    free_cash_flow: freeCashFlow,
+    debt_ratio: debtRatio,
+  };
 
   return {
     accounts: activeAccounts,
@@ -729,5 +1068,9 @@ export function getDemoSummary(): FinancialSummary {
     ] : [],
     top_categories: topCategories,
     savings_goals: demoGoals,
+    category_budgets: budgetsWithProgress,
+    subscriptions: allSubscriptions,
+    total_subscriptions_monthly: totalSubscriptionsMonthly,
+    health_metrics: healthMetrics,
   };
 }

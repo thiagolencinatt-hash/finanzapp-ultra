@@ -7,15 +7,19 @@ import { SalaryCard } from "@/components/dashboard/SalaryCard";
 import { AccountsGrid } from "@/components/dashboard/AccountsGrid";
 import { DashboardGoalsSection } from "@/components/dashboard/DashboardGoalsSection";
 import { DashboardInstallmentsSection } from "@/components/dashboard/DashboardInstallmentsSection";
+import { DashboardBudgetsSection } from "@/components/dashboard/DashboardBudgetsSection";
+import { DashboardSubscriptionsSection } from "@/components/dashboard/DashboardSubscriptionsSection";
+import { FinancialHealthCard } from "@/components/dashboard/FinancialHealthCard";
 import { SpendingChart } from "@/components/dashboard/SpendingChart";
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
 import { DollarRates } from "@/components/dashboard/DollarRates";
 import { QuickFinanceModal } from "@/components/dashboard/QuickFinanceModal";
-import type { FinancialSummary } from "@/lib/types";
-import { Loader2, SlidersHorizontal } from "lucide-react";
+import type { FinancialSummary, Category } from "@/lib/types";
+import { Loader2, SlidersHorizontal, Plus } from "lucide-react";
 
 export default function DashboardPage() {
   const [summary, setSummary] = useState<FinancialSummary | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [showQuickModal, setShowQuickModal] = useState(false);
   const [dateSubtitle, setDateSubtitle] = useState("");
@@ -23,8 +27,12 @@ export default function DashboardPage() {
 
   const loadSummary = useCallback(async () => {
     try {
-      const res = await fetch("/api/summary");
-      if (res.ok) setSummary(await res.json());
+      const [resSummary, resCats] = await Promise.all([
+        fetch("/api/summary"),
+        fetch("/api/categories"),
+      ]);
+      if (resSummary.ok) setSummary(await resSummary.json());
+      if (resCats.ok) setCategories(await resCats.json());
     } finally {
       setLoading(false);
     }
@@ -36,6 +44,10 @@ export default function DashboardPage() {
     const h = now.getHours();
     setGreeting(h < 12 ? "¡Buenos días" : h < 19 ? "¡Buenas tardes" : "¡Buenas noches");
     setDateSubtitle(now.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" }));
+
+    const handleExternalRefresh = () => loadSummary();
+    window.addEventListener("finance-refresh", handleExternalRefresh);
+    return () => window.removeEventListener("finance-refresh", handleExternalRefresh);
   }, [loadSummary]);
 
   return (
@@ -66,7 +78,12 @@ export default function DashboardPage() {
             <DollarRates />
           </div>
 
-          {/* 1. Balance Total */}
+          {/* 1. Indicador de Salud Financiera Pro */}
+          <div className="animate-slide-up">
+            <FinancialHealthCard metrics={summary?.health_metrics} />
+          </div>
+
+          {/* 2. Balance Total */}
           <div className="animate-slide-up">
             <BalanceCard
               totalBalance={summary?.total_balance || 0}
@@ -77,7 +94,7 @@ export default function DashboardPage() {
             />
           </div>
 
-          {/* 2. Módulo de Sueldo & Ingresos */}
+          {/* 3. Módulo de Sueldo & Ingresos */}
           <div className="animate-slide-up">
             <SalaryCard
               salary={summary?.configured_salary || summary?.income_30d || 980000}
@@ -87,12 +104,30 @@ export default function DashboardPage() {
             />
           </div>
 
-          {/* 3. Grid de Cuentas & Saldos editables con 1 clic */}
+          {/* 4. Presupuestos Mensuales por Categoría */}
+          <div className="animate-slide-up">
+            <DashboardBudgetsSection
+              budgets={summary?.category_budgets || []}
+              categories={categories}
+              onRefresh={loadSummary}
+            />
+          </div>
+
+          {/* 5. Grid de Cuentas & Saldos editables con 1 clic */}
           <div className="animate-slide-up">
             <AccountsGrid accounts={summary?.accounts || []} onRefresh={loadSummary} />
           </div>
 
-          {/* 4. Metas & Ahorros con Asignador Inteligente de Sueldo */}
+          {/* 6. Suscripciones y Gastos Recurrentes */}
+          <div className="animate-slide-up">
+            <DashboardSubscriptionsSection
+              subscriptions={summary?.subscriptions || []}
+              monthlyTotal={summary?.total_subscriptions_monthly || 0}
+              onRefresh={loadSummary}
+            />
+          </div>
+
+          {/* 7. Metas & Ahorros con Asignador Inteligente de Sueldo */}
           <div className="animate-slide-up">
             <DashboardGoalsSection
               goals={summary?.savings_goals || []}
@@ -101,7 +136,7 @@ export default function DashboardPage() {
             />
           </div>
 
-          {/* 5. Compras en Cuotas y Tarjetas */}
+          {/* 8. Compras en Cuotas y Tarjetas */}
           <div className="animate-slide-up">
             <DashboardInstallmentsSection
               installments={summary?.active_installments || []}
@@ -110,7 +145,7 @@ export default function DashboardPage() {
             />
           </div>
 
-          {/* 6. Gráfico de Gastos y Transacciones Recientes */}
+          {/* 9. Gráfico de Gastos y Transacciones Recientes */}
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
             <div className="lg:col-span-2 animate-slide-up">
               <SpendingChart categories={summary?.top_categories || []} />

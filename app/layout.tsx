@@ -18,10 +18,14 @@ export const metadata: Metadata = {
     "Controlá tus gastos, cuotas y metas de ahorro con la ayuda de un asistente de IA personal. Gestión financiera inteligente para uso personal.",
   keywords: ["finanzas personales", "control de gastos", "ahorro", "IA", "Gemini"],
   manifest: "/manifest.json",
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "FinanceAI",
+    title: "FinanzApp",
   },
   formatDetection: {
     telephone: false,
