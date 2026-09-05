@@ -7,7 +7,6 @@ import { TrendingUp, Mail, Lock, Eye, EyeOff, Loader2, Sparkles, CheckCircle2 } 
 
 export default function LoginPage() {
   const router = useRouter();
-  const supabase = createClient();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,7 +28,7 @@ export default function LoginPage() {
     setSuccess(null);
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-    const isSupabaseConfigured = supabaseUrl.length > 10 && !supabaseUrl.includes("your-project");
+    const isSupabaseConfigured = supabaseUrl.length > 10 && !supabaseUrl.includes("your-project") && !supabaseUrl.includes("placeholder");
 
     if (!isSupabaseConfigured) {
       // Si Supabase aún no tiene credenciales configuradas en .env.local, ingresar directamente en modo demo
@@ -38,6 +37,7 @@ export default function LoginPage() {
     }
 
     try {
+      const supabase = createClient();
       if (isLogin) {
         const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
         if (authError) throw authError;

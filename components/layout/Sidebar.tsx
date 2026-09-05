@@ -31,11 +31,11 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const supabase = createClient();
   const [collapsed, setCollapsed] = useState(false);
 
   async function handleLogout() {
     try {
+      const supabase = createClient();
       await supabase.auth.signOut();
     } catch {
       // ignore
