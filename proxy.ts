@@ -4,12 +4,13 @@ import { createServerClient } from "@supabase/ssr";
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
-  const isDemo = request.cookies.get("finance_demo_session")?.value === "true";
+  const hasDemoCookie = request.cookies.get("finance_demo_session")?.value === "true";
+  const hasSessionCookie = !!request.cookies.get("finance_session")?.value;
   let user = null;
 
   // Intentar autenticación con Supabase si las variables están configuradas
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const isSupabaseConfigured = supabaseUrl && !supabaseUrl.includes("your-project");
+  const isSupabaseConfigured = supabaseUrl && !supabaseUrl.includes("your-project") && !supabaseUrl.includes("placeholder");
 
   if (isSupabaseConfigured) {
     try {
@@ -41,25 +42,30 @@ export async function proxy(request: NextRequest) {
   }
 
   const { pathname } = request.nextUrl;
-  const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/register");
+  const isAuthPage = pathname.startsWith("/login");
   const isApiRoute = pathname.startsWith("/api");
-  const isPublicAsset = pathname.startsWith("/_next") || pathname.startsWith("/icons") || pathname === "/manifest.json" || pathname.includes(".");
+  const isPublicAsset =
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/icons") ||
+    pathname === "/manifest.json" ||
+    pathname === "/favicon.ico" ||
+    pathname.includes(".");
 
-  // No interceptar rutas de API ni assets
+  // No interceptar rutas de API ni assets públicos
   if (isApiRoute || isPublicAsset) {
     return supabaseResponse;
   }
 
-  const isAuthenticated = !!user || isDemo;
+  const isAuthenticated = !!user || hasDemoCookie || hasSessionCookie;
 
-  // Redirigir a login si no hay sesión y no es página de auth
+  // Si no está autenticado y no está en /login, redirigir a /login
   if (!isAuthenticated && !isAuthPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
-  // Redirigir al dashboard si ya hay sesión y está en auth page
+  // Si ya está autenticado e intenta ir a /login, redirigir al Dashboard principal
   if (isAuthenticated && isAuthPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
@@ -70,5 +76,7 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|manifest.json|icons/.*|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 };

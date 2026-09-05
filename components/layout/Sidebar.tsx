@@ -40,8 +40,11 @@ export function Sidebar() {
     } catch {
       // ignore
     }
-    // Borrar cookie de demo
+    // Borrar cookies de sesión
+    document.cookie = "finance_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
     document.cookie = "finance_demo_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    document.cookie = "finance_user_name=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    localStorage.removeItem("finanzapp_user_profile");
     router.push("/login");
     router.refresh();
   }
