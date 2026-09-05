@@ -65,13 +65,6 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Si ya está autenticado e intenta ir a /login, redirigir al Dashboard principal
-  if (isAuthenticated && isAuthPage) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/";
-    return NextResponse.redirect(url);
-  }
-
   return supabaseResponse;
 }
 
