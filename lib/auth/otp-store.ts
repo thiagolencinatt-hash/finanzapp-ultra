@@ -4,6 +4,7 @@ interface OtpEntry {
   code: string;
   email: string;
   name?: string;
+  password?: string;
   currency?: string;
   salary?: number;
   createdAt: number;
@@ -27,11 +28,13 @@ setInterval(() => {
 export async function generateAndSendOtp({
   email,
   name,
+  password,
   currency,
   salary,
 }: {
   email: string;
   name?: string;
+  password?: string;
   currency?: string;
   salary?: number;
 }) {
@@ -46,6 +49,7 @@ export async function generateAndSendOtp({
     code,
     email: normalizedEmail,
     name: name || normalizedEmail.split("@")[0],
+    password,
     currency: currency || "ARS",
     salary: salary || 980000,
     createdAt: now,
@@ -168,6 +172,7 @@ export function verifyOtp(email: string, inputCode: string) {
     user: {
       name: entry.name,
       email: entry.email,
+      password: entry.password,
       currency: entry.currency,
       salary: entry.salary,
     },

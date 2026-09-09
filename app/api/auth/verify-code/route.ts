@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { verifyOtp } from "@/lib/auth/otp-store";
+import { registerUser } from "@/lib/auth/user-store";
 
 export async function POST(request: Request) {
   try {
@@ -74,7 +75,19 @@ export async function POST(request: Request) {
           { status: 400 }
         );
       }
-      verifiedUser = localVerification.user as { name: string; email: string; currency: string; salary: number };
+      const u = localVerification.user as { name: string; email: string; currency: string; salary: number; password?: string };
+      verifiedUser = { name: u.name, email: u.email, currency: u.currency, salary: u.salary };
+
+      // Si el usuario proporcionó una contraseña durante el registro, guardarla permanentemente
+      if (u.password) {
+        registerUser({
+          email: u.email,
+          password: u.password,
+          name: u.name,
+          currency: u.currency,
+          salary: u.salary,
+        });
+      }
     }
 
     const response = NextResponse.json({

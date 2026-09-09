@@ -5,7 +5,7 @@ import { generateAndSendOtp } from "@/lib/auth/otp-store";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { email, name, currency, salary } = body;
+    const { email, name, password, currency, salary } = body;
 
     if (!email || !email.includes("@")) {
       return NextResponse.json(
@@ -26,6 +26,7 @@ export async function POST(request: Request) {
     const localOtp = await generateAndSendOtp({
       email: normalizedEmail,
       name,
+      password,
       currency,
       salary,
     });
