@@ -30,6 +30,19 @@ export async function POST(request: Request) {
       salary,
     });
 
+    // Si el correo fue enviado exitosamente por Resend o SMTP con los 6 dígitos reales
+    if (localOtp.emailSentReal) {
+      console.log(`✅ [Email Dispatch] Correo con código de 6 dígitos enviado exitosamente a: ${normalizedEmail}`);
+      return NextResponse.json({
+        success: true,
+        email: normalizedEmail,
+        code: localOtp.code,
+        emailSentReal: true,
+        provider: "resend",
+        message: `¡Código de 6 dígitos enviado con éxito a ${normalizedEmail}!`,
+      });
+    }
+
     let supabaseSent = false;
     let supabaseError: string | null = null;
 
