@@ -119,7 +119,7 @@ export default function AIAssistantPage() {
               <Bot className="w-8 h-8 text-white" />
             </div>
             <h2 className="text-xl font-bold mb-2" style={{ color: "hsl(var(--foreground))" }}>
-              ¡Hola! Soy tu FinanceAI
+              ¡Hola! Soy tu FinanzApp AI
             </h2>
             <p className="text-sm max-w-xs mb-8" style={{ color: "hsl(var(--muted-foreground))" }}>
               Podés decirme cosas como{" "}

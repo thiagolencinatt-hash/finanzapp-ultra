@@ -1,7 +1,7 @@
 {
-  "name": "FinanceAI",
-  "short_name": "FinanceAI",
-  "description": "Tu asistente financiero personal con IA",
+  "name": "FinanzApp Ultra",
+  "short_name": "FinanzApp",
+  "description": "Control de gastos personal y finanzas con IA",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0A0F1E",

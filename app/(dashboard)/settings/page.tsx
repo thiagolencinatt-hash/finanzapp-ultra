@@ -144,7 +144,7 @@ export default function SettingsPage() {
                 Apariencia y Tema
               </h2>
               <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
-                Personalizá la interfaz visual de FinanceAI
+                Personalizá la interfaz visual de FinanzApp Ultra
               </p>
             </div>
           </div>

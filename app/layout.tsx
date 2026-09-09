@@ -11,12 +11,12 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "FinanceAI — Tu finanzas con inteligencia artificial",
-    template: "%s | FinanceAI",
+    default: "FinanzApp Ultra — Control de Gastos & Finanzas Pro",
+    template: "%s | FinanzApp Ultra",
   },
   description:
     "Controlá tus gastos, cuotas y metas de ahorro con la ayuda de un asistente de IA personal. Gestión financiera inteligente para uso personal.",
-  keywords: ["finanzas personales", "control de gastos", "ahorro", "IA", "Gemini"],
+  keywords: ["finanzas personales", "control de gastos", "ahorro", "IA", "Gemini", "FinanzApp Ultra"],
   manifest: "/manifest.json",
   icons: {
     icon: "/favicon.ico",
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "FinanzApp",
+    title: "FinanzApp Ultra",
   },
   formatDetection: {
     telephone: false,

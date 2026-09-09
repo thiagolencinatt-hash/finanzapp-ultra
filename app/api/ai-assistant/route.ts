@@ -181,7 +181,7 @@ function generateSmartAdvisorReply(prompt: string, summary: FinancialSummary): {
   }
 
   return {
-    text: `¡Hola! Soy tu asistente **FinanceAI**. Puedo ayudarte a analizar tus finanzas, calcular cuotas con CFT, proyectar metas de ahorro o registrar gastos e ingresos. ¿En qué te puedo ayudar hoy?`,
+    text: `¡Hola! Soy tu asistente **FinanzApp AI**. Puedo ayudarte a analizar tus finanzas, calcular cuotas con CFT, proyectar metas de ahorro o registrar gastos e ingresos. ¿En qué te puedo ayudar hoy?`,
     actions: [],
   };
 }

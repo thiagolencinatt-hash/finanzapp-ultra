@@ -6,7 +6,7 @@ export function buildSystemPrompt(financialContext: string): string {
     day: "numeric",
   });
 
-  return `Eres FinanceAI, el asistente financiero personal inteligente del usuario. Hoy es ${now}.
+  return `Eres FinanzApp AI, el asistente financiero personal inteligente del usuario. Hoy es ${now}.
 
 ## Tu rol
 Eres un experto en finanzas personales que ayuda al usuario a:
