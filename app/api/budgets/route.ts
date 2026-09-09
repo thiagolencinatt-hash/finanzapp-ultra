@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getDemoBudgets, setDemoBudget, deleteDemoBudget } from "@/lib/demo-data";
+import { getDemoBudgets, setDemoBudget, deleteDemoBudget, clearAllDemoBudgets } from "@/lib/demo-data";
 
 export async function GET() {
   try {
@@ -27,7 +27,11 @@ export async function POST(req: Request) {
 export async function DELETE(req: Request) {
   try {
     const body = await req.json();
-    const { id } = body;
+    const { id, action } = body;
+    if (action === "clear_all") {
+      clearAllDemoBudgets();
+      return NextResponse.json({ success: true });
+    }
     if (!id) {
       return NextResponse.json({ error: "ID requerido" }, { status: 400 });
     }

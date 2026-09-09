@@ -12,8 +12,9 @@ const inMemoryChat: { id: string; role: "user" | "assistant"; content: string; c
 // POST /api/ai-assistant
 export async function POST(req: NextRequest) {
   const isDemo = req.cookies.get("finance_demo_session")?.value === "true";
-  const { message, session_id } = await req.json();
-  if (!message?.trim()) return NextResponse.json({ error: "Empty message" }, { status: 400 });
+  const body = await req.json();
+  const { message, session_id, image_base64, image_mime_type } = body;
+  if (!message?.trim() && !image_base64) return NextResponse.json({ error: "Empty message" }, { status: 400 });
 
   let summary: FinancialSummary = getDemoSummary();
 
@@ -54,7 +55,20 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      let response = await chat.sendMessage({ message });
+      // Construir mensaje multimodal con imagen si se adjuntó
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let chatContent: any;
+      if (image_base64) {
+        chatContent = {
+          parts: [
+            { text: message || "Analizá esta imagen" },
+            { inlineData: { mimeType: image_mime_type || "image/jpeg", data: image_base64 } },
+          ],
+        };
+      } else {
+        chatContent = { message };
+      }
+      let response = await chat.sendMessage(chatContent);
       const executedActions: ExecutedAction[] = [];
       let maxIterations = 5;
 

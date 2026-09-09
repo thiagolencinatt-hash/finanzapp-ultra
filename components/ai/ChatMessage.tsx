@@ -40,13 +40,24 @@ export function ChatMessage({ message }: ChatMessageProps) {
             borderBottomLeftRadius: isUser ? "16px" : "4px",
           }}
         >
-          {message.isLoading ? (
+        {message.isLoading ? (
             <div className="flex items-center gap-2">
               <Loader2 className="w-4 h-4 animate-spin" style={{ color: "hsl(var(--primary))" }} />
               <span style={{ color: "hsl(var(--muted-foreground))" }}>Pensando...</span>
             </div>
           ) : (
-            <p className="whitespace-pre-wrap">{message.content}</p>
+            <>
+              {/* Imagen adjunta (solo en mensajes del usuario) */}
+              {message.imagePreview && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={message.imagePreview}
+                  alt="Imagen enviada"
+                  className="rounded-xl max-h-48 max-w-full object-cover mb-2 shadow-md"
+                />
+              )}
+              <p className="whitespace-pre-wrap">{message.content}</p>
+            </>
           )}
         </div>
 

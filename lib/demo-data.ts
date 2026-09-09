@@ -948,6 +948,26 @@ export function deleteDemoSubscription(id: string) {
   return { success: true };
 }
 
+export function clearAllDemoSubscriptions() {
+  demoSubscriptions = [];
+  return { success: true };
+}
+
+export function clearAllDemoBudgets() {
+  demoBudgets = [];
+  return { success: true };
+}
+
+export function clearAllDemoTransactions() {
+  demoTransactions = [];
+  return { success: true };
+}
+
+export function resetAllAccountBalances() {
+  demoAccounts = demoAccounts.map((a) => ({ ...a, balance: 0 }));
+  return { success: true };
+}
+
 // Restauración de Copia de Seguridad completa (Import JSON)
 export function restoreDatabaseBackup(backup: {
   transactions?: Transaction[];

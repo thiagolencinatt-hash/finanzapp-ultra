@@ -4,6 +4,7 @@ import {
   addDemoSubscription,
   toggleDemoSubscription,
   deleteDemoSubscription,
+  clearAllDemoSubscriptions,
 } from "@/lib/demo-data";
 
 export async function GET() {
@@ -42,7 +43,11 @@ export async function PATCH(req: Request) {
 export async function DELETE(req: Request) {
   try {
     const body = await req.json();
-    const { id } = body;
+    const { id, action } = body;
+    if (action === "clear_all") {
+      clearAllDemoSubscriptions();
+      return NextResponse.json({ success: true });
+    }
     if (!id) {
       return NextResponse.json({ error: "ID requerido" }, { status: 400 });
     }

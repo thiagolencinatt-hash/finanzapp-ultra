@@ -5,6 +5,7 @@ import {
   addDemoTransaction,
   updateDemoTransaction,
   deleteDemoTransaction,
+  clearAllDemoTransactions,
 } from "@/lib/demo-data";
 
 // GET /api/transactions
@@ -161,7 +162,22 @@ export async function PATCH(req: NextRequest) {
 // DELETE /api/transactions
 export async function DELETE(req: NextRequest) {
   const body = await req.json();
-  const { id } = body;
+  const { id, action } = body;
+
+  // Borrar todas las transacciones
+  if (action === "clear_all") {
+    clearAllDemoTransactions();
+    try {
+      const supabase = await createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from("transactions").delete().eq("user_id", user.id);
+      }
+    } catch {
+      // fallback
+    }
+    return NextResponse.json({ success: true });
+  }
 
   deleteDemoTransaction(id);
 

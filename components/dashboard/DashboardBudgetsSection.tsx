@@ -61,6 +61,16 @@ export function DashboardBudgetsSection({
     if (onRefresh) onRefresh();
   }
 
+  async function handleClearAllBudgets() {
+    if (!confirm("¿Deseas eliminar TODOS los presupuestos configurados?")) return;
+    await fetch("/api/budgets", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "clear_all" }),
+    });
+    if (onRefresh) onRefresh();
+  }
+
   return (
     <div className="rounded-3xl p-5 lg:p-6 glass-strong shadow-xl relative overflow-hidden">
       {/* Header */}
@@ -79,13 +89,25 @@ export function DashboardBudgetsSection({
           </div>
         </div>
 
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white gradient-primary cursor-pointer hover:opacity-90 self-start sm:self-auto"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span>Fijar Presupuesto</span>
-        </button>
+        <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
+          {budgets.length > 0 && (
+            <button
+              onClick={handleClearAllBudgets}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold text-red-400 bg-red-950/30 hover:bg-red-900/40 border border-red-800/30 cursor-pointer transition-all"
+              title="Borrar todos los presupuestos"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Borrar Todo</span>
+            </button>
+          )}
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white gradient-primary cursor-pointer hover:opacity-90"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Fijar Presupuesto</span>
+          </button>
+        </div>
       </div>
 
       {/* Barra de progreso global */}

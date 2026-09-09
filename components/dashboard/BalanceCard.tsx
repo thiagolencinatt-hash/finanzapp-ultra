@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { TrendingUp, TrendingDown, CreditCard, DollarSign, PlusCircle, MinusCircle } from "lucide-react";
+import { TrendingUp, TrendingDown, CreditCard, DollarSign, PlusCircle, MinusCircle, RotateCcw, Trash2 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 import { TransactionForm } from "@/components/transactions/TransactionForm";
 
@@ -22,7 +22,38 @@ export function BalanceCard({
   onRefresh,
 }: BalanceCardProps) {
   const [formType, setFormType] = useState<"income" | "expense" | null>(null);
+  const [resetting, setResetting] = useState(false);
   const netFlow = income30d - expense30d;
+
+  async function handleResetBalance() {
+    if (!confirm("⚠️ ¿Resetear el saldo de TODAS las cuentas a $0? Esta acción no se puede deshacer.")) return;
+    setResetting(true);
+    try {
+      await fetch("/api/accounts", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reset_all_balances" }),
+      });
+      onRefresh?.();
+    } finally {
+      setResetting(false);
+    }
+  }
+
+  async function handleClearTransactions() {
+    if (!confirm("⚠️ ¿Borrar TODAS las transacciones (ingresos y gastos)? Esta acción no se puede deshacer.")) return;
+    setResetting(true);
+    try {
+      await fetch("/api/transactions", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "clear_all" }),
+      });
+      onRefresh?.();
+    } finally {
+      setResetting(false);
+    }
+  }
 
   return (
     <>
@@ -54,7 +85,7 @@ export function BalanceCard({
             </div>
 
             {/* Quick Action buttons */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap justify-end">
               <button
                 onClick={() => setFormType("income")}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-income bg-income/10 hover:bg-income/20 border border-income/30 transition-all cursor-pointer"
@@ -68,6 +99,24 @@ export function BalanceCard({
                 title="Registrar nuevo gasto"
               >
                 <MinusCircle className="w-3.5 h-3.5" /> - Gasto
+              </button>
+              <button
+                onClick={handleResetBalance}
+                disabled={resetting}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-orange-400 bg-orange-950/30 hover:bg-orange-900/40 border border-orange-800/30 transition-all cursor-pointer"
+                title="Poner todas las cuentas en $0"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                {resetting ? "Reseteando..." : "Reset $0"}
+              </button>
+              <button
+                onClick={handleClearTransactions}
+                disabled={resetting}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-red-400 bg-red-950/30 hover:bg-red-900/40 border border-red-800/30 transition-all cursor-pointer"
+                title="Borrar todo el historial de transacciones"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Borrar Historial
               </button>
             </div>
           </div>

@@ -5,6 +5,7 @@ import {
   addDemoAccount,
   updateDemoAccount,
   deleteDemoAccount,
+  resetAllAccountBalances,
 } from "@/lib/demo-data";
 
 // GET /api/accounts
@@ -67,7 +68,22 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const isDemo = req.cookies.get("finance_demo_session")?.value === "true";
   const body = await req.json();
-  const { id, ...updates } = body;
+  const { id, action, ...updates } = body;
+
+  // Acción especial: resetear todos los saldos a 0
+  if (action === "reset_all_balances") {
+    resetAllAccountBalances();
+    try {
+      const supabase = await createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from("accounts").update({ balance: 0 }).eq("user_id", user.id).eq("is_active", true);
+      }
+    } catch {
+      // fallback to demo
+    }
+    return NextResponse.json({ success: true });
+  }
 
   if (!id) {
     return NextResponse.json({ error: "ID requerido" }, { status: 400 });

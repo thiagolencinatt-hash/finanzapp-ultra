@@ -204,6 +204,7 @@ export interface ChatMessage {
   timestamp: Date;
   actions?: ExecutedAction[];
   isLoading?: boolean;
+  imagePreview?: string; // data URI para mostrar imagen enviada por el usuario
 }
 
 export interface ExecutedAction {

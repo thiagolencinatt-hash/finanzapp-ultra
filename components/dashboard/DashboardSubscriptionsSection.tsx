@@ -73,6 +73,16 @@ export function DashboardSubscriptionsSection({
     }
   }
 
+  async function handleClearAll() {
+    if (!confirm("¿Deseas eliminar TODAS las suscripciones para empezar en limpio?")) return;
+    await fetch("/api/subscriptions", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "clear_all" }),
+    });
+    if (onRefresh) onRefresh();
+  }
+
   return (
     <div className="rounded-3xl p-5 lg:p-6 glass-strong shadow-xl relative overflow-hidden">
       {/* Header */}
@@ -91,13 +101,25 @@ export function DashboardSubscriptionsSection({
           </div>
         </div>
 
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white gradient-primary cursor-pointer hover:opacity-90 self-start sm:self-auto"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span>Nueva Suscripción</span>
-        </button>
+        <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
+          {subscriptions.length > 0 && (
+            <button
+              onClick={handleClearAll}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold text-red-400 bg-red-950/30 hover:bg-red-900/40 border border-red-800/30 cursor-pointer transition-all"
+              title="Borrar todas las suscripciones"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Borrar Todo</span>
+            </button>
+          )}
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white gradient-primary cursor-pointer hover:opacity-90"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Nueva Suscripción</span>
+          </button>
+        </div>
       </div>
 
       {/* Grid de Suscripciones */}

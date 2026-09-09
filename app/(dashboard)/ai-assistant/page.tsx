@@ -49,14 +49,15 @@ export default function AIAssistantPage() {
     }
   }, [messages]);
 
-  const sendMessage = useCallback(async (text: string) => {
-    if (!text.trim() || loading) return;
+  const sendMessage = useCallback(async (text: string, imageBase64?: string, imageMimeType?: string) => {
+    if ((!text.trim() && !imageBase64) || loading) return;
 
     const userMsg: ChatMessageType = {
       id: crypto.randomUUID(),
       role: "user",
-      content: text,
+      content: text || (imageBase64 ? "📷 Imagen adjunta" : ""),
       timestamp: new Date(),
+      imagePreview: imageBase64 ? `data:${imageMimeType || "image/jpeg"};base64,${imageBase64}` : undefined,
     };
 
     const loadingMsg: ChatMessageType = {
@@ -74,7 +75,12 @@ export default function AIAssistantPage() {
       const res = await fetch("/api/ai-assistant", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, session_id: SESSION_ID }),
+        body: JSON.stringify({
+          message: text || "Analizá esta imagen",
+          session_id: SESSION_ID,
+          image_base64: imageBase64,
+          image_mime_type: imageMimeType || "image/jpeg",
+        }),
       });
       const data = await res.json();
 
