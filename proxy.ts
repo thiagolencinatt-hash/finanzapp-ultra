@@ -42,7 +42,7 @@ export async function proxy(request: NextRequest) {
   }
 
   const { pathname } = request.nextUrl;
-  const isAuthPage = pathname.startsWith("/login");
+  const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/auth");
   const isApiRoute = pathname.startsWith("/api");
   const isPublicAsset =
     pathname.startsWith("/_next") ||

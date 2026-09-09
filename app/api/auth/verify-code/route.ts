@@ -31,13 +31,26 @@ export async function POST(request: Request) {
     if (isSupabaseConfigured) {
       try {
         const supabase = createClient(supabaseUrl, supabaseKey);
-        const { data, error: verifyErr } = await supabase.auth.verifyOtp({
+        let { data, error: verifyErr } = await supabase.auth.verifyOtp({
           email: normalizedEmail,
           token: normalizedCode,
           type: "email",
         });
 
-        if (!verifyErr && data.user) {
+        // Si falló y era nuevo usuario, intentar también con type: "signup"
+        if (verifyErr) {
+          const resSignup = await supabase.auth.verifyOtp({
+            email: normalizedEmail,
+            token: normalizedCode,
+            type: "signup",
+          });
+          if (!resSignup.error && resSignup.data.user) {
+            data = resSignup.data;
+            verifyErr = null;
+          }
+        }
+
+        if (!verifyErr && data?.user) {
           authSource = "supabase";
           verifiedUser = {
             name: data.user.user_metadata?.name || normalizedEmail.split("@")[0],

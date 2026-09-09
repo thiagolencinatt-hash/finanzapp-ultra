@@ -22,6 +22,7 @@ import {
   BrainCircuit,
   Lock,
 } from "lucide-react";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -58,6 +59,56 @@ export default function LoginPage() {
     }
     return () => clearTimeout(timer);
   }, [countdown]);
+
+  // Escuchar si el usuario llegó tras hacer clic en un enlace de acceso en su correo
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+
+    try {
+      const supabase = createClient();
+
+      const handleUserSession = (sessionUser: { id: string; email?: string; user_metadata?: Record<string, unknown> }) => {
+        const maxAge = 60 * 60 * 24 * 30;
+        document.cookie = `finance_session=active; path=/; max-age=${maxAge}; SameSite=Lax`;
+        document.cookie = `finance_demo_session=true; path=/; max-age=${maxAge}; SameSite=Lax`;
+        const profileName = (sessionUser.user_metadata?.name as string) || sessionUser.email?.split("@")[0] || "Usuario";
+        document.cookie = `finance_user_name=${encodeURIComponent(profileName)}; path=/; max-age=${maxAge}; SameSite=Lax`;
+
+        localStorage.setItem(
+          "finanzapp_user_profile",
+          JSON.stringify({
+            name: profileName,
+            email: sessionUser.email,
+            currency: sessionUser.user_metadata?.currency || "ARS",
+            salary: sessionUser.user_metadata?.salary || 980000,
+            loggedInAt: new Date().toISOString(),
+          })
+        );
+
+        setSuccess("¡Enlace verificado con éxito! Ingresando al panel...");
+        setTimeout(() => {
+          router.push("/");
+          router.refresh();
+        }, 500);
+      };
+
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user) {
+          handleUserSession(session.user);
+        }
+      });
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        if ((event === "SIGNED_IN" || event === "USER_UPDATED") && session?.user) {
+          handleUserSession(session.user);
+        }
+      });
+
+      return () => subscription.unsubscribe();
+    } catch (e) {
+      console.warn("Supabase listener error:", e);
+    }
+  }, [router]);
 
   // Focus first input box when switching to OTP step
   useEffect(() => {
@@ -547,7 +598,7 @@ export default function LoginPage() {
                     <div className="flex items-center gap-2">
                       <Inbox className="w-4 h-4 text-primary animate-pulse" />
                       <span className="text-[11px] font-bold text-primary">
-                        {isRealEmailSent ? "📧 Correo real despachado" : "📧 Correo & Código en Vivo"}
+                        {isRealEmailSent ? "📧 Correo despachado & Código" : "📧 Código de 6 Dígitos Generado"}
                       </span>
                     </div>
                     <button
@@ -556,12 +607,15 @@ export default function LoginPage() {
                       className="text-[11px] font-extrabold px-2.5 py-1 rounded-lg gradient-primary text-black flex items-center gap-1 cursor-pointer hover:brightness-110 active:scale-95"
                     >
                       {copiedCode ? <Check className="w-3 h-3" /> : <Sparkles className="w-3 h-3" />}
-                      <span>{copiedCode ? "¡Aplicado!" : "⚡ Autocompletar"}</span>
+                      <span>{copiedCode ? "¡Aplicado!" : "⚡ Autocompletar (6 dígitos)"}</span>
                     </button>
                   </div>
-                  <div className="flex items-center justify-between bg-black/40 px-3 py-2 rounded-xl border border-white/5">
-                    <span className="text-xs text-muted-foreground">Código de seguridad:</span>
-                    <span className="font-mono font-black text-base text-primary tracking-widest">
+                  <div className="flex items-center justify-between bg-black/40 px-3 py-2.5 rounded-xl border border-white/5">
+                    <div>
+                      <span className="text-[11px] text-muted-foreground block">Código de 6 dígitos:</span>
+                      <span className="text-[10px] text-muted-foreground/70">Ingresa este código o el de tu correo</span>
+                    </div>
+                    <span className="font-mono font-black text-lg text-primary tracking-[0.25em]">
                       {receivedCodePreview}
                     </span>
                   </div>

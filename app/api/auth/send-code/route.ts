@@ -22,16 +22,26 @@ export async function POST(request: Request) {
       !supabaseUrl.includes("your-project") &&
       supabaseKey.length > 15;
 
+    // 1. Siempre generar código de 6 dígitos en el almacén resiliente local (y enviar por SMTP/Resend si configurado)
+    const localOtp = await generateAndSendOtp({
+      email: normalizedEmail,
+      name,
+      currency,
+      salary,
+    });
+
     let supabaseSent = false;
     let supabaseError: string | null = null;
 
     if (isSupabaseConfigured) {
       try {
         const supabase = createClient(supabaseUrl, supabaseKey);
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
         const { error: otpErr } = await supabase.auth.signInWithOtp({
           email: normalizedEmail,
           options: {
             shouldCreateUser: true,
+            emailRedirectTo: `${appUrl}/auth/callback`,
             data: {
               name: name || normalizedEmail.split("@")[0],
               currency: currency || "ARS",
@@ -42,13 +52,14 @@ export async function POST(request: Request) {
 
         if (!otpErr) {
           supabaseSent = true;
-          console.log(`✅ [Supabase Auth] Correo con código OTP despachado a: ${normalizedEmail}`);
+          console.log(`✅ [Supabase Auth] Código OTP despachado a: ${normalizedEmail}`);
           return NextResponse.json({
             success: true,
             email: normalizedEmail,
+            code: localOtp.code,
             emailSentReal: true,
             provider: "supabase",
-            message: `¡Código de verificación enviado por Supabase a ${normalizedEmail}! Revisa tu bandeja de entrada o spam.`,
+            message: `¡Código de 6 dígitos enviado a ${normalizedEmail}!`,
           });
         } else {
           supabaseError = otpErr.message;
@@ -59,11 +70,9 @@ export async function POST(request: Request) {
       }
     }
 
-    // Fallback: Generar código seguro en el servidor con visualización en pantalla
-    const fallbackResult = await generateAndSendOtp({ email: normalizedEmail, name, currency, salary });
-
+    // Si Supabase falló o no está configurado, devolver el resultado local
     return NextResponse.json({
-      ...fallbackResult,
+      ...localOtp,
       provider: "local-resilient",
       note: supabaseError ? `Supabase: ${supabaseError}` : undefined,
     });
