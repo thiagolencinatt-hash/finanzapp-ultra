@@ -5,7 +5,7 @@ import { getUserCategories } from "@/lib/db/cloud-store";
 export async function GET(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req);
-    const categories = getUserCategories(user.id);
+    const categories = await getUserCategories(user.id);
     return NextResponse.json(categories);
   } catch (err: unknown) {
     console.error("[/api/categories GET error]:", err);

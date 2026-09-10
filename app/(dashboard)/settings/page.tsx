@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Header } from "@/components/layout/Header";
 import { useTheme } from "next-themes";
+import { toast } from "sonner";
 import {
   Settings,
   Database,
@@ -107,9 +108,10 @@ export default function SettingsPage() {
       a.click();
       URL.revokeObjectURL(url);
       setExported(true);
+      toast.success("Copia de seguridad exportada con éxito.");
       setTimeout(() => setExported(false), 3000);
     } catch {
-      alert("Error al exportar los datos");
+      toast.error("Error al exportar los datos.");
     }
   }
 
@@ -130,13 +132,14 @@ export default function SettingsPage() {
 
       if (res.ok) {
         setImportSuccess(true);
+        toast.success("Copia de seguridad restaurada exitosamente.");
         setTimeout(() => setImportSuccess(false), 4000);
         window.dispatchEvent(new Event("finance-refresh"));
       } else {
-        alert("El archivo no tiene el formato esperado.");
+        toast.error("El archivo no tiene el formato esperado.");
       }
     } catch {
-      alert("Error al procesar el archivo JSON.");
+      toast.error("Error al procesar el archivo JSON.");
     } finally {
       setImporting(false);
       e.target.value = "";

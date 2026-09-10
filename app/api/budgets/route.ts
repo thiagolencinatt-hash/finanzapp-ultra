@@ -6,7 +6,7 @@ import type { CategoryBudget } from "@/lib/types";
 export async function GET(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req);
-    const store = getUserStore(user.id);
+    const store = await getUserStore(user.id);
     return NextResponse.json(store.budgets || []);
   } catch (err: unknown) {
     console.error("[/api/budgets GET error]:", err);
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req);
-    const store = getUserStore(user.id);
+    const store = await getUserStore(user.id);
     const body = await req.json();
     const { category_id, monthly_limit, currency } = body;
 
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     if (existing) {
       existing.monthly_limit = Number(monthly_limit);
       if (currency) existing.currency = currency;
-      saveUserStore(user.id);
+      await saveUserStore(user.id);
       return NextResponse.json(existing);
     }
 
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     };
 
     store.budgets.push(newBudget);
-    saveUserStore(user.id);
+    await saveUserStore(user.id);
     return NextResponse.json(newBudget);
   } catch (err: unknown) {
     console.error("[/api/budgets POST error]:", err);
@@ -56,13 +56,13 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req);
-    const store = getUserStore(user.id);
+    const store = await getUserStore(user.id);
     const body = await req.json();
     const { id, action } = body;
 
     if (action === "clear_all") {
       store.budgets = [];
-      saveUserStore(user.id);
+      await saveUserStore(user.id);
       return NextResponse.json({ success: true });
     }
 
@@ -71,7 +71,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     store.budgets = (store.budgets || []).filter((b) => b.id !== id);
-    saveUserStore(user.id);
+    await saveUserStore(user.id);
     return NextResponse.json({ success: true });
   } catch (err: unknown) {
     console.error("[/api/budgets DELETE error]:", err);

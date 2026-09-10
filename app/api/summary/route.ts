@@ -5,7 +5,7 @@ import { getUserSummary } from "@/lib/db/cloud-store";
 export async function GET(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req);
-    const summary = getUserSummary(user.id, {
+    const summary = await getUserSummary(user.id, {
       email: user.email,
       name: user.name,
       currency: user.currency,

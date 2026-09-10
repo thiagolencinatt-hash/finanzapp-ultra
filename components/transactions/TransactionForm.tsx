@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Loader2, Lock } from "lucide-react";
 import type { Account, Category, Transaction } from "@/lib/types";
+import { toast } from "sonner";
 import { DraggableWindow } from "../ui/DraggableWindow";
 import { isDemoUser, canPerformAction, incrementDemoTxCount } from "@/lib/freemium";
 
@@ -151,9 +152,12 @@ export function TransactionForm({
           incrementDemoTxCount();
         }
       }
+      toast.success(isEditing ? "Movimiento actualizado con éxito" : "Movimiento registrado con éxito");
       onSuccess();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error");
+      const msg = err instanceof Error ? err.message : "Error";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

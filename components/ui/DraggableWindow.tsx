@@ -28,7 +28,7 @@ export function DraggableWindow({
   windowId,
   defaultPosition = { x: 0, y: 0 },
   footer,
-  className = "w-full sm:w-[540px] max-h-[90dvh]",
+  className = "w-full sm:w-[540px] sm:max-h-[90dvh]",
 }: DraggableWindowProps) {
   const [isMinimized, setIsMinimized] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -72,7 +72,7 @@ export function DraggableWindow({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 flex items-center justify-center p-3 sm:p-6"
+          className="fixed inset-0 flex items-end sm:items-center justify-center sm:p-6"
           style={{ zIndex }}
           onPointerDown={bringToFront}
         >
@@ -94,8 +94,8 @@ export function DraggableWindow({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 15 }}
             transition={{ type: "spring", bounce: 0.2, duration: 0.35 }}
-            className={`relative flex flex-col glass-strong shadow-2xl border border-white/10 rounded-2xl overflow-hidden transition-all duration-200 z-10 w-[calc(100vw-1.25rem)] max-w-full sm:max-w-none ${
-              isMinimized ? "w-[300px] h-[52px]" : className
+            className={`relative flex flex-col glass-strong shadow-2xl border-white/10 overflow-hidden transition-all duration-200 z-10 w-full h-[100dvh] sm:h-auto rounded-none sm:rounded-2xl sm:border sm:w-[540px] sm:max-w-none ${
+              isMinimized ? "sm:w-[300px] sm:h-[52px]" : className
             }`}
             style={{ x: isMobile ? 0 : defaultPosition.x, y: isMobile ? 0 : defaultPosition.y }}
           >

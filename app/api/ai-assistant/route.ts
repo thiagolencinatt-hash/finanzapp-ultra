@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const summary = getUserSummary(user.id, {
+  const summary = await getUserSummary(user.id, {
     email: user.email,
     name: user.name,
     currency: user.currency,
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
       const genai = getGenAI();
 
       // Preparar historial estructurado para @google/genai (alternando user / model)
-      const previousMessages = getUserChatMessages(user.id, 6);
+      const previousMessages = await getUserChatMessages(user.id, 6);
       const history: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }> = [];
       for (const prev of previousMessages) {
         if (!prev.content?.trim()) continue;
@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
 
             for (const call of response.functionCalls) {
               if (!call.name) continue;
-              const result = executeTool(call.name, (call.args as Record<string, unknown>) || {}, user.id);
+              const result = await executeTool(call.name, (call.args as Record<string, unknown>) || {}, user.id);
               toolResults.push({
                 functionResponse: {
                   name: call.name,
@@ -167,7 +167,7 @@ export async function POST(req: NextRequest) {
           if (!assistantText) assistantText = "He procesado tu consulta exitosamente.";
 
           // Guardar en memoria persistente del usuario
-          addUserChatMessage(user.id, {
+          await addUserChatMessage(user.id, {
             id: `msg-${Date.now()}-u`,
             user_id: user.id,
             role: "user",
@@ -175,7 +175,7 @@ export async function POST(req: NextRequest) {
             created_at: new Date().toISOString(),
           });
 
-          addUserChatMessage(user.id, {
+          await addUserChatMessage(user.id, {
             id: `msg-${Date.now()}-a`,
             user_id: user.id,
             role: "assistant",
@@ -200,7 +200,7 @@ export async function POST(req: NextRequest) {
   // Respuesta inteligente local simulada basada en el contexto financiero
   const fallbackResponse = generateSmartAdvisorReply(message, summary);
 
-  addUserChatMessage(user.id, {
+  await addUserChatMessage(user.id, {
     id: `msg-${Date.now()}-u`,
     user_id: user.id,
     role: "user",
@@ -208,7 +208,7 @@ export async function POST(req: NextRequest) {
     created_at: new Date().toISOString(),
   });
 
-  addUserChatMessage(user.id, {
+  await addUserChatMessage(user.id, {
     id: `msg-${Date.now()}-a`,
     user_id: user.id,
     role: "assistant",
@@ -227,7 +227,7 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req);
-    const messages = getUserChatMessages(user.id, 50);
+    const messages = await getUserChatMessages(user.id, 50);
     return NextResponse.json(messages);
   } catch (err: unknown) {
     console.error("[/api/ai-assistant GET error]:", err);
@@ -236,11 +236,11 @@ export async function GET(req: NextRequest) {
 }
 
 // Ejecutar tool calls de Gemini persistidas en cloud-store por usuario
-function executeTool(
+async function executeTool(
   name: string,
   args: Record<string, unknown>,
   userId: string
-): { data: unknown; error?: string; summary: string } {
+): Promise<{ data: unknown; error?: string; summary: string }> {
   try {
     switch (name) {
       case "create_transaction": {
@@ -250,7 +250,7 @@ function executeTool(
         const currency = (args.currency as string) || "ARS";
         const date = (args.date as string) || new Date().toISOString().split("T")[0];
 
-        const newTx = addUserTransaction(userId, {
+        const newTx = await addUserTransaction(userId, {
           type,
           amount,
           currency,
@@ -273,7 +273,7 @@ function executeTool(
         const currency = (args.currency as string) || "ARS";
         const dueDay = Number(args.due_day) || 10;
 
-        const newInst = addUserInstallment(userId, {
+        const newInst = await addUserInstallment(userId, {
           description,
           total_amount: totalAmount,
           total_installments: totalInstallments,
@@ -296,7 +296,7 @@ function executeTool(
         const monthly = Number(args.monthly_contribution) || 0;
         const currency = (args.currency as string) || "ARS";
 
-        const newGoal = addUserGoal(userId, {
+        const newGoal = await addUserGoal(userId, {
           name,
           target_amount: targetAmount,
           type,

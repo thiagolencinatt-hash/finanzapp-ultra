@@ -6,6 +6,7 @@ import { X, ArrowDownRight, ArrowUpRight, Check, Loader2, Lock, Sparkles, ArrowR
 import { DraggableWindow } from "../ui/DraggableWindow";
 import type { Category, Account } from "@/lib/types";
 import { isDemoUser, canPerformAction, incrementDemoTxCount } from "@/lib/freemium";
+import { toast } from "sonner";
 
 interface QuickExpenseModalProps {
   isOpen: boolean;
@@ -117,7 +118,7 @@ export function QuickExpenseModal({ isOpen, onClose, onSuccess }: QuickExpenseMo
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        alert(errData.error || "Error al registrar movimiento");
+        toast.error(errData.error || "Error al registrar movimiento");
         return;
       }
 
@@ -125,12 +126,13 @@ export function QuickExpenseModal({ isOpen, onClose, onSuccess }: QuickExpenseMo
         incrementDemoTxCount();
       }
 
+      toast.success("Movimiento registrado con éxito");
       onClose();
       setAmount("");
       setDescription("");
       if (onSuccess) onSuccess();
     } catch {
-      alert("Error al registrar movimiento");
+      toast.error("Error al registrar movimiento");
     } finally {
       setSubmitting(false);
     }

@@ -1,4 +1,5 @@
 "use client";
+import { toast } from "sonner";
 
 import { useEffect, useState, useRef } from "react";
 import { useTheme } from "next-themes";
@@ -126,7 +127,7 @@ export function Header({ title, subtitle, actionButton }: HeaderProps) {
             className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors hover:bg-muted cursor-pointer"
             style={{ color: "hsl(var(--muted-foreground))" }}
             title="Notificaciones y Recordatorios"
-            onClick={() => alert("¡Todo al día! No tienes alertas financieras críticas en este momento.")}
+            onClick={() => toast.success("¡Todo al día! No tienes alertas financieras críticas en este momento.")}
           >
             <Bell className="w-4 h-4" />
           </button>

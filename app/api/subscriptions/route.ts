@@ -6,7 +6,7 @@ import type { Subscription } from "@/lib/types";
 export async function GET(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req);
-    const store = getUserStore(user.id);
+    const store = await getUserStore(user.id);
     return NextResponse.json(store.subscriptions || []);
   } catch (err: unknown) {
     console.error("[/api/subscriptions GET error]:", err);
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req);
-    const store = getUserStore(user.id);
+    const store = await getUserStore(user.id);
     const body = await req.json();
 
     const newSub: Subscription = {
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
 
     if (!store.subscriptions) store.subscriptions = [];
     store.subscriptions.push(newSub);
-    saveUserStore(user.id);
+    await saveUserStore(user.id);
 
     return NextResponse.json(newSub, { status: 201 });
   } catch (err: unknown) {
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req);
-    const store = getUserStore(user.id);
+    const store = await getUserStore(user.id);
     const body = await req.json();
     const { id, action, ...updates } = body;
 
@@ -64,7 +64,7 @@ export async function PATCH(req: NextRequest) {
       Object.assign(sub, updates);
     }
 
-    saveUserStore(user.id);
+    await saveUserStore(user.id);
     return NextResponse.json(sub);
   } catch (err: unknown) {
     console.error("[/api/subscriptions PATCH error]:", err);
@@ -75,13 +75,13 @@ export async function PATCH(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req);
-    const store = getUserStore(user.id);
+    const store = await getUserStore(user.id);
     const body = await req.json();
     const { id, action } = body;
 
     if (action === "clear_all") {
       store.subscriptions = [];
-      saveUserStore(user.id);
+      await saveUserStore(user.id);
       return NextResponse.json({ success: true });
     }
 
@@ -90,7 +90,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     store.subscriptions = (store.subscriptions || []).filter((s) => s.id !== id);
-    saveUserStore(user.id);
+    await saveUserStore(user.id);
     return NextResponse.json({ success: true });
   } catch (err: unknown) {
     console.error("[/api/subscriptions DELETE error]:", err);

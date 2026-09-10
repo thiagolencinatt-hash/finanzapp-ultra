@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     const user = await getUserFromRequest(req);
     const { searchParams } = new URL(req.url);
     const type = searchParams.get("type") || undefined;
-    const goals = getUserGoals(user.id, type);
+    const goals = await getUserGoals(user.id, type);
     return NextResponse.json(goals);
   } catch (err: unknown) {
     console.error("[/api/goals GET error]:", err);
@@ -28,14 +28,14 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
 
     if (body.action === "clear_all") {
-      const store = getUserStore(user.id);
+      const store = await getUserStore(user.id);
       store.goals = [];
-      saveUserStore(user.id);
+      await saveUserStore(user.id);
       return NextResponse.json({ success: true, count: 0 });
     }
 
     if (body.action === "distribute_salary") {
-      const store = getUserStore(user.id);
+      const store = await getUserStore(user.id);
       const allocations: { goalId: string; amount: number }[] = body.allocations || [];
       allocations.forEach(({ goalId, amount }) => {
         const goal = store.goals.find((g) => g.id === goalId);
@@ -47,11 +47,11 @@ export async function POST(req: NextRequest) {
           }
         }
       });
-      saveUserStore(user.id);
+      await saveUserStore(user.id);
       return NextResponse.json({ success: true, goals: store.goals });
     }
 
-    const newGoal = addUserGoal(user.id, body);
+    const newGoal = await addUserGoal(user.id, body);
     return NextResponse.json(newGoal, { status: 201 });
   } catch (err: unknown) {
     console.error("[/api/goals POST error]:", err);
@@ -69,7 +69,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     if (action === "add_funds") {
-      const store = getUserStore(user.id);
+      const store = await getUserStore(user.id);
       const goal = store.goals.find((g) => g.id === id);
       if (goal) {
         const newAmount = (Number(goal.current_amount) || 0) + (Number(amount) || 0);
@@ -78,13 +78,13 @@ export async function PATCH(req: NextRequest) {
           goal.is_completed = true;
           goal.completed_at = new Date().toISOString();
         }
-        saveUserStore(user.id);
+        await saveUserStore(user.id);
         return NextResponse.json({ success: true, goal });
       }
       return NextResponse.json({ error: "Meta no encontrada" }, { status: 404 });
     }
 
-    const updated = updateUserGoal(user.id, id, updates);
+    const updated = await updateUserGoal(user.id, id, updates);
     if (!updated) {
       return NextResponse.json({ error: "Meta no encontrada" }, { status: 404 });
     }
@@ -102,9 +102,9 @@ export async function DELETE(req: NextRequest) {
     const { id, action } = body;
 
     if (action === "clear_all") {
-      const store = getUserStore(user.id);
+      const store = await getUserStore(user.id);
       store.goals = [];
-      saveUserStore(user.id);
+      await saveUserStore(user.id);
       return NextResponse.json({ success: true });
     }
 
@@ -112,7 +112,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "ID requerido" }, { status: 400 });
     }
 
-    const deleted = deleteUserGoal(user.id, id);
+    const deleted = await deleteUserGoal(user.id, id);
     return NextResponse.json({ success: deleted });
   } catch (err: unknown) {
     console.error("[/api/goals DELETE error]:", err);

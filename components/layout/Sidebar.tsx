@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
   History,
+  PieChart,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { createClient } from "@/lib/supabase/client";
@@ -27,6 +28,7 @@ const navItems = [
   { href: "/history", icon: History, label: "Historial" },
   { href: "/installments", icon: CreditCard, label: "Cuotas" },
   { href: "/goals", icon: Target, label: "Metas" },
+  { href: "/budgets", icon: PieChart, label: "Presupuestos" },
   { href: "/ai-assistant", icon: Bot, label: "IA Coach" },
 ];
 

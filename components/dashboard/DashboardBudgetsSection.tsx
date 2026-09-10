@@ -1,4 +1,5 @@
 "use client";
+import { toast } from "sonner";
 
 import { useState } from "react";
 import { motion } from "framer-motion";
@@ -45,7 +46,7 @@ export function DashboardBudgetsSection({
       setMonthlyLimit("");
       if (onRefresh) onRefresh();
     } catch {
-      alert("Error al guardar presupuesto");
+      toast.error("Error al guardar presupuesto");
     } finally {
       setSaving(false);
     }

@@ -4,6 +4,8 @@ import { Bot, User, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import type { ChatMessage as ChatMessageType } from "@/lib/types";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface ChatMessageProps {
   message: ChatMessageType;
@@ -60,7 +62,39 @@ export function ChatMessage({ message }: ChatMessageProps) {
                   className="rounded-xl max-h-48 max-w-full object-cover mb-2 shadow-md"
                 />
               )}
-              <p className="whitespace-pre-wrap">{message.content}</p>
+              {isUser ? (
+                <p className="whitespace-pre-wrap">{message.content}</p>
+              ) : (
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    p: ({ node, ...props }) => <p className="mb-2 last:mb-0 leading-relaxed" {...props} />,
+                    ul: ({ node, ...props }) => <ul className="list-disc pl-5 mb-2 space-y-1 last:mb-0" {...props} />,
+                    ol: ({ node, ...props }) => <ol className="list-decimal pl-5 mb-2 space-y-1 last:mb-0" {...props} />,
+                    li: ({ node, ...props }) => <li className="" {...props} />,
+                    strong: ({ node, ...props }) => <strong className="font-bold text-emerald-400" {...props} />,
+                    a: ({ node, ...props }) => <a className="text-emerald-400 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
+                    h1: ({ node, ...props }) => <h1 className="text-lg font-black mb-2 mt-3 text-emerald-400" {...props} />,
+                    h2: ({ node, ...props }) => <h2 className="text-base font-bold mb-2 mt-2 text-emerald-400" {...props} />,
+                    h3: ({ node, ...props }) => <h3 className="text-sm font-bold mb-1 mt-2 text-emerald-400" {...props} />,
+                    table: ({ node, ...props }) => <div className="overflow-x-auto w-full mb-3 mt-1"><table className="w-full text-left border-collapse text-xs sm:text-sm" {...props} /></div>,
+                    th: ({ node, ...props }) => <th className="border-b border-emerald-500/30 py-1.5 px-2 font-bold text-emerald-400" {...props} />,
+                    td: ({ node, ...props }) => <td className="border-b border-white/10 py-1.5 px-2" {...props} />,
+                    code: ({ node, className, children, ...props }) => {
+                      const match = /language-(\w+)/.exec(className || '');
+                      return !match ? (
+                        <code className="bg-black/30 rounded px-1.5 py-0.5 text-emerald-300 text-xs font-mono" {...props}>{children}</code>
+                      ) : (
+                        <div className="bg-black/50 rounded-lg p-3 overflow-x-auto mb-2 text-xs font-mono text-emerald-200">
+                          <code {...props}>{children}</code>
+                        </div>
+                      )
+                    }
+                  }}
+                >
+                  {message.content}
+                </ReactMarkdown>
+              )}
             </>
           )}
         </div>

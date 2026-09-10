@@ -1,4 +1,5 @@
 "use client";
+import { toast } from "sonner";
 
 import { useState } from "react";
 import { FileSpreadsheet, Loader2, CheckCircle2 } from "lucide-react";
@@ -29,7 +30,7 @@ export function ExportExcelButton({
       setTimeout(() => setSuccess(false), 3500);
     } catch (err) {
       console.error(err);
-      alert("Error al generar la planilla Excel. Intente nuevamente.");
+      toast.error("Error al generar la planilla Excel. Intente nuevamente.");
     } finally {
       setLoading(false);
     }

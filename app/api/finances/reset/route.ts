@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     const configuredSalary = typeof body.configuredSalary === "number" ? Math.max(0, body.configuredSalary) : 0;
     const primaryAccountName = body.primaryAccountName?.trim() || "Santander Río";
 
-    const summary = resetUserFinances(user.id, {
+    const summary = await resetUserFinances(user.id, {
       initialBalanceARS: initialBalance,
       configuredSalary,
       primaryAccountName,

@@ -110,7 +110,7 @@ export async function POST(request: Request) {
     // Asegurar que el cloud store esté inicializado
     try {
       const { getUserStore } = await import("@/lib/db/cloud-store");
-      getUserStore(authenticatedUser.id, {
+      await getUserStore(authenticatedUser.id, {
         email: authenticatedUser.email,
         name: authenticatedUser.name,
         currency: authenticatedUser.currency,

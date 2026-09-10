@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
     const from = searchParams.get("from") || undefined;
     const to = searchParams.get("to") || undefined;
 
-    const { data, count } = getUserTransactions(user.id, {
+    const { data, count } = await getUserTransactions(user.id, {
       type,
       accountId,
       categoryId,
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: validationError }, { status: 400 });
     }
 
-    const newTx = addUserTransaction(user.id, body as Partial<Transaction>);
+    const newTx = await addUserTransaction(user.id, body as Partial<Transaction>);
     return NextResponse.json(newTx, { status: 201 });
   } catch (err: unknown) {
     console.error("[/api/transactions POST error]:", err);
@@ -95,7 +95,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: validationError }, { status: 400 });
     }
 
-    const updated = updateUserTransaction(user.id, id, updates);
+    const updated = await updateUserTransaction(user.id, id, updates);
     if (!updated) {
       return NextResponse.json({ error: "Transacción no encontrada" }, { status: 404 });
     }
@@ -115,14 +115,14 @@ export async function DELETE(req: NextRequest) {
     const { id, action } = body;
 
     if (action === "clear_all") {
-      const store = getUserStore(user.id);
+      const store = await getUserStore(user.id);
       store.transactions = [];
-      saveUserStore(user.id);
+      await saveUserStore(user.id);
       return NextResponse.json({ success: true, count: 0 });
     }
 
     if (id) {
-      const deleted = deleteUserTransaction(user.id, id);
+      const deleted = await deleteUserTransaction(user.id, id);
       return NextResponse.json({ success: deleted });
     }
 

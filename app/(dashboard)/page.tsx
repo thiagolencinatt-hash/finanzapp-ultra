@@ -15,6 +15,8 @@ import { isDemoUser } from "@/lib/freemium";
 import type { FinancialSummary, Category } from "@/lib/types";
 import { Loader2, SlidersHorizontal, ChevronDown, ChevronUp, Lock } from "lucide-react";
 
+import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
+
 export default function DashboardPage() {
   const router = useRouter();
   const [summary, setSummary] = useState<FinancialSummary | null>(null);
@@ -84,9 +86,7 @@ export default function DashboardPage() {
       />
 
       {loading ? (
-        <div className="flex-1 flex items-center justify-center p-12">
-          <Loader2 className="w-8 h-8 animate-spin" style={{ color: "hsl(var(--primary))" }} />
-        </div>
+        <DashboardSkeleton />
       ) : (
         <div className="flex-1 p-3 sm:p-5 lg:p-6 space-y-3.5 sm:space-y-5 max-w-7xl mx-auto w-full">
 

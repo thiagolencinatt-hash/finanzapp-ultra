@@ -43,6 +43,8 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+import { Toaster } from "@/components/ui/Toaster";
+
 export default function RootLayout({
   children,
 }: {
@@ -58,6 +60,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
+          <Toaster position="top-center" />
         </ThemeProvider>
       </body>
     </html>

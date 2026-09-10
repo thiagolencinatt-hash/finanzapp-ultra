@@ -1,4 +1,5 @@
 "use client";
+import { toast } from "sonner";
 
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
@@ -61,7 +62,7 @@ export function ResetDataModal({ isOpen, onClose, onSuccess }: ResetDataModalPro
       }, 1500);
     } catch (err) {
       console.error(err);
-      alert("Ocurrió un error al reiniciar los datos. Intente nuevamente.");
+      toast.error("Ocurrió un error al reiniciar los datos. Intente nuevamente.");
     } finally {
       setLoading(false);
     }

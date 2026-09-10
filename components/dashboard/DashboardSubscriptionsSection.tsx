@@ -1,4 +1,5 @@
 "use client";
+import { toast } from "sonner";
 
 import { useState } from "react";
 import { Repeat, Plus, Calendar, Check, X, Trash2, Power, AlertCircle } from "lucide-react";
@@ -67,7 +68,7 @@ export function DashboardSubscriptionsSection({
       setNotes("");
       if (onRefresh) onRefresh();
     } catch {
-      alert("Error al agregar suscripción");
+      toast.error("Error al agregar suscripción");
     } finally {
       setSaving(false);
     }

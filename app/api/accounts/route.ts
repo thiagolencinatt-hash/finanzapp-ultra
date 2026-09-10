@@ -13,7 +13,7 @@ import {
 export async function GET(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req);
-    const accounts = getUserAccounts(user.id);
+    const accounts = await getUserAccounts(user.id);
     return NextResponse.json(accounts);
   } catch (err: unknown) {
     console.error("[/api/accounts GET error]:", err);
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req);
     const body = await req.json();
-    const newAcc = addUserAccount(user.id, body);
+    const newAcc = await addUserAccount(user.id, body);
     return NextResponse.json(newAcc, { status: 201 });
   } catch (err: unknown) {
     console.error("[/api/accounts POST error]:", err);
@@ -43,11 +43,11 @@ export async function PATCH(req: NextRequest) {
 
     // Acción especial: resetear todos los saldos a 0
     if (action === "reset_all_balances") {
-      const store = getUserStore(user.id);
+      const store = await getUserStore(user.id);
       store.accounts.forEach((a) => {
         a.balance = 0;
       });
-      saveUserStore(user.id);
+      await saveUserStore(user.id);
       return NextResponse.json({ success: true, accounts: store.accounts });
     }
 
@@ -59,7 +59,7 @@ export async function PATCH(req: NextRequest) {
       updates.balance = parseFloat(updates.balance) || 0;
     }
 
-    const updated = updateUserAccount(user.id, id, updates);
+    const updated = await updateUserAccount(user.id, id, updates);
     if (!updated) {
       return NextResponse.json({ error: "Cuenta no encontrada" }, { status: 404 });
     }
@@ -80,7 +80,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "ID requerido" }, { status: 400 });
     }
 
-    const deleted = deleteUserAccount(user.id, id);
+    const deleted = await deleteUserAccount(user.id, id);
     return NextResponse.json({ success: deleted });
   } catch (err: unknown) {
     console.error("[/api/accounts DELETE error]:", err);

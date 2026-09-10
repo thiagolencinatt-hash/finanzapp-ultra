@@ -102,7 +102,7 @@ export async function POST(request: Request) {
     // Inicializar almacén persistente en la nube
     try {
       const { getUserStore } = await import("@/lib/db/cloud-store");
-      getUserStore(userId, {
+      await getUserStore(userId, {
         email: verifiedUser.email,
         name: verifiedUser.name,
         currency: verifiedUser.currency,

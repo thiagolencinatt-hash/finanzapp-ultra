@@ -65,7 +65,7 @@ export async function POST(request: Request) {
     // 3. Inicializar almacén persistente en la nube para este usuario
     try {
       const { getUserStore } = await import("@/lib/db/cloud-store");
-      getUserStore(regResult.user.id, {
+      await getUserStore(regResult.user.id, {
         email: regResult.user.email,
         name: regResult.user.name,
         currency: regResult.user.currency,

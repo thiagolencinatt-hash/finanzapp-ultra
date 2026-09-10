@@ -5,7 +5,7 @@ import { getUserStore, saveUserStore, getUserSummary } from "@/lib/db/cloud-stor
 export async function POST(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req);
-    const store = getUserStore(user.id);
+    const store = await getUserStore(user.id);
     const body = await req.json();
 
     const {
@@ -35,8 +35,8 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      saveUserStore(user.id);
-      return NextResponse.json({ success: true, summary: getUserSummary(user.id) });
+      await saveUserStore(user.id);
+      return NextResponse.json({ success: true, summary: await getUserSummary(user.id) });
     }
 
     if (action === "set_cash") {
@@ -68,14 +68,14 @@ export async function POST(req: NextRequest) {
         store.transactions = store.transactions.filter((t) => t.type !== "expense");
       }
 
-      saveUserStore(user.id);
-      return NextResponse.json({ success: true, summary: getUserSummary(user.id) });
+      await saveUserStore(user.id);
+      return NextResponse.json({ success: true, summary: await getUserSummary(user.id) });
     }
 
     if (action === "clear_expenses") {
       store.transactions = store.transactions.filter((t) => t.type !== "expense");
-      saveUserStore(user.id);
-      return NextResponse.json({ success: true, summary: getUserSummary(user.id) });
+      await saveUserStore(user.id);
+      return NextResponse.json({ success: true, summary: await getUserSummary(user.id) });
     }
 
     if (action === "reset_clean") {
@@ -106,8 +106,8 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      saveUserStore(user.id);
-      return NextResponse.json({ success: true, account: store.accounts[0], summary: getUserSummary(user.id) });
+      await saveUserStore(user.id);
+      return NextResponse.json({ success: true, account: store.accounts[0], summary: await getUserSummary(user.id) });
     }
 
     if (action === "set_direct") {
@@ -138,8 +138,8 @@ export async function POST(req: NextRequest) {
         store.transactions = store.transactions.filter((t) => t.type !== "expense");
       }
 
-      saveUserStore(user.id);
-      return NextResponse.json({ success: true, summary: getUserSummary(user.id) });
+      await saveUserStore(user.id);
+      return NextResponse.json({ success: true, summary: await getUserSummary(user.id) });
     }
 
     return NextResponse.json({ error: "Acción no reconocida" }, { status: 400 });

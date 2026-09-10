@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const active = searchParams.get("active");
 
-    let list = getUserInstallments(user.id);
+    let list = await getUserInstallments(user.id);
     if (active !== null) {
       list = list.filter((i) => i.is_active === (active === "true"));
     }
@@ -33,13 +33,13 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
 
     if (body.action === "clear_all") {
-      const store = getUserStore(user.id);
+      const store = await getUserStore(user.id);
       store.installments = [];
-      saveUserStore(user.id);
+      await saveUserStore(user.id);
       return NextResponse.json({ success: true, count: 0 });
     }
 
-    const newInst = addUserInstallment(user.id, body);
+    const newInst = await addUserInstallment(user.id, body);
     return NextResponse.json(newInst, { status: 201 });
   } catch (err: unknown) {
     console.error("[/api/installments POST error]:", err);
@@ -57,19 +57,19 @@ export async function PATCH(req: NextRequest) {
     }
 
     if (action === "pay") {
-      const store = getUserStore(user.id);
+      const store = await getUserStore(user.id);
       const inst = store.installments.find((i) => i.id === id);
       if (inst) {
         const newPaid = (inst.paid_installments || 0) + 1;
         inst.paid_installments = newPaid;
         inst.is_active = newPaid < inst.total_installments;
-        saveUserStore(user.id);
+        await saveUserStore(user.id);
         return NextResponse.json({ success: true, installment: inst });
       }
       return NextResponse.json({ error: "Cuota no encontrada" }, { status: 404 });
     }
 
-    const updated = updateUserInstallment(user.id, id, updates);
+    const updated = await updateUserInstallment(user.id, id, updates);
     if (!updated) {
       return NextResponse.json({ error: "Cuota no encontrada" }, { status: 404 });
     }
@@ -87,9 +87,9 @@ export async function DELETE(req: NextRequest) {
     const { id, action } = body;
 
     if (action === "clear_all") {
-      const store = getUserStore(user.id);
+      const store = await getUserStore(user.id);
       store.installments = [];
-      saveUserStore(user.id);
+      await saveUserStore(user.id);
       return NextResponse.json({ success: true });
     }
 
@@ -97,7 +97,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "ID requerido" }, { status: 400 });
     }
 
-    const deleted = deleteUserInstallment(user.id, id);
+    const deleted = await deleteUserInstallment(user.id, id);
     return NextResponse.json({ success: deleted });
   } catch (err: unknown) {
     console.error("[/api/installments DELETE error]:", err);
