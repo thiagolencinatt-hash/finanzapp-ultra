@@ -28,7 +28,7 @@ export function DraggableWindow({
   windowId,
   defaultPosition = { x: 0, y: 0 },
   footer,
-  className = "w-full sm:w-[540px] max-h-[88vh]",
+  className = "w-full sm:w-[540px] max-h-[90dvh]",
 }: DraggableWindowProps) {
   const [isMinimized, setIsMinimized] = useState(false);
   const [mounted, setMounted] = useState(false);
