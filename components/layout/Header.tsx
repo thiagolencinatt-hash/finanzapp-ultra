@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/client";
 import { ExportExcelButton } from "@/components/dashboard/ExportExcelButton";
 import { ResetDataModal } from "@/components/dashboard/ResetDataModal";
 import { exportFinancialsToExcel } from "@/lib/export/excel-generator";
+import { ViewModeSelector } from "@/components/ui/ViewModeSelector";
 
 interface HeaderProps {
   title: string;
@@ -83,26 +84,29 @@ export function Header({ title, subtitle, actionButton }: HeaderProps) {
   return (
     <>
       <header
-        className="sticky top-0 z-30 flex items-center justify-between px-4 lg:px-6 h-16"
+        className="sticky top-0 z-30 flex items-center justify-between px-3 sm:px-4 lg:px-6 h-14 sm:h-16"
         style={{
-          background: "hsl(var(--background) / 0.85)",
+          background: "hsl(var(--background) / 0.88)",
           backdropFilter: "blur(16px)",
           WebkitBackdropFilter: "blur(16px)",
           borderBottom: "1px solid hsl(var(--border) / 0.5)",
         }}
       >
-        <div>
-          <h1 className="text-base sm:text-lg font-bold" style={{ color: "hsl(var(--foreground))" }}>
+        <div className="min-w-0 pr-2">
+          <h1 className="text-sm sm:text-base lg:text-lg font-black truncate max-w-[150px] xs:max-w-[200px] sm:max-w-none text-foreground">
             {displayTitle}
           </h1>
           {subtitle && (
-            <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate max-w-[160px] sm:max-w-none">
               {subtitle}
             </p>
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* Selector de modo Móvil / Computadora */}
+          <ViewModeSelector compact />
+
           {actionButton}
 
           {/* Botón rápido para nuevo usuario / reset a cero */}
@@ -124,7 +128,7 @@ export function Header({ title, subtitle, actionButton }: HeaderProps) {
 
           {/* Notificaciones */}
           <button
-            className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors hover:bg-muted cursor-pointer"
+            className="hidden xs:flex w-8 h-8 sm:w-9 sm:h-9 rounded-xl items-center justify-center transition-colors hover:bg-muted cursor-pointer"
             style={{ color: "hsl(var(--muted-foreground))" }}
             title="Notificaciones y Recordatorios"
             onClick={() => toast.success("¡Todo al día! No tienes alertas financieras críticas en este momento.")}
@@ -136,28 +140,21 @@ export function Header({ title, subtitle, actionButton }: HeaderProps) {
           {mounted ? (
             <button
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors hover:bg-muted cursor-pointer"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center transition-colors hover:bg-muted cursor-pointer"
               style={{ color: "hsl(var(--muted-foreground))" }}
               title="Cambiar tema (Claro / Oscuro)"
             >
-              {theme === "dark" ? <Sun className="w-4 h-4 text-primary" /> : <Moon className="w-4 h-4" />}
+              {theme === "dark" ? <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" /> : <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
             </button>
           ) : (
-            <div className="w-9 h-9" />
+            <div className="w-8 h-8 sm:w-9 sm:h-9" />
           )}
-
-          {/* Indicador de Nube Activa y Auto-guardado */}
-          <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-sm" title="Todo lo que hagas se guarda automáticamente y de forma aislada en tu cuenta">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <Cloud className="w-3.5 h-3.5" />
-            <span>Nube Activa</span>
-          </div>
 
           {/* User Profile Dropdown */}
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center gap-2 pl-2 pr-2.5 py-1.5 rounded-xl border transition-all hover:bg-muted/70 cursor-pointer"
+              className="flex items-center gap-1.5 sm:gap-2 p-1.5 sm:pl-2 sm:pr-2.5 sm:py-1.5 rounded-xl border transition-all hover:bg-muted/70 cursor-pointer"
               style={{
                 background: "hsl(var(--card))",
                 borderColor: "hsl(var(--border))",
@@ -166,10 +163,10 @@ export function Header({ title, subtitle, actionButton }: HeaderProps) {
               <div className="w-6 h-6 rounded-lg gradient-primary flex items-center justify-center text-black font-extrabold text-xs shadow-sm">
                 {userName.charAt(0).toUpperCase()}
               </div>
-              <span className="hidden sm:inline text-xs font-bold max-w-[90px] truncate text-foreground">
+              <span className="hidden md:inline text-xs font-bold max-w-[80px] truncate text-foreground">
                 {userName}
               </span>
-              <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+              <ChevronDown className="w-3 h-3 text-muted-foreground" />
             </button>
 
             {showUserMenu && (

@@ -24,6 +24,7 @@ import {
   Info,
 } from "lucide-react";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { ViewModeSelector } from "@/components/ui/ViewModeSelector";
 
 function LoginPageContent() {
   const router = useRouter();
@@ -446,7 +447,7 @@ function LoginPageContent() {
 
   return (
     <div
-      className="min-h-dvh flex flex-col items-center justify-center p-4 relative overflow-hidden select-none"
+      className="min-h-dvh flex flex-col items-center justify-center p-3 sm:p-4 relative overflow-x-hidden select-none"
       style={{
         backgroundColor: "#03060c",
         backgroundImage: `
@@ -457,33 +458,38 @@ function LoginPageContent() {
       }}
     >
       {/* Main Glassmorphic 3D Card Container */}
-      <div className="w-full max-w-md relative z-10 my-8 animate-slide-up">
+      <div className="w-full max-w-sm sm:max-w-md relative z-10 my-3 sm:my-8 animate-slide-up">
+        {/* Selector de modo Móvil / Computadora */}
+        <div className="mb-4">
+          <ViewModeSelector />
+        </div>
+
         {/* Brand Header */}
-        <div className="text-center mb-6">
+        <div className="text-center mb-4 sm:mb-6">
           <div
-            className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-3 shadow-[0_10px_30px_rgba(16,185,129,0.35),inset_0_1px_0_rgba(255,255,255,0.3)] border-t border-emerald-300/40 border-b-4 border-emerald-800"
+            className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 rounded-2xl mb-2 sm:mb-3 shadow-[0_10px_30px_rgba(16,185,129,0.35),inset_0_1px_0_rgba(255,255,255,0.3)] border-t border-emerald-300/40 border-b-4 border-emerald-800"
             style={{
               background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
             }}
           >
-            <TrendingUp className="w-9 h-9 text-black stroke-[2.5]" />
+            <TrendingUp className="w-6 h-6 sm:w-9 sm:h-9 text-black stroke-[2.5]" />
           </div>
-          <h1 className="text-3xl font-black tracking-tight text-gradient">
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-gradient">
             FinanzApp Ultra
           </h1>
-          <p className="mt-1 text-xs sm:text-sm font-medium text-zinc-400">
-            Control de gastos, cuotas y finanzas personales pro
+          <p className="mt-0.5 text-xs sm:text-sm font-medium text-zinc-400">
+            Control de gastos, cuotas y finanzas pro
           </p>
 
           {/* Badges */}
-          <div className="flex flex-wrap items-center justify-center gap-1.5 mt-3">
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]">
+          <div className="flex flex-wrap items-center justify-center gap-1.5 mt-2.5">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]">
               <Zap className="w-3 h-3" /> Dólar en Vivo
             </span>
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-zinc-800/80 text-zinc-300 border border-zinc-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-[11px] font-semibold bg-zinc-800/80 text-zinc-300 border border-zinc-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]">
               <BrainCircuit className="w-3 h-3 text-emerald-400" /> Asistente IA
             </span>
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-zinc-800/80 text-zinc-300 border border-zinc-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-[11px] font-semibold bg-zinc-800/80 text-zinc-300 border border-zinc-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]">
               <ShieldCheck className="w-3 h-3 text-emerald-400" /> Cifrado 100% Privado
             </span>
           </div>
@@ -491,9 +497,9 @@ function LoginPageContent() {
 
         {/* 3D Glassmorphic Auth Card */}
         <div
-          className="rounded-3xl p-6 sm:p-8 border backdrop-blur-3xl transition-all duration-300 relative shadow-[0_30px_90px_rgba(0,0,0,0.95)]"
+          className="rounded-2xl sm:rounded-3xl p-4 sm:p-7 border backdrop-blur-3xl transition-all duration-300 relative shadow-[0_30px_90px_rgba(0,0,0,0.95)]"
           style={{
-            backgroundColor: "rgba(10, 15, 26, 0.78)",
+            backgroundColor: "rgba(10, 15, 26, 0.88)",
             borderColor: "rgba(255, 255, 255, 0.12)",
           }}
         >

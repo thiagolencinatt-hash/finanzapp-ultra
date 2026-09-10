@@ -44,6 +44,7 @@ export const viewport: Viewport = {
 };
 
 import { Toaster } from "@/components/ui/Toaster";
+import { ViewModeProvider } from "@/components/providers/ViewModeProvider";
 
 export default function RootLayout({
   children,
@@ -59,8 +60,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
-          <Toaster position="top-center" />
+          <ViewModeProvider>
+            {children}
+            <Toaster position="top-center" />
+          </ViewModeProvider>
         </ThemeProvider>
       </body>
     </html>

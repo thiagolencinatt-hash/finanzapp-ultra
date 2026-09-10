@@ -29,7 +29,7 @@ export function BalanceCard({
   return (
     <>
       <div
-        className="relative rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-7 overflow-hidden glass-strong shadow-2xl"
+        className="relative rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 lg:p-7 overflow-hidden glass-strong shadow-2xl"
         style={{
           border: "1px solid hsl(var(--border) / 0.6)",
         }}
@@ -45,19 +45,19 @@ export function BalanceCard({
         />
 
         <div className="relative z-10">
-          <div className="flex items-center justify-between gap-3 mb-2">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center bg-primary/20 text-primary">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center bg-primary/20 text-primary shrink-0">
                 <DollarSign className="w-4 h-4 font-bold" />
               </div>
-              <p className="text-xs sm:text-sm font-bold uppercase tracking-wider text-muted-foreground">
+              <p className="text-[11px] sm:text-sm font-bold uppercase tracking-wider text-muted-foreground truncate">
                 Balance General
               </p>
             </div>
 
             <button
               onClick={() => setShowResetModal(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-bold text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition-all cursor-pointer active:scale-95"
+              className="flex items-center gap-1 px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl text-[10px] sm:text-xs font-bold text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition-all cursor-pointer active:scale-95 shrink-0"
               title="Dejar todas las finanzas en $0 para arrancar como nuevo usuario"
             >
               <RotateCcw className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
@@ -70,17 +70,17 @@ export function BalanceCard({
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.4 }}
           >
-            <p className="text-3xl sm:text-4xl lg:text-5xl font-black text-foreground mb-1 tracking-tight">
+            <p className="text-2xl xs:text-3xl sm:text-4xl lg:text-5xl font-black text-foreground mb-1 tracking-tight truncate">
               {formatCurrency(totalBalance)}
             </p>
           </motion.div>
 
-          <p className="text-[11px] sm:text-xs text-muted-foreground mb-4">
+          <p className="text-[10px] sm:text-xs text-muted-foreground mb-3 sm:mb-4">
             Saldo total acumulado en todas tus cuentas
           </p>
 
           {/* Botones de acción principales grandes para pulgar móvil */}
-          <div className="grid grid-cols-2 gap-2.5 mb-4">
+          <div className="grid grid-cols-2 gap-2 sm:gap-2.5 mb-3.5 sm:mb-4">
             <button
               onClick={() => setFormType("income")}
               className="flex items-center justify-center gap-2 py-2.5 sm:py-3 px-3 rounded-xl text-xs sm:text-sm font-black text-emerald-400 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 shadow-lg shadow-emerald-500/10 transition-all cursor-pointer active:scale-[0.98]"

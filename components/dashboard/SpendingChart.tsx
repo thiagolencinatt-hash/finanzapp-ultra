@@ -67,20 +67,20 @@ export function SpendingChart({ categories }: SpendingChartProps) {
 
   return (
     <div
-      className="rounded-3xl p-6 glass shadow-lg"
+      className="rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 glass shadow-lg"
       style={{ border: "1px solid hsl(var(--border) / 0.5)" }}
     >
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-base font-bold" style={{ color: "hsl(var(--foreground))" }}>
+      <div className="flex items-center justify-between mb-3 sm:mb-4">
+        <h2 className="text-sm sm:text-base font-bold" style={{ color: "hsl(var(--foreground))" }}>
           Gastos por categoría
         </h2>
-        <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-white/5 text-muted-foreground">
+        <span className="text-[10px] sm:text-xs font-semibold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg bg-white/5 text-muted-foreground">
           últimos 30 días
         </span>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-6 items-center">
-        <div className="w-full sm:w-48 h-48 flex-shrink-0">
+      <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-center">
+        <div className="w-full sm:w-48 h-44 sm:h-48 flex-shrink-0">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie

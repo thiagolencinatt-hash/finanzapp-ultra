@@ -106,8 +106,8 @@ export function RecentTransactions() {
                       {t.account?.name} • {format(new Date(t.date + "T12:00:00"), "d MMM", { locale: es })}
                     </p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold" style={{ color }}>
+                  <div className="text-right shrink-0 pl-2">
+                    <p className="text-xs sm:text-sm font-extrabold" style={{ color }}>
                       {isIncome ? "+" : isTransfer ? "" : "-"}{formatCurrency(t.amount, t.currency, true)}
                     </p>
                     {t.currency !== "ARS" && (

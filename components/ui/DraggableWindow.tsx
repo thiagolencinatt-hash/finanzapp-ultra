@@ -5,6 +5,8 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Minus, Maximize2 } from "lucide-react";
 
+import { useViewMode } from "@/components/providers/ViewModeProvider";
+
 // Sistema global de z-index para apilar ventanas siempre en primer plano absoluto
 let zCounter = 99990;
 const getNextZ = () => ++zCounter;
@@ -33,17 +35,20 @@ export function DraggableWindow({
   const [isMinimized, setIsMinimized] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [zIndex, setZIndex] = useState(99990);
-  const [isMobile, setIsMobile] = useState(false);
+  const [isSmallScreen, setIsSmallScreen] = useState(false);
+  const { isMobile } = useViewMode();
 
   useEffect(() => {
     setMounted(true);
     const checkMobile = () => {
-      setIsMobile(typeof window !== "undefined" && window.innerWidth < 640);
+      setIsSmallScreen(typeof window !== "undefined" && window.innerWidth < 640);
     };
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
+
+  const isTouchDevice = isSmallScreen || isMobile;
 
   // Bloquear scroll de fondo mientras la ventana esté abierta
   useEffect(() => {
@@ -72,7 +77,7 @@ export function DraggableWindow({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 flex items-end sm:items-center justify-center sm:p-6"
+          className="fixed inset-0 flex items-end sm:items-center justify-center p-0 sm:p-6"
           style={{ zIndex }}
           onPointerDown={bringToFront}
         >
@@ -81,24 +86,30 @@ export function DraggableWindow({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/65 backdrop-blur-md cursor-pointer"
+            className="fixed inset-0 bg-black/75 backdrop-blur-md cursor-pointer"
             onClick={onClose}
           />
 
           <motion.div
-            drag={!isMobile}
+            drag={!isTouchDevice}
             dragMomentum={false}
             dragElastic={0.06}
             dragConstraints={{ left: -500, right: 500, top: -350, bottom: 350 }}
-            initial={{ opacity: 0, scale: 0.95, y: 15 }}
+            initial={{ opacity: 0, scale: isTouchDevice ? 1 : 0.95, y: isTouchDevice ? 100 : 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 15 }}
-            transition={{ type: "spring", bounce: 0.2, duration: 0.35 }}
-            className={`relative flex flex-col glass-strong shadow-2xl border-white/10 overflow-hidden transition-all duration-200 z-10 w-full h-[100dvh] sm:h-auto rounded-none sm:rounded-2xl sm:border sm:w-[540px] sm:max-w-none ${
+            exit={{ opacity: 0, scale: isTouchDevice ? 1 : 0.95, y: isTouchDevice ? 100 : 15 }}
+            transition={{ type: "spring", bounce: 0.15, duration: 0.35 }}
+            className={`relative flex flex-col glass-strong shadow-2xl border-white/10 overflow-hidden transition-all duration-200 z-10 w-full max-h-[92dvh] sm:max-h-[90dvh] rounded-t-3xl sm:rounded-2xl border-t border-x sm:border sm:w-[540px] sm:max-w-none ${
               isMinimized ? "sm:w-[300px] sm:h-[52px]" : className
             }`}
-            style={{ x: isMobile ? 0 : defaultPosition.x, y: isMobile ? 0 : defaultPosition.y }}
+            style={{
+              x: isTouchDevice ? 0 : defaultPosition.x,
+              y: isTouchDevice ? 0 : defaultPosition.y,
+            }}
           >
+            {/* Pill indicador para móvil */}
+            <div className="w-12 h-1.5 rounded-full bg-white/25 mx-auto mt-2 sm:hidden shrink-0" />
+
             {/* Header / Barra de título arrastrable */}
             <div
               className="flex items-center justify-between px-4 py-3 border-b cursor-grab active:cursor-grabbing shrink-0 select-none bg-black/20"

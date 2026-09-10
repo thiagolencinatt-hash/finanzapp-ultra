@@ -32,7 +32,7 @@ const navItems = [
   { href: "/ai-assistant", icon: Bot, label: "IA Coach" },
 ];
 
-export function Sidebar() {
+export function Sidebar({ forceVisible = false }: { forceVisible?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
@@ -59,7 +59,10 @@ export function Sidebar() {
     <motion.aside
       animate={{ width: collapsed ? 72 : 240 }}
       transition={{ duration: 0.2, ease: "easeInOut" }}
-      className="hidden lg:flex flex-col h-screen sticky top-0 overflow-hidden z-40"
+      className={cn(
+        forceVisible ? "flex" : "hidden lg:flex",
+        "flex-col h-screen sticky top-0 overflow-hidden z-40"
+      )}
       style={{
         background: "hsl(var(--card))",
         borderRight: "1px solid hsl(var(--border))",

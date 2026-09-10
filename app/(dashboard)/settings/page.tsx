@@ -26,6 +26,7 @@ import {
 import type { Category } from "@/lib/types";
 import { ExportExcelButton } from "@/components/dashboard/ExportExcelButton";
 import { ResetDataModal } from "@/components/dashboard/ResetDataModal";
+import { ViewModeSelector } from "@/components/ui/ViewModeSelector";
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
@@ -236,7 +237,7 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-3 mb-5">
             {[
               { id: "dark", label: "Oscuro (Recomendado)", icon: Moon },
               { id: "light", label: "Claro", icon: Sun },
@@ -256,6 +257,13 @@ export default function SettingsPage() {
                 <span className="text-xs font-semibold">{t.label}</span>
               </button>
             ))}
+          </div>
+
+          <div className="border-t border-white/5 pt-4">
+            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">
+              Modo de Vista (Móvil vs Escritorio)
+            </h3>
+            <ViewModeSelector />
           </div>
         </section>
 

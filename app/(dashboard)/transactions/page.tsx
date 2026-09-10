@@ -213,15 +213,15 @@ export default function TransactionsPage() {
                       </div>
                     </div>
 
-                    <div className="text-right flex items-center gap-3">
+                    <div className="text-right flex items-center gap-2 sm:gap-3 shrink-0">
                       <div>
-                        <p className="text-base font-extrabold" style={{ color }}>
+                        <p className="text-xs sm:text-base font-extrabold" style={{ color }}>
                           {isIncome ? "+" : isTransfer ? "" : "-"}{formatCurrency(t.amount, t.currency, true)}
                         </p>
                       </div>
 
-                      {/* Action buttons on hover */}
-                      <div className="flex items-center gap-1">
+                      {/* Action buttons (visibles en desktop hover) */}
+                      <div className="hidden sm:flex items-center gap-1">
                         <button
                           onClick={(e) => { e.stopPropagation(); handleEdit(t); }}
                           className="p-1.5 rounded-lg transition-all opacity-80 hover:opacity-100 hover:bg-primary/20 text-primary"
