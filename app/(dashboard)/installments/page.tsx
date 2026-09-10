@@ -9,6 +9,7 @@ import { InstallmentCalculator } from "@/components/installments/InstallmentCalc
 import { Plus, CreditCard, TrendingDown, Calculator, Calendar, Trash2 } from "lucide-react";
 import type { Installment } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils/currency";
+import { FreemiumGate } from "@/components/ui/FreemiumGate";
 
 export default function InstallmentsPage() {
   const [installments, setInstallments] = useState<Installment[]>([]);
@@ -56,6 +57,7 @@ export default function InstallmentsPage() {
   }
 
   return (
+    <FreemiumGate action="manage_installments">
     <div className="flex flex-col">
       <Header
         title="Cuotas y Deudas"
@@ -195,5 +197,6 @@ export default function InstallmentsPage() {
         />
       )}
     </div>
+    </FreemiumGate>
   );
 }

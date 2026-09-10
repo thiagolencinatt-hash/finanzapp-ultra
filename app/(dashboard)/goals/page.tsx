@@ -7,6 +7,7 @@ import { GoalForm } from "@/components/goals/GoalForm";
 import { SalaryAllocationModal } from "@/components/goals/SalaryAllocationModal";
 import { Plus, Target, ShoppingBag, Trash2, SlidersHorizontal, Briefcase } from "lucide-react";
 import type { SavingsGoal } from "@/lib/types";
+import { FreemiumGate } from "@/components/ui/FreemiumGate";
 
 export default function GoalsPage() {
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
@@ -87,6 +88,7 @@ export default function GoalsPage() {
   const totalMonthlySavings = goals.reduce((s, g) => s + (g.monthly_contribution || 0), 0);
 
   return (
+    <FreemiumGate action="manage_goals">
     <div className="flex flex-col">
       <Header
         title="Metas y Ahorros"
@@ -252,5 +254,6 @@ export default function GoalsPage() {
         />
       )}
     </div>
+    </FreemiumGate>
   );
 }

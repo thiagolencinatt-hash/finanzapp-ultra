@@ -127,8 +127,23 @@ export function GoalForm({ defaultType, onClose, onSuccess, goal, isOpen = true 
       title={isEditing ? `Editar (${form.name})` : form.type === "goal" ? "Nueva Meta de Ahorro" : "Agregar a Wishlist"}
       windowId="goal-form-modal"
       defaultPosition={{ x: 0, y: -40 }}
+      footer={
+        <div className="flex w-full gap-3">
+          <button type="button" onClick={onClose} className="flex-1 py-3 rounded-xl text-xs font-bold btn-3d-secondary">
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            form="goal-form"
+            disabled={loading}
+            className="flex-1 py-3 rounded-xl text-xs font-bold text-black gradient-primary btn-3d flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin text-black" /> : isEditing ? "Guardar cambios" : "Crear meta"}
+          </button>
+        </div>
+      }
     >
-      <form onSubmit={handleSubmit} className="space-y-4 animate-fade-in">
+      <form id="goal-form" onSubmit={handleSubmit} className="space-y-4 animate-fade-in">
         {/* Type toggle */}
         <div className="flex rounded-xl p-1 bg-black/20 shadow-inner">
           {[
@@ -277,19 +292,6 @@ export function GoalForm({ defaultType, onClose, onSuccess, goal, isOpen = true 
         </div>
 
         {error && <p className="text-xs font-medium rounded-xl p-3 bg-red-900/30 text-red-400">{error}</p>}
-
-        <div className="flex gap-3 pt-3 border-t border-white/10">
-          <button type="button" onClick={onClose} className="flex-1 py-3 rounded-xl text-xs font-bold btn-3d-secondary">
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex-1 py-3 rounded-xl text-xs font-bold text-black gradient-primary btn-3d flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-          >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin text-black" /> : isEditing ? "Guardar cambios" : "Crear meta"}
-          </button>
-        </div>
       </form>
     </DraggableWindow>
   );

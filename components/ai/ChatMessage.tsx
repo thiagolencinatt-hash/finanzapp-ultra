@@ -22,10 +22,14 @@ export function ChatMessage({ message }: ChatMessageProps) {
           border: isUser ? "none" : "1px solid hsl(var(--border))",
         }}
       >
-        {isUser
-          ? <User className="w-4 h-4 text-white" />
-          : <Bot className="w-4 h-4" style={{ color: "hsl(var(--primary))" }} />
-        }
+        {isUser ? (
+          <User className="w-4 h-4 text-white" />
+        ) : (
+          <div className="w-full h-full rounded-xl overflow-hidden border border-emerald-400/40">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/ai-dollar-icon.jpg" alt="AI" className="w-full h-full object-cover" />
+          </div>
+        )}
       </div>
 
       <div className={`flex flex-col max-w-[85%] ${isUser ? "items-end" : "items-start"} gap-1`}>
@@ -85,7 +89,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
 
         {/* Timestamp */}
         <span className="text-[10px] px-1" style={{ color: "hsl(var(--muted-foreground))" }}>
-          {format(message.timestamp, "HH:mm", { locale: es })}
+          {format(message.timestamp ? new Date(message.timestamp) : (message.created_at ? new Date(message.created_at) : new Date()), "HH:mm", { locale: es })}
         </span>
       </div>
     </div>

@@ -1,141 +1,121 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getUserFromRequest } from "@/lib/auth/get-user";
 import {
-  getDemoGoals,
-  addDemoGoal,
-  updateDemoGoal,
-  deleteDemoGoal,
-  clearAllGoals,
-  distributeSalaryToGoals,
-} from "@/lib/demo-data";
+  getUserGoals,
+  addUserGoal,
+  updateUserGoal,
+  deleteUserGoal,
+  getUserStore,
+  saveUserStore,
+} from "@/lib/db/cloud-store";
 
 export async function GET(req: NextRequest) {
-  const isDemo = req.cookies.get("finance_demo_session")?.value === "true";
-  const { searchParams } = new URL(req.url);
-  const type = searchParams.get("type");
-
-  if (isDemo) {
-    let list = [...getDemoGoals()];
-    if (type) list = list.filter((g) => g.type === type);
-    return NextResponse.json(list);
-  }
-
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      let list = [...getDemoGoals()];
-      if (type) list = list.filter((g) => g.type === type);
-      return NextResponse.json(list);
-    }
-
-    let query = supabase
-      .from("savings_goals")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("priority")
-      .order("created_at");
-
-    if (type) query = query.eq("type", type);
-
-    const { data, error } = await query;
-    if (error) throw error;
-    return NextResponse.json(data);
-  } catch {
-    let list = [...getDemoGoals()];
-    if (type) list = list.filter((g) => g.type === type);
-    return NextResponse.json(list);
+    const user = await getUserFromRequest(req);
+    const { searchParams } = new URL(req.url);
+    const type = searchParams.get("type") || undefined;
+    const goals = getUserGoals(user.id, type);
+    return NextResponse.json(goals);
+  } catch (err: unknown) {
+    console.error("[/api/goals GET error]:", err);
+    return NextResponse.json({ error: "Error al obtener metas" }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
-  const isDemo = req.cookies.get("finance_demo_session")?.value === "true";
-  const body = await req.json();
-
-  if (body.action === "clear_all") {
-    clearAllGoals();
-    return NextResponse.json({ success: true, count: 0 });
-  }
-
-  if (body.action === "distribute_salary") {
-    const updated = distributeSalaryToGoals(body.allocations || []);
-    return NextResponse.json({ success: true, goals: updated });
-  }
-
-  if (isDemo) {
-    const newGoal = addDemoGoal(body);
-    return NextResponse.json(newGoal, { status: 201 });
-  }
-
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      const newGoal = addDemoGoal(body);
-      return NextResponse.json(newGoal, { status: 201 });
+    const user = await getUserFromRequest(req);
+    const body = await req.json();
+
+    if (body.action === "clear_all") {
+      const store = getUserStore(user.id);
+      store.goals = [];
+      saveUserStore(user.id);
+      return NextResponse.json({ success: true, count: 0 });
     }
 
-    const { data, error } = await supabase
-      .from("savings_goals")
-      .insert({ ...body, user_id: user.id })
-      .select()
-      .single();
+    if (body.action === "distribute_salary") {
+      const store = getUserStore(user.id);
+      const allocations: { goalId: string; amount: number }[] = body.allocations || [];
+      allocations.forEach(({ goalId, amount }) => {
+        const goal = store.goals.find((g) => g.id === goalId);
+        if (goal) {
+          goal.current_amount = (Number(goal.current_amount) || 0) + (Number(amount) || 0);
+          if (goal.target_amount > 0 && goal.current_amount >= goal.target_amount) {
+            goal.is_completed = true;
+            goal.completed_at = new Date().toISOString();
+          }
+        }
+      });
+      saveUserStore(user.id);
+      return NextResponse.json({ success: true, goals: store.goals });
+    }
 
-    if (error) throw error;
-    return NextResponse.json(data, { status: 201 });
-  } catch {
-    const newGoal = addDemoGoal(body);
+    const newGoal = addUserGoal(user.id, body);
     return NextResponse.json(newGoal, { status: 201 });
+  } catch (err: unknown) {
+    console.error("[/api/goals POST error]:", err);
+    return NextResponse.json({ error: "Error al guardar meta" }, { status: 500 });
   }
 }
 
 export async function PATCH(req: NextRequest) {
-  const { id, action, amount, ...updates } = await req.json();
-
-  if (action === "add_funds") {
-    const existing = getDemoGoals().find((g) => g.id === id);
-    if (existing) {
-      const newAmount = (existing.current_amount || 0) + (amount || 0);
-      updateDemoGoal(id, { current_amount: newAmount, is_completed: newAmount >= existing.target_amount });
-    }
-    return NextResponse.json({ success: true });
-  }
-
-  updateDemoGoal(id, updates);
-
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase.from("savings_goals").update(updates).eq("id", id).eq("user_id", user.id);
-    }
-  } catch {
-    // fallback
-  }
+    const user = await getUserFromRequest(req);
+    const { id, action, amount, ...updates } = await req.json();
 
-  return NextResponse.json({ success: true });
+    if (!id) {
+      return NextResponse.json({ error: "ID requerido" }, { status: 400 });
+    }
+
+    if (action === "add_funds") {
+      const store = getUserStore(user.id);
+      const goal = store.goals.find((g) => g.id === id);
+      if (goal) {
+        const newAmount = (Number(goal.current_amount) || 0) + (Number(amount) || 0);
+        goal.current_amount = newAmount;
+        if (goal.target_amount > 0 && newAmount >= goal.target_amount) {
+          goal.is_completed = true;
+          goal.completed_at = new Date().toISOString();
+        }
+        saveUserStore(user.id);
+        return NextResponse.json({ success: true, goal });
+      }
+      return NextResponse.json({ error: "Meta no encontrada" }, { status: 404 });
+    }
+
+    const updated = updateUserGoal(user.id, id, updates);
+    if (!updated) {
+      return NextResponse.json({ error: "Meta no encontrada" }, { status: 404 });
+    }
+    return NextResponse.json(updated);
+  } catch (err: unknown) {
+    console.error("[/api/goals PATCH error]:", err);
+    return NextResponse.json({ error: "Error al actualizar meta" }, { status: 500 });
+  }
 }
 
 export async function DELETE(req: NextRequest) {
-  const body = await req.json();
-  const { id, action } = body;
-
-  if (action === "clear_all") {
-    clearAllGoals();
-    return NextResponse.json({ success: true });
-  }
-
-  deleteDemoGoal(id);
-
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase.from("savings_goals").delete().eq("id", id).eq("user_id", user.id);
-    }
-  } catch {
-    // fallback
-  }
+    const user = await getUserFromRequest(req);
+    const body = await req.json();
+    const { id, action } = body;
 
-  return NextResponse.json({ success: true });
+    if (action === "clear_all") {
+      const store = getUserStore(user.id);
+      store.goals = [];
+      saveUserStore(user.id);
+      return NextResponse.json({ success: true });
+    }
+
+    if (!id) {
+      return NextResponse.json({ error: "ID requerido" }, { status: 400 });
+    }
+
+    const deleted = deleteUserGoal(user.id, id);
+    return NextResponse.json({ success: deleted });
+  } catch (err: unknown) {
+    console.error("[/api/goals DELETE error]:", err);
+    return NextResponse.json({ error: "Error al eliminar meta" }, { status: 500 });
+  }
 }

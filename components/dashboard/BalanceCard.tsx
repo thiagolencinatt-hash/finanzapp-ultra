@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { TrendingUp, TrendingDown, CreditCard, DollarSign, PlusCircle, MinusCircle, RotateCcw, Trash2 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 import { TransactionForm } from "@/components/transactions/TransactionForm";
+import { ResetDataModal } from "@/components/dashboard/ResetDataModal";
 
 interface BalanceCardProps {
   totalBalance: number;
@@ -22,38 +23,8 @@ export function BalanceCard({
   onRefresh,
 }: BalanceCardProps) {
   const [formType, setFormType] = useState<"income" | "expense" | null>(null);
-  const [resetting, setResetting] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
   const netFlow = income30d - expense30d;
-
-  async function handleResetBalance() {
-    if (!confirm("⚠️ ¿Resetear el saldo de TODAS las cuentas a $0? Esta acción no se puede deshacer.")) return;
-    setResetting(true);
-    try {
-      await fetch("/api/accounts", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "reset_all_balances" }),
-      });
-      onRefresh?.();
-    } finally {
-      setResetting(false);
-    }
-  }
-
-  async function handleClearTransactions() {
-    if (!confirm("⚠️ ¿Borrar TODAS las transacciones (ingresos y gastos)? Esta acción no se puede deshacer.")) return;
-    setResetting(true);
-    try {
-      await fetch("/api/transactions", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "clear_all" }),
-      });
-      onRefresh?.();
-    } finally {
-      setResetting(false);
-    }
-  }
 
   return (
     <>
@@ -74,7 +45,7 @@ export function BalanceCard({
         />
 
         <div className="relative z-10">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-primary/20 text-primary">
                 <DollarSign className="w-4 h-4 font-bold" />
@@ -85,7 +56,7 @@ export function BalanceCard({
             </div>
 
             {/* Quick Action buttons */}
-            <div className="flex items-center gap-2 flex-wrap justify-end">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap w-full sm:w-auto justify-start sm:justify-end">
               <button
                 onClick={() => setFormType("income")}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-income bg-income/10 hover:bg-income/20 border border-income/30 transition-all cursor-pointer"
@@ -101,22 +72,12 @@ export function BalanceCard({
                 <MinusCircle className="w-3.5 h-3.5" /> - Gasto
               </button>
               <button
-                onClick={handleResetBalance}
-                disabled={resetting}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-orange-400 bg-orange-950/30 hover:bg-orange-900/40 border border-orange-800/30 transition-all cursor-pointer"
-                title="Poner todas las cuentas en $0"
+                onClick={() => setShowResetModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition-all cursor-pointer"
+                title="Dejar todas las finanzas en $0 para arrancar como nuevo usuario"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                {resetting ? "Reseteando..." : "Reset $0"}
-              </button>
-              <button
-                onClick={handleClearTransactions}
-                disabled={resetting}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-red-400 bg-red-950/30 hover:bg-red-900/40 border border-red-800/30 transition-all cursor-pointer"
-                title="Borrar todo el historial de transacciones"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                Borrar Historial
+                <span>Empezar de Cero ($0)</span>
               </button>
             </div>
           </div>
@@ -212,6 +173,12 @@ export function BalanceCard({
           }}
         />
       )}
+
+      <ResetDataModal
+        isOpen={showResetModal}
+        onClose={() => setShowResetModal(false)}
+        onSuccess={() => onRefresh?.()}
+      />
     </>
   );
 }

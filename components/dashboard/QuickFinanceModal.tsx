@@ -99,8 +99,30 @@ export function QuickFinanceModal({
       title="Ajustar Mi Plata y Mi Sueldo"
       windowId="quick-finance-modal"
       defaultPosition={{ x: 0, y: -40 }}
+      footer={
+        <div className="flex w-full gap-2.5 flex-wrap">
+          <button
+            type="button"
+            onClick={handleResetClean}
+            disabled={loading}
+            className="flex-1 py-3 px-3 rounded-xl text-xs font-bold text-red-400 bg-red-950/40 hover:bg-red-900/50 border border-red-800/40 flex items-center justify-center gap-1.5 cursor-pointer transition-all"
+            title="Borrar gastos de prueba y empezar en blanco"
+          >
+            <Trash2 className="w-3.5 h-3.5" /> Empezar en Limpio
+          </button>
+
+          <button
+            type="submit"
+            form="quick-finance-form"
+            disabled={loading}
+            className="flex-1 py-3 px-4 rounded-xl text-xs font-bold text-black gradient-primary btn-3d flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+          >
+            {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin text-black" /> : "Guardar mis números"}
+          </button>
+        </div>
+      }
     >
-      <form onSubmit={handleSaveDirect} className="space-y-4 animate-fade-in">
+      <form id="quick-finance-form" onSubmit={handleSaveDirect} className="space-y-4 animate-fade-in">
         <div className="rounded-2xl p-3.5 bg-primary/10 border border-primary/30 flex items-start gap-3">
           <Sparkles className="w-5 h-5 text-primary shrink-0 mt-0.5" />
           <p className="text-xs text-foreground leading-relaxed">
@@ -193,26 +215,6 @@ export function QuickFinanceModal({
             <CheckCircle2 className="w-4 h-4" /> {successMsg}
           </p>
         )}
-
-        <div className="flex gap-2.5 pt-2 border-t border-white/10 flex-wrap">
-          <button
-            type="button"
-            onClick={handleResetClean}
-            disabled={loading}
-            className="flex-1 py-3 px-3 rounded-xl text-xs font-bold text-red-400 bg-red-950/40 hover:bg-red-900/50 border border-red-800/40 flex items-center justify-center gap-1.5 cursor-pointer transition-all"
-            title="Borrar gastos de prueba y empezar en blanco"
-          >
-            <Trash2 className="w-3.5 h-3.5" /> Empezar en Limpio
-          </button>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex-1 py-3 px-4 rounded-xl text-xs font-bold text-black gradient-primary btn-3d flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-          >
-            {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin text-black" /> : "Guardar mis números"}
-          </button>
-        </div>
       </form>
     </DraggableWindow>
   );

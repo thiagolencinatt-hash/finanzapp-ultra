@@ -1,27 +1,27 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Header } from "@/components/layout/Header";
 import { BalanceCard } from "@/components/dashboard/BalanceCard";
-import { SalaryCard } from "@/components/dashboard/SalaryCard";
-import { AccountsGrid } from "@/components/dashboard/AccountsGrid";
+import { SmartTipCard } from "@/components/dashboard/SmartTipCard";
+import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
+import { SpendingChart } from "@/components/dashboard/SpendingChart";
 import { DashboardGoalsSection } from "@/components/dashboard/DashboardGoalsSection";
 import { DashboardInstallmentsSection } from "@/components/dashboard/DashboardInstallmentsSection";
-import { DashboardBudgetsSection } from "@/components/dashboard/DashboardBudgetsSection";
-import { DashboardSubscriptionsSection } from "@/components/dashboard/DashboardSubscriptionsSection";
-import { FinancialHealthCard } from "@/components/dashboard/FinancialHealthCard";
-import { SpendingChart } from "@/components/dashboard/SpendingChart";
-import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
-import { DollarRates } from "@/components/dashboard/DollarRates";
 import { QuickFinanceModal } from "@/components/dashboard/QuickFinanceModal";
+import { FreemiumGate } from "@/components/ui/FreemiumGate";
+import { isDemoUser } from "@/lib/freemium";
 import type { FinancialSummary, Category } from "@/lib/types";
-import { Loader2, SlidersHorizontal, Plus } from "lucide-react";
+import { Loader2, SlidersHorizontal, ChevronDown, ChevronUp, Lock } from "lucide-react";
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [summary, setSummary] = useState<FinancialSummary | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [showQuickModal, setShowQuickModal] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [dateSubtitle, setDateSubtitle] = useState("");
   const [greeting, setGreeting] = useState("¡Hola");
 
@@ -54,16 +54,32 @@ export default function DashboardPage() {
     <div className="flex flex-col">
       <Header
         title={`${greeting}! 👋`}
-        subtitle={dateSubtitle || "Tu panel de finanzas integral"}
+        subtitle={dateSubtitle || "Tu panel de finanzas"}
         actionButton={
-          <button
-            onClick={() => setShowQuickModal(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-black gradient-primary btn-3d cursor-pointer"
-            title="Ajustar saldo real, sueldo mensual y gastos directamente"
-          >
-            <SlidersHorizontal className="w-3.5 h-3.5" />
-            <span>Ajustar Mis Montos</span>
-          </button>
+          isDemoUser() ? (
+            <button
+              onClick={() => router.push("/login?tab=register")}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all"
+              style={{
+                background: "hsl(var(--secondary))",
+                color: "hsl(var(--muted-foreground))",
+                border: "1px solid hsl(var(--border))",
+              }}
+              title="Creá tu cuenta para ajustar montos"
+            >
+              <Lock className="w-3.5 h-3.5" />
+              <span>Ajustar Montos</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowQuickModal(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-black gradient-primary btn-3d cursor-pointer"
+              title="Ajustar saldo real, sueldo mensual y gastos"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <span>Ajustar Montos</span>
+            </button>
+          )
         }
       />
 
@@ -72,18 +88,20 @@ export default function DashboardPage() {
           <Loader2 className="w-8 h-8 animate-spin" style={{ color: "hsl(var(--primary))" }} />
         </div>
       ) : (
-        <div className="flex-1 p-4 lg:p-6 space-y-6">
-          {/* Cotizaciones Dólar en Vivo */}
+        <div className="flex-1 p-4 lg:p-6 space-y-5">
+
+          {/* 1. 💡 Smart Tip — Coach IA */}
           <div className="animate-slide-up">
-            <DollarRates />
+            <SmartTipCard
+              income30d={summary?.income_30d || 0}
+              expense30d={summary?.expense_30d || 0}
+              installmentsMonthly={summary?.total_installments_monthly || 0}
+              topCategory={summary?.top_categories?.[0]?.category_name}
+              goalsCount={summary?.savings_goals?.length || 0}
+            />
           </div>
 
-          {/* 1. Indicador de Salud Financiera Pro */}
-          <div className="animate-slide-up">
-            <FinancialHealthCard metrics={summary?.health_metrics} />
-          </div>
-
-          {/* 2. Balance Total */}
+          {/* 2. 💰 Balance Total + Ingresos vs Gastos */}
           <div className="animate-slide-up">
             <BalanceCard
               totalBalance={summary?.total_balance || 0}
@@ -94,66 +112,61 @@ export default function DashboardPage() {
             />
           </div>
 
-          {/* 3. Módulo de Sueldo & Ingresos */}
-          <div className="animate-slide-up">
-            <SalaryCard
-              salary={summary?.configured_salary || summary?.income_30d || 980000}
-              payDay={summary?.salary_pay_day || 5}
-              totalIncome30d={summary?.income_30d || 0}
-              onRefresh={loadSummary}
-            />
+          {/* 3. 📊 Gráfico de Gastos + Transacciones Recientes */}
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 animate-slide-up">
+            <div className="lg:col-span-2">
+              <SpendingChart categories={summary?.top_categories || []} />
+            </div>
+            <div className="lg:col-span-3">
+              <RecentTransactions />
+            </div>
           </div>
 
-          {/* 4. Presupuestos Mensuales por Categoría */}
-          <div className="animate-slide-up">
-            <DashboardBudgetsSection
-              budgets={summary?.category_budgets || []}
-              categories={categories}
-              onRefresh={loadSummary}
-            />
-          </div>
-
-          {/* 5. Grid de Cuentas & Saldos editables con 1 clic */}
-          <div className="animate-slide-up">
-            <AccountsGrid accounts={summary?.accounts || []} onRefresh={loadSummary} />
-          </div>
-
-          {/* 6. Suscripciones y Gastos Recurrentes */}
-          <div className="animate-slide-up">
-            <DashboardSubscriptionsSection
-              subscriptions={summary?.subscriptions || []}
-              monthlyTotal={summary?.total_subscriptions_monthly || 0}
-              onRefresh={loadSummary}
-            />
-          </div>
-
-          {/* 7. Metas & Ahorros con Asignador Inteligente de Sueldo */}
-          <div className="animate-slide-up">
+          {/* 4. 🎯 Metas de Ahorro */}
+          <FreemiumGate action="manage_goals" className="animate-slide-up">
             <DashboardGoalsSection
               goals={summary?.savings_goals || []}
               salary={summary?.configured_salary || summary?.income_30d || 980000}
               onRefresh={loadSummary}
             />
-          </div>
+          </FreemiumGate>
 
-          {/* 8. Compras en Cuotas y Tarjetas */}
-          <div className="animate-slide-up">
-            <DashboardInstallmentsSection
-              installments={summary?.active_installments || []}
-              monthlyTotal={summary?.total_installments_monthly || 0}
-              onRefresh={loadSummary}
-            />
-          </div>
+          {/* ▼ Sección Avanzada (expandible) */}
+          <FreemiumGate action="manage_installments" className="animate-slide-up">
+            <div>
+              <button
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all cursor-pointer"
+                style={{
+                  background: "hsl(var(--card))",
+                  border: "1px solid hsl(var(--border))",
+                  color: "hsl(var(--muted-foreground))",
+                }}
+              >
+                {showAdvanced ? (
+                  <>
+                    <ChevronUp className="w-4 h-4" />
+                    Ocultar sección avanzada
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="w-4 h-4" />
+                    Ver cuotas, suscripciones y más
+                  </>
+                )}
+              </button>
 
-          {/* 9. Gráfico de Gastos y Transacciones Recientes */}
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-            <div className="lg:col-span-2 animate-slide-up">
-              <SpendingChart categories={summary?.top_categories || []} />
+              {showAdvanced && (
+                <div className="space-y-5 mt-5 animate-slide-up">
+                  <DashboardInstallmentsSection
+                    installments={summary?.active_installments || []}
+                    monthlyTotal={summary?.total_installments_monthly || 0}
+                    onRefresh={loadSummary}
+                  />
+                </div>
+              )}
             </div>
-            <div className="lg:col-span-3 animate-slide-up">
-              <RecentTransactions />
-            </div>
-          </div>
+          </FreemiumGate>
         </div>
       )}
 

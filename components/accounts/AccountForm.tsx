@@ -114,8 +114,24 @@ export function AccountForm({ onClose, onSuccess, account, isOpen = true }: Acco
       title={isEditing ? `Editar Cuenta (${account?.name})` : "Nueva Cuenta / Billetera"}
       windowId="account-form-window"
       defaultPosition={{ x: 0, y: -40 }}
+      footer={
+        <div className="flex w-full gap-3">
+          <button type="button" onClick={onClose} className="flex-1 py-3 rounded-xl text-sm font-bold btn-3d-secondary">
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            form="account-form"
+            disabled={loading}
+            className="flex-1 py-3 rounded-xl text-sm font-bold text-black gradient-primary btn-3d flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin text-black" /> : null}
+            {loading ? "Guardando..." : isEditing ? "Guardar cambios" : "Crear cuenta"}
+          </button>
+        </div>
+      }
     >
-      <form onSubmit={handleSubmit} className="space-y-4 animate-fade-in">
+      <form id="account-form" onSubmit={handleSubmit} className="space-y-4 animate-fade-in">
         {/* Name */}
         <div>
           <label className="text-xs font-semibold uppercase tracking-wider block mb-1.5 opacity-80">
@@ -208,20 +224,6 @@ export function AccountForm({ onClose, onSuccess, account, isOpen = true }: Acco
             {error}
           </p>
         )}
-
-        <div className="flex gap-3 pt-4 border-t border-white/10">
-          <button type="button" onClick={onClose} className="flex-1 py-3 rounded-xl text-sm font-bold btn-3d-secondary">
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex-1 py-3 rounded-xl text-sm font-bold text-black gradient-primary btn-3d flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
-          >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin text-black" /> : null}
-            {loading ? "Guardando..." : isEditing ? "Guardar cambios" : "Crear cuenta"}
-          </button>
-        </div>
       </form>
     </DraggableWindow>
   );

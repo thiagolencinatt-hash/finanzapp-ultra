@@ -15,8 +15,16 @@ export interface UserAccount {
 }
 
 // Ruta persistente para el almacén de cuentas de usuario
-const DATA_DIR = path.join(process.cwd(), "data");
-const USERS_FILE = path.join(DATA_DIR, "users.json");
+function getDataDir(): string {
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    return path.join("/tmp", "data");
+  }
+  return path.join(process.cwd(), "data");
+}
+
+function getUsersFile(): string {
+  return path.join(getDataDir(), "users.json");
+}
 
 // In-memory cache para acceso de altísima velocidad
 const usersCache = new Map<string, UserAccount>();
@@ -25,11 +33,13 @@ let isLoaded = false;
 function ensureLoaded() {
   if (isLoaded) return;
   try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
+    const dir = getDataDir();
+    const file = getUsersFile();
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
     }
-    if (fs.existsSync(USERS_FILE)) {
-      const content = fs.readFileSync(USERS_FILE, "utf-8");
+    if (fs.existsSync(file)) {
+      const content = fs.readFileSync(file, "utf-8");
       const list: UserAccount[] = JSON.parse(content);
       for (const u of list) {
         usersCache.set(u.email.toLowerCase().trim(), u);
@@ -43,11 +53,13 @@ function ensureLoaded() {
 
 function persistToFile() {
   try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
+    const dir = getDataDir();
+    const file = getUsersFile();
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
     }
     const list = Array.from(usersCache.values());
-    fs.writeFileSync(USERS_FILE, JSON.stringify(list, null, 2), "utf-8");
+    fs.writeFileSync(file, JSON.stringify(list, null, 2), "utf-8");
   } catch (err) {
     console.warn("⚠️ No se pudo guardar archivo de usuarios en disco:", err);
   }

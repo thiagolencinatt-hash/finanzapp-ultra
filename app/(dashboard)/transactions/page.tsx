@@ -9,6 +9,7 @@ import type { Transaction } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils/currency";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { ExportExcelButton } from "@/components/dashboard/ExportExcelButton";
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -134,6 +135,8 @@ export default function TransactionsPage() {
           >
             <Filter className="w-4 h-4" /> Filtros
           </button>
+
+          <ExportExcelButton variant="outline" label="Exportar Excel" />
 
           {transactions.length > 0 && (
             <button

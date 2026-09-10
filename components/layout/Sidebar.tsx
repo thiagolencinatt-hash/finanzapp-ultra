@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   LayoutDashboard,
@@ -14,18 +14,20 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  History,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { openAIAssistant } from "../ai/GlobalAIAssistant";
 
 const navItems = [
   { href: "/", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/transactions", icon: ArrowUpDown, label: "Transacciones" },
+  { href: "/history", icon: History, label: "Historial" },
   { href: "/installments", icon: CreditCard, label: "Cuotas" },
   { href: "/goals", icon: Target, label: "Metas" },
-  { href: "/ai-assistant", icon: Bot, label: "Asistente IA" },
+  { href: "/ai-assistant", icon: Bot, label: "IA Coach" },
 ];
 
 export function Sidebar() {
@@ -44,6 +46,8 @@ export function Sidebar() {
     document.cookie = "finance_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
     document.cookie = "finance_demo_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
     document.cookie = "finance_user_name=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    document.cookie = "finance_user_email=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    document.cookie = "finance_user_id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
     localStorage.removeItem("finanzapp_user_profile");
     router.push("/login");
     router.refresh();
@@ -79,6 +83,31 @@ export function Sidebar() {
       {/* Nav Items */}
       <nav className="flex-1 px-2 py-4 space-y-1">
         {navItems.map((item) => {
+          if (item.href === "/ai-assistant") {
+            return (
+              <button
+                key={item.href}
+                onClick={() => openAIAssistant()}
+                title={collapsed ? item.label : undefined}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 group relative cursor-pointer",
+                  collapsed && "justify-center",
+                  "hover:bg-muted text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <div className="w-5 h-5 rounded-lg overflow-hidden border border-emerald-400/40 flex-shrink-0 shadow-sm">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/ai-dollar-icon.jpg" alt="IA Dólar" className="w-full h-full object-cover" />
+                </div>
+                {!collapsed && (
+                  <span className="text-sm font-medium">
+                    {item.label}
+                  </span>
+                )}
+              </button>
+            );
+          }
+
           const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
           return (
             <Link

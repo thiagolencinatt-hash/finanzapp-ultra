@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   TrendingUp,
   Mail,
@@ -25,16 +25,19 @@ import {
 } from "lucide-react";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Mode: "input" (forms) | "otp" (6-digit verification)
   const [step, setStep] = useState<"input" | "otp">("input");
-  const [activeTab, setActiveTab] = useState<"login" | "register">("login");
+  const [activeTab, setActiveTab] = useState<"login" | "register">(
+    searchParams.get("tab") === "register" ? "register" : "login"
+  );
   const [loginMethod, setLoginMethod] = useState<"password" | "otp">("password");
 
-  // Floating spam notification banner
-  const [showSpamBanner, setShowSpamBanner] = useState(true);
+  // Floating spam notification banner (disabled since auth is now direct)
+  const [showSpamBanner, setShowSpamBanner] = useState(false);
 
   // Form states
   const [email, setEmail] = useState("");
@@ -82,16 +85,24 @@ export default function LoginPage() {
       }) => {
         const maxAge = 60 * 60 * 24 * 30;
         document.cookie = `finance_session=active; path=/; max-age=${maxAge}; SameSite=Lax`;
-        document.cookie = `finance_demo_session=true; path=/; max-age=${maxAge}; SameSite=Lax`;
+        // Quitar modo demo para usuarios con cuenta real
+        document.cookie = `finance_demo_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
         const profileName =
           (sessionUser.user_metadata?.name as string) ||
           sessionUser.email?.split("@")[0] ||
           "Usuario";
         document.cookie = `finance_user_name=${encodeURIComponent(profileName)}; path=/; max-age=${maxAge}; SameSite=Lax`;
+        if (sessionUser.id) {
+          document.cookie = `finance_user_id=${encodeURIComponent(sessionUser.id)}; path=/; max-age=${maxAge}; SameSite=Lax`;
+        }
+        if (sessionUser.email) {
+          document.cookie = `finance_user_email=${encodeURIComponent(sessionUser.email)}; path=/; max-age=${maxAge}; SameSite=Lax`;
+        }
 
         localStorage.setItem(
           "finanzapp_user_profile",
           JSON.stringify({
+            id: sessionUser.id,
             name: profileName,
             email: sessionUser.email,
             currency: sessionUser.user_metadata?.currency || "ARS",
@@ -190,7 +201,19 @@ export default function LoginPage() {
         throw new Error(data.error || "Credenciales incorrectas");
       }
 
-      // Guardar perfil en localStorage
+      // Guardar perfil en localStorage y limpiar demo
+      document.cookie = "finance_demo_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      const maxAge = 60 * 60 * 24 * 30;
+      if (data.user?.id) {
+        document.cookie = `finance_user_id=${encodeURIComponent(data.user.id)}; path=/; max-age=${maxAge}; SameSite=Lax`;
+      }
+      if (data.user?.email || email) {
+        document.cookie = `finance_user_email=${encodeURIComponent(data.user?.email || email)}; path=/; max-age=${maxAge}; SameSite=Lax`;
+      }
+      if (data.user?.name) {
+        document.cookie = `finance_user_name=${encodeURIComponent(data.user.name)}; path=/; max-age=${maxAge}; SameSite=Lax`;
+      }
+
       const userProfile = data.user || {
         name: email.split("@")[0] || "Usuario",
         email,
@@ -199,7 +222,7 @@ export default function LoginPage() {
       };
       localStorage.setItem("finanzapp_user_profile", JSON.stringify(userProfile));
 
-      setSuccess("¡Bienvenido de nuevo! Ingresando al panel...");
+      setSuccess("¡Bienvenido! Ingresando al panel...");
       setTimeout(() => {
         router.push("/");
         router.refresh();
@@ -211,7 +234,78 @@ export default function LoginPage() {
     }
   }
 
-  // Enviar Código de Verificación (para registrarse o para login OTP)
+  // Registro Directo con Contraseña (Cómodo, rápido y sin esperar códigos por email)
+  async function handleRegister(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email || !email.includes("@")) {
+      setError("Por favor ingresa un correo electrónico válido");
+      return;
+    }
+    if (!password || password.length < 6) {
+      setError("La contraseña debe tener al menos 6 caracteres");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("Las contraseñas no coinciden");
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          password,
+          name: name.trim() || email.split("@")[0],
+          currency,
+          salary: Number(salary) || 980000,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "No se pudo crear la cuenta");
+      }
+
+      // Quitar modo demo para usuarios con cuenta real
+      document.cookie = "finance_demo_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      const maxAge = 60 * 60 * 24 * 30;
+      if (data.user?.id) {
+        document.cookie = `finance_user_id=${encodeURIComponent(data.user.id)}; path=/; max-age=${maxAge}; SameSite=Lax`;
+      }
+      if (data.user?.email || email) {
+        document.cookie = `finance_user_email=${encodeURIComponent(data.user?.email || email)}; path=/; max-age=${maxAge}; SameSite=Lax`;
+      }
+      if (data.user?.name) {
+        document.cookie = `finance_user_name=${encodeURIComponent(data.user.name)}; path=/; max-age=${maxAge}; SameSite=Lax`;
+      }
+
+      const userProfile = data.user || {
+        name: name.trim() || email.split("@")[0],
+        email,
+        currency,
+        salary: Number(salary) || 980000,
+      };
+      localStorage.setItem("finanzapp_user_profile", JSON.stringify(userProfile));
+
+      setSuccess("¡Cuenta creada con éxito! Ingresando al panel...");
+      setTimeout(() => {
+        router.push("/");
+        router.refresh();
+      }, 500);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Error al crear cuenta");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  // Enviar Código de Verificación (opcional para login OTP)
   async function handleSendCode(e: React.FormEvent) {
     e.preventDefault();
     if (!email || !email.includes("@")) {
@@ -362,41 +456,6 @@ export default function LoginPage() {
         `,
       }}
     >
-      {/* Dynamic Floating Spam Reminder Notification (with X close button) */}
-      {showSpamBanner && (
-        <div className="fixed top-4 left-4 right-4 max-w-xl mx-auto z-50 animate-slide-up">
-          <div
-            className="flex items-start justify-between gap-3 p-3.5 sm:p-4 rounded-2xl border backdrop-blur-2xl transition-all shadow-[0_15px_40px_rgba(0,0,0,0.8)]"
-            style={{
-              backgroundColor: "rgba(10, 15, 26, 0.88)",
-              borderColor: "rgba(255, 255, 255, 0.12)",
-            }}
-          >
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]">
-                <Info className="w-4 h-4 text-amber-400" />
-              </div>
-              <div className="text-left leading-tight">
-                <div className="font-extrabold text-xs sm:text-sm text-zinc-100 flex items-center gap-1.5">
-                  <span>Recordatorio de Código por Correo</span>
-                </div>
-                <p className="text-[11px] sm:text-xs text-zinc-400 mt-1">
-                  Si solicitas un código de verificación, <strong className="text-amber-300">revisa tu carpeta de Spam / Correo no deseado</strong> en tu casilla de email si no lo ves en tu bandeja principal.
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowSpamBanner(false)}
-              className="w-7 h-7 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 text-zinc-400 hover:text-white flex items-center justify-center transition-all cursor-pointer flex-shrink-0 border border-white/10 active:scale-95"
-              title="Cerrar notificación"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Main Glassmorphic 3D Card Container */}
       <div className="w-full max-w-md relative z-10 my-8 animate-slide-up">
         {/* Brand Header */}
@@ -668,7 +727,7 @@ export default function LoginPage() {
 
               {/* Formulario 3: Crear Cuenta con Contraseña Permanente */}
               {activeTab === "register" && (
-                <form onSubmit={handleSendCode} className="space-y-3.5 animate-slide-up">
+                <form onSubmit={handleRegister} className="space-y-3.5 animate-slide-up">
                   {/* Name */}
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-zinc-200">Tu Nombre o Apodo</label>
@@ -797,12 +856,12 @@ export default function LoginPage() {
                     {isLoading ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin text-black" />
-                        <span>Enviando código de validación...</span>
+                        <span>Creando tu cuenta...</span>
                       </>
                     ) : (
                       <>
-                        <ShieldCheck className="w-4 h-4 text-black stroke-[2.5]" />
-                        <span>Crear Cuenta y Validar Correo</span>
+                        <Sparkles className="w-4 h-4 text-black stroke-[2.5]" />
+                        <span>Crear Cuenta y Entrar Directo</span>
                       </>
                     )}
                   </button>
@@ -945,5 +1004,19 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-zinc-950">
+          <Loader2 className="w-8 h-8 animate-spin text-emerald-400" />
+        </div>
+      }
+    >
+      <LoginPageContent />
+    </Suspense>
   );
 }

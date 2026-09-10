@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { verifyOtp } from "@/lib/auth/otp-store";
-import { registerUser } from "@/lib/auth/user-store";
+import { registerUser, getUserByEmail } from "@/lib/auth/user-store";
 
 export async function POST(request: Request) {
   try {
@@ -90,10 +90,32 @@ export async function POST(request: Request) {
       }
     }
 
+    // Obtener o derivar ID de usuario
+    let userId = "";
+    const localUser = getUserByEmail(normalizedEmail);
+    if (localUser) {
+      userId = localUser.id;
+    } else {
+      userId = `user_${normalizedEmail.replace(/[^a-zA-Z0-9]/g, "_")}`;
+    }
+
+    // Inicializar almacén persistente en la nube
+    try {
+      const { getUserStore } = await import("@/lib/db/cloud-store");
+      getUserStore(userId, {
+        email: verifiedUser.email,
+        name: verifiedUser.name,
+        currency: verifiedUser.currency,
+        salary: verifiedUser.salary,
+      });
+    } catch (e) {
+      console.warn("Could not pre-init user store in verify-code:", e);
+    }
+
     const response = NextResponse.json({
       success: true,
       message: "¡Código verificado con éxito!",
-      user: verifiedUser,
+      user: { ...verifiedUser, id: userId },
       source: authSource,
     });
 
@@ -104,9 +126,9 @@ export async function POST(request: Request) {
       maxAge,
       sameSite: "lax",
     });
-    response.cookies.set("finance_demo_session", "true", {
+    response.cookies.set("finance_demo_session", "", {
       path: "/",
-      maxAge,
+      maxAge: 0,
       sameSite: "lax",
     });
     if (verifiedUser.name) {
@@ -116,6 +138,16 @@ export async function POST(request: Request) {
         sameSite: "lax",
       });
     }
+    response.cookies.set("finance_user_email", encodeURIComponent(verifiedUser.email), {
+      path: "/",
+      maxAge,
+      sameSite: "lax",
+    });
+    response.cookies.set("finance_user_id", encodeURIComponent(userId), {
+      path: "/",
+      maxAge,
+      sameSite: "lax",
+    });
 
     return response;
   } catch (error: unknown) {

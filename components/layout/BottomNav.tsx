@@ -3,9 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, ArrowUpDown, CreditCard, Target, Plus } from "lucide-react";
+import { LayoutDashboard, ArrowUpDown, Bot, Target, Plus } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { QuickExpenseModal } from "./QuickExpenseModal";
+import { openAIAssistant } from "../ai/GlobalAIAssistant";
 
 export function BottomNav() {
   const pathname = usePathname();
@@ -64,19 +65,17 @@ export function BottomNav() {
             </span>
           </div>
 
-          {/* Cuotas */}
-          <Link
-            href="/installments"
-            className={cn(
-              "flex flex-col items-center gap-1 px-3 py-1.5 rounded-2xl transition-all duration-200 min-w-[54px]",
-              pathname.startsWith("/installments")
-                ? "text-primary font-bold"
-                : "text-muted-foreground hover:text-foreground"
-            )}
+          {/* IA Chat */}
+          <button
+            onClick={() => openAIAssistant()}
+            className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-2xl transition-all duration-200 min-w-[54px] text-muted-foreground hover:text-foreground cursor-pointer"
           >
-            <CreditCard className="w-5 h-5" />
-            <span className="text-[10px] tracking-tight">Cuotas</span>
-          </Link>
+            <div className="w-5 h-5 rounded-md overflow-hidden border border-emerald-400/40 shadow-sm">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/ai-dollar-icon.jpg" alt="IA Dólar" className="w-full h-full object-cover" />
+            </div>
+            <span className="text-[10px] tracking-tight font-semibold">IA Coach</span>
+          </button>
 
           {/* Metas */}
           <Link
@@ -101,7 +100,6 @@ export function BottomNav() {
           onClose={() => setShowQuickModal(false)}
           onSuccess={() => {
             router.refresh();
-            // Dispatch a custom event so pages can re-fetch summary if needed
             window.dispatchEvent(new Event("finance-refresh"));
           }}
         />

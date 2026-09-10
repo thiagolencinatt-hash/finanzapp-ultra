@@ -18,8 +18,11 @@ import {
   Trash2,
   Sparkles,
   RefreshCw,
+  RotateCcw,
 } from "lucide-react";
 import type { Category } from "@/lib/types";
+import { ExportExcelButton } from "@/components/dashboard/ExportExcelButton";
+import { ResetDataModal } from "@/components/dashboard/ResetDataModal";
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
@@ -28,6 +31,7 @@ export default function SettingsPage() {
   const [newCatType, setNewCatType] = useState<"expense" | "income">("expense");
   const [newCatColor, setNewCatColor] = useState("#6366F1");
   const [exported, setExported] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
 
   useEffect(() => {
     fetch("/api/categories")
@@ -261,10 +265,24 @@ export default function SettingsPage() {
             </div>
           </div>
 
+          {/* Exportar Excel (.xlsx) */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl mb-3 gap-3" style={{ background: "hsl(var(--muted))" }}>
+            <div>
+              <p className="text-sm font-semibold flex items-center gap-2" style={{ color: "hsl(var(--foreground))" }}>
+                <span>Planilla Contable Microsoft Excel (.xlsx)</span>
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-emerald-500/20 text-emerald-400">Recomendado</span>
+              </p>
+              <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
+                Libro multihas: Resumen Ejecutivo, Transacciones Detalladas, Cuotas, Metas de Ahorro y Presupuestos
+              </p>
+            </div>
+            <ExportExcelButton variant="primary" label="Exportar a Excel" />
+          </div>
+
           <div className="flex items-center justify-between p-4 rounded-xl mb-3" style={{ background: "hsl(var(--muted))" }}>
             <div>
               <p className="text-sm font-semibold" style={{ color: "hsl(var(--foreground))" }}>
-                Exportar base de datos completa
+                Exportar base de datos completa (JSON)
               </p>
               <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
                 Incluye presupuestos, suscripciones, transacciones, cuentas y cuotas
@@ -307,7 +325,53 @@ export default function SettingsPage() {
             </label>
           </div>
         </section>
+
+        {/* Zona de Reinicio / Modo Nuevo Usuario */}
+        <section
+          className="rounded-2xl p-6 border border-amber-500/30"
+          style={{ background: "hsl(var(--card))" }}
+        >
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-400 font-bold">
+              <RotateCcw className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-foreground">
+                Modo Nuevo Usuario: Empezar en Limpio
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Dejar todo en $0 para empezar a registrar tus gastos e ingresos reales
+              </p>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-bold text-foreground">
+                Reiniciar todas las finanzas a Cero ($0)
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5 max-w-md">
+                Elimina transacciones, deudas y metas de ejemplo. Podés definir tu saldo bancario real inicial y tu sueldo estimado para arrancar tu control de gastos personal.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowResetModal(true)}
+              className="px-4 py-2.5 rounded-xl text-xs font-extrabold text-black bg-amber-400 hover:bg-amber-300 transition-all flex items-center gap-2 shadow-md cursor-pointer shrink-0"
+            >
+              <RotateCcw className="w-4 h-4" />
+              <span>Empezar de Cero ($0)</span>
+            </button>
+          </div>
+        </section>
       </div>
+
+      <ResetDataModal
+        isOpen={showResetModal}
+        onClose={() => setShowResetModal(false)}
+        onSuccess={() => {
+          window.location.reload();
+        }}
+      />
     </div>
   );
 }

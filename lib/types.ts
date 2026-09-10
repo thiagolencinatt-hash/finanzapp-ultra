@@ -7,6 +7,7 @@ export type AccountType = "cash" | "bank" | "digital_wallet" | "investment" | "c
 export type GoalType = "goal" | "wishlist";
 export type CategoryType = "income" | "expense" | "both";
 export type MessageRole = "user" | "assistant" | "system";
+export type UrgencyLevel = "essential" | "important" | "nice_to_have" | "unnecessary";
 
 // ---- Supabase Row Types ----
 
@@ -48,6 +49,8 @@ export interface Transaction {
   installment_id: string | null;
   transfer_to_account_id: string | null;
   exchange_rate: number | null;
+  urgency: UrgencyLevel | null;
+  tags: string[];
   created_at: string;
   updated_at: string;
   // Joins
@@ -123,11 +126,12 @@ export interface AiMemory {
 
 export interface CategoryBudget {
   id: string;
+  user_id?: string;
   category_id: string;
   monthly_limit: number;
   currency: string;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
   // Computed
   category?: Category;
   spent_this_month?: number;
@@ -178,7 +182,10 @@ export interface FinancialSummary {
   configured_salary?: number;
   salary_pay_day?: number;
   active_installments: Installment[];
+  active_installments_count?: number;
   total_installments_monthly: number;
+  savings_goals_progress?: number;
+  recent_transactions?: Transaction[];
   upcoming_installments: Array<{
     description: string;
     amount: number;
@@ -201,8 +208,11 @@ export interface ChatMessage {
   id: string;
   role: MessageRole;
   content: string;
-  timestamp: Date;
+  timestamp?: Date | string;
+  created_at?: string;
+  user_id?: string;
   actions?: ExecutedAction[];
+  metadata?: Record<string, unknown>;
   isLoading?: boolean;
   imagePreview?: string; // data URI para mostrar imagen enviada por el usuario
 }

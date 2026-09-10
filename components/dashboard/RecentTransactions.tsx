@@ -23,6 +23,9 @@ export function RecentTransactions() {
 
   useEffect(() => {
     fetchTransactions();
+    const handleRefresh = () => fetchTransactions();
+    window.addEventListener("finance-refresh", handleRefresh);
+    return () => window.removeEventListener("finance-refresh", handleRefresh);
   }, []);
 
   return (

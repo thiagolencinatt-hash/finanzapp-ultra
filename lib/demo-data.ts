@@ -86,6 +86,8 @@ export let demoTransactions: Transaction[] = [
     installment_id: null,
     transfer_to_account_id: null,
     exchange_rate: null,
+    urgency: null,
+    tags: [],
     created_at: nowIso,
     updated_at: nowIso,
     account: demoAccounts[0],
@@ -104,6 +106,8 @@ export let demoTransactions: Transaction[] = [
     installment_id: null,
     transfer_to_account_id: null,
     exchange_rate: null,
+    urgency: "essential",
+    tags: ["supermercado"],
     created_at: nowIso,
     updated_at: nowIso,
     account: demoAccounts[1],
@@ -122,6 +126,8 @@ export let demoTransactions: Transaction[] = [
     installment_id: null,
     transfer_to_account_id: null,
     exchange_rate: null,
+    urgency: "essential",
+    tags: ["servicios"],
     created_at: nowIso,
     updated_at: nowIso,
     account: demoAccounts[0],
@@ -427,11 +433,23 @@ export function deleteDemoAccount(id: string) {
 }
 
 // Mutaciones en memoria para Transacciones
+let demoUserCreatedTxCount = 0;
+export function getDemoCreatedTxCount(): number {
+  return demoUserCreatedTxCount;
+}
+export function incrementDemoCreatedTxCount(): number {
+  return ++demoUserCreatedTxCount;
+}
+export function resetDemoCreatedTxCount(): void {
+  demoUserCreatedTxCount = 0;
+}
+
 export function getDemoTransactions() {
   return demoTransactions;
 }
 
 export function addDemoTransaction(txData: Partial<Transaction>): Transaction {
+  incrementDemoCreatedTxCount();
   const account = demoAccounts.find((a) => a.id === txData.account_id) || demoAccounts[0];
   const category = demoCategories.find((c) => c.id === txData.category_id) || demoCategories[0];
   const amount = Number(txData.amount) || 0;
@@ -449,6 +467,8 @@ export function addDemoTransaction(txData: Partial<Transaction>): Transaction {
     installment_id: null,
     transfer_to_account_id: txData.transfer_to_account_id || null,
     exchange_rate: null,
+    urgency: txData.urgency || null,
+    tags: txData.tags || [],
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     account,
@@ -671,6 +691,8 @@ export function setSalaryConfig({
     installment_id: null,
     transfer_to_account_id: null,
     exchange_rate: null,
+    urgency: null,
+    tags: [],
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     account: targetAcc,
@@ -808,6 +830,8 @@ export function setDirectFinances({
       installment_id: null,
       transfer_to_account_id: null,
       exchange_rate: null,
+      urgency: "essential",
+      tags: [],
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       account: demoAccounts[0],
@@ -966,6 +990,73 @@ export function clearAllDemoTransactions() {
 export function resetAllAccountBalances() {
   demoAccounts = demoAccounts.map((a) => ({ ...a, balance: 0 }));
   return { success: true };
+}
+
+// Reiniciar todas las finanzas a Cero (Modo Nuevo Usuario Limpio)
+export function resetAllDataToZero(options?: {
+  initialBalanceARS?: number;
+  configuredSalary?: number;
+  primaryAccountName?: string;
+}) {
+  demoTransactions = [];
+  demoInstallments = [];
+  demoGoals = [];
+  demoBudgets = [];
+  demoSubscriptions = [];
+
+  const initialBalance = typeof options?.initialBalanceARS === "number" ? Math.max(0, options.initialBalanceARS) : 0;
+  const primaryName = options?.primaryAccountName?.trim() || "Santander Río";
+
+  const now = new Date().toISOString();
+  demoAccounts = [
+    {
+      id: "acc-1",
+      user_id: "demo-user",
+      name: primaryName,
+      type: "bank",
+      balance: initialBalance,
+      currency: "ARS",
+      color: "#10B981",
+      icon: "Building2",
+      is_active: true,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: "acc-2",
+      user_id: "demo-user",
+      name: "Mercado Pago",
+      type: "digital_wallet",
+      balance: 0,
+      currency: "ARS",
+      color: "#3B82F6",
+      icon: "Smartphone",
+      is_active: true,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: "acc-3",
+      user_id: "demo-user",
+      name: "Efectivo / Billetera",
+      type: "cash",
+      balance: 0,
+      currency: "ARS",
+      color: "#F59E0B",
+      icon: "Wallet",
+      is_active: true,
+      created_at: now,
+      updated_at: now,
+    },
+  ];
+
+  if (typeof options?.configuredSalary === "number") {
+    configuredSalary = Math.max(0, options.configuredSalary);
+  } else {
+    configuredSalary = 0;
+  }
+
+  return getDemoSummary();
 }
 
 // Restauración de Copia de Seguridad completa (Import JSON)

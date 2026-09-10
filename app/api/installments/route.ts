@@ -1,144 +1,106 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getUserFromRequest } from "@/lib/auth/get-user";
 import {
-  getDemoInstallments,
-  addDemoInstallment,
-  updateDemoInstallment,
-  deleteDemoInstallment,
-  clearAllInstallments,
-} from "@/lib/demo-data";
+  getUserInstallments,
+  addUserInstallment,
+  updateUserInstallment,
+  deleteUserInstallment,
+  getUserStore,
+  saveUserStore,
+} from "@/lib/db/cloud-store";
 
 export async function GET(req: NextRequest) {
-  const isDemo = req.cookies.get("finance_demo_session")?.value === "true";
-  const { searchParams } = new URL(req.url);
-  const active = searchParams.get("active");
-
-  if (isDemo) {
-    let list = [...getDemoInstallments()];
-    if (active !== null) list = list.filter((i) => i.is_active === (active === "true"));
-    return NextResponse.json(list);
-  }
-
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      let list = [...getDemoInstallments()];
-      if (active !== null) list = list.filter((i) => i.is_active === (active === "true"));
-      return NextResponse.json(list);
+    const user = await getUserFromRequest(req);
+    const { searchParams } = new URL(req.url);
+    const active = searchParams.get("active");
+
+    let list = getUserInstallments(user.id);
+    if (active !== null) {
+      list = list.filter((i) => i.is_active === (active === "true"));
     }
 
-    let query = supabase
-      .from("installments_summary")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("next_due_date");
-
-    if (active !== null) query = query.eq("is_active", active === "true");
-
-    const { data, error } = await query;
-    if (error) throw error;
-    return NextResponse.json(data);
-  } catch {
-    let list = [...getDemoInstallments()];
-    if (active !== null) list = list.filter((i) => i.is_active === (active === "true"));
     return NextResponse.json(list);
+  } catch (err: unknown) {
+    console.error("[/api/installments GET error]:", err);
+    return NextResponse.json({ error: "Error al obtener cuotas" }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
-  const isDemo = req.cookies.get("finance_demo_session")?.value === "true";
-  const body = await req.json();
-
-  if (body.action === "clear_all") {
-    clearAllInstallments();
-    return NextResponse.json({ success: true, count: 0 });
-  }
-
-  if (isDemo) {
-    const newInst = addDemoInstallment(body);
-    return NextResponse.json(newInst, { status: 201 });
-  }
-
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      const newInst = addDemoInstallment(body);
-      return NextResponse.json(newInst, { status: 201 });
+    const user = await getUserFromRequest(req);
+    const body = await req.json();
+
+    if (body.action === "clear_all") {
+      const store = getUserStore(user.id);
+      store.installments = [];
+      saveUserStore(user.id);
+      return NextResponse.json({ success: true, count: 0 });
     }
 
-    const totalPaid = (body.installment_amount || 0) * (body.total_installments || 1);
-    const cftTotal = (body.total_amount || 0) > 0 ? ((totalPaid / body.total_amount) - 1) * 100 : 0;
-
-    const { data, error } = await supabase
-      .from("installments")
-      .insert({
-        ...body,
-        user_id: user.id,
-        cft_total: parseFloat(cftTotal.toFixed(2)),
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-    return NextResponse.json(data, { status: 201 });
-  } catch {
-    const newInst = addDemoInstallment(body);
+    const newInst = addUserInstallment(user.id, body);
     return NextResponse.json(newInst, { status: 201 });
+  } catch (err: unknown) {
+    console.error("[/api/installments POST error]:", err);
+    return NextResponse.json({ error: "Error al guardar cuota" }, { status: 500 });
   }
 }
 
 export async function PATCH(req: NextRequest) {
-  const { id, action, ...updates } = await req.json();
-
-  if (action === "pay") {
-    const existing = getDemoInstallments().find((i) => i.id === id);
-    if (existing) {
-      const newPaid = existing.paid_installments + 1;
-      updateDemoInstallment(id, {
-        paid_installments: newPaid,
-        is_active: newPaid < existing.total_installments,
-      });
-    }
-    return NextResponse.json({ success: true });
-  }
-
-  updateDemoInstallment(id, updates);
-
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase.from("installments").update(updates).eq("id", id).eq("user_id", user.id);
-    }
-  } catch {
-    // fallback
-  }
+    const user = await getUserFromRequest(req);
+    const { id, action, ...updates } = await req.json();
 
-  return NextResponse.json({ success: true });
+    if (!id) {
+      return NextResponse.json({ error: "ID requerido" }, { status: 400 });
+    }
+
+    if (action === "pay") {
+      const store = getUserStore(user.id);
+      const inst = store.installments.find((i) => i.id === id);
+      if (inst) {
+        const newPaid = (inst.paid_installments || 0) + 1;
+        inst.paid_installments = newPaid;
+        inst.is_active = newPaid < inst.total_installments;
+        saveUserStore(user.id);
+        return NextResponse.json({ success: true, installment: inst });
+      }
+      return NextResponse.json({ error: "Cuota no encontrada" }, { status: 404 });
+    }
+
+    const updated = updateUserInstallment(user.id, id, updates);
+    if (!updated) {
+      return NextResponse.json({ error: "Cuota no encontrada" }, { status: 404 });
+    }
+    return NextResponse.json(updated);
+  } catch (err: unknown) {
+    console.error("[/api/installments PATCH error]:", err);
+    return NextResponse.json({ error: "Error al actualizar cuota" }, { status: 500 });
+  }
 }
 
 export async function DELETE(req: NextRequest) {
-  const body = await req.json();
-  const { id, action } = body;
-
-  if (action === "clear_all") {
-    clearAllInstallments();
-    return NextResponse.json({ success: true });
-  }
-
-  deleteDemoInstallment(id);
-
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase.from("installments").update({ is_active: false }).eq("id", id).eq("user_id", user.id);
-    }
-  } catch {
-    // fallback
-  }
+    const user = await getUserFromRequest(req);
+    const body = await req.json();
+    const { id, action } = body;
 
-  return NextResponse.json({ success: true });
+    if (action === "clear_all") {
+      const store = getUserStore(user.id);
+      store.installments = [];
+      saveUserStore(user.id);
+      return NextResponse.json({ success: true });
+    }
+
+    if (!id) {
+      return NextResponse.json({ error: "ID requerido" }, { status: 400 });
+    }
+
+    const deleted = deleteUserInstallment(user.id, id);
+    return NextResponse.json({ success: deleted });
+  } catch (err: unknown) {
+    console.error("[/api/installments DELETE error]:", err);
+    return NextResponse.json({ error: "Error al eliminar cuota" }, { status: 500 });
+  }
 }

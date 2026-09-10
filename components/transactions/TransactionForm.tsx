@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Lock } from "lucide-react";
 import type { Account, Category, Transaction } from "@/lib/types";
 import { DraggableWindow } from "../ui/DraggableWindow";
+import { isDemoUser, canPerformAction, incrementDemoTxCount } from "@/lib/freemium";
 
 const TRANSACTION_TYPES = [
   { value: "expense", label: "Gasto" },
@@ -108,6 +109,12 @@ export function TransactionForm({
       setError("El monto debe ser mayor a 0");
       return;
     }
+
+    if (isDemoUser() && !isEditing && !canPerformAction("add_transaction").allowed) {
+      setError("Has alcanzado el límite de 5 transacciones en modo demo. Creá tu cuenta gratis para continuar sin límites.");
+      return;
+    }
+
     setLoading(true);
     setError("");
 
@@ -140,6 +147,9 @@ export function TransactionForm({
       // Limpiar borrador si fue exitoso
       if (!isEditing) {
         localStorage.removeItem(draftKey);
+        if (isDemoUser()) {
+          incrementDemoTxCount();
+        }
       }
       onSuccess();
     } catch (err) {
@@ -154,10 +164,26 @@ export function TransactionForm({
       isOpen={isOpen}
       onClose={onClose}
       title={isEditing ? `Editar Movimiento (${form.type === "income" ? "Ingreso" : "Gasto"})` : "Nueva Transacción"}
-      windowId="transaction-form"
-      defaultPosition={{ x: 0, y: -40 }}
+      windowId="transaction-form-window"
+      defaultPosition={{ x: 0, y: 0 }}
+      footer={
+        <div className="flex w-full gap-3">
+          <button type="button" onClick={onClose} className="flex-1 py-3 rounded-xl text-sm font-bold btn-3d-secondary">
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            form="transaction-form"
+            disabled={loading}
+            className="flex-1 py-3 rounded-xl text-sm font-bold text-black gradient-primary btn-3d flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin text-black" /> : null}
+            {loading ? "Guardando..." : isEditing ? "Guardar cambios" : "Registrar"}
+          </button>
+        </div>
+      }
     >
-      <form onSubmit={handleSubmit} className="space-y-5 animate-fade-in">
+      <form id="transaction-form" onSubmit={handleSubmit} className="space-y-5 animate-fade-in">
         {/* Type selector */}
         <div className="flex rounded-xl p-1 bg-black/20 shadow-inner">
           {TRANSACTION_TYPES.map((t) => (
@@ -321,20 +347,6 @@ export function TransactionForm({
             {error}
           </p>
         )}
-
-        <div className="flex gap-3 pt-4 border-t border-white/10">
-          <button type="button" onClick={onClose} className="flex-1 py-3 rounded-xl text-sm font-bold btn-3d-secondary">
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex-1 py-3 rounded-xl text-sm font-bold text-black gradient-primary btn-3d flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
-          >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin text-black" /> : null}
-            {loading ? "Guardando..." : isEditing ? "Guardar cambios" : "Registrar"}
-          </button>
-        </div>
       </form>
     </DraggableWindow>
   );

@@ -118,8 +118,23 @@ export function SalaryAllocationModal({
       title="Organizar y Asignar Sueldo a Metas"
       windowId="salary-allocation-modal"
       defaultPosition={{ x: 0, y: -40 }}
+      footer={
+        <div className="flex w-full gap-3">
+          <button type="button" onClick={onClose} className="flex-1 py-3 rounded-xl text-xs font-bold btn-3d-secondary">
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            form="salary-allocation-form"
+            disabled={loading}
+            className="flex-1 py-3 rounded-xl text-xs font-bold text-black gradient-primary btn-3d flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin text-black" /> : "Guardar Asignaciones"}
+          </button>
+        </div>
+      }
     >
-      <form onSubmit={handleSave} className="space-y-4 animate-fade-in">
+      <form id="salary-allocation-form" onSubmit={handleSave} className="space-y-4 animate-fade-in">
         {/* Banner de Sueldo y Distribución */}
         <div className="rounded-2xl p-4 glass-strong border border-primary/40 shadow-inner">
           <div className="flex items-center justify-between mb-2">
@@ -245,19 +260,6 @@ export function SalaryAllocationModal({
             <CheckCircle2 className="w-4 h-4" /> {successMsg}
           </p>
         )}
-
-        <div className="flex gap-3 pt-2 border-t border-white/10">
-          <button type="button" onClick={onClose} className="flex-1 py-3 rounded-xl text-xs font-bold btn-3d-secondary">
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex-1 py-3 rounded-xl text-xs font-bold text-black gradient-primary btn-3d flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-          >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin text-black" /> : "Guardar Asignaciones"}
-          </button>
-        </div>
       </form>
     </DraggableWindow>
   );

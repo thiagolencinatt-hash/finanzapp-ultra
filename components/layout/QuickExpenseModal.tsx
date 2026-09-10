@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, ArrowDownRight, ArrowUpRight, Check, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { X, ArrowDownRight, ArrowUpRight, Check, Loader2, Lock, Sparkles, ArrowRight } from "lucide-react";
+import { DraggableWindow } from "../ui/DraggableWindow";
 import type { Category, Account } from "@/lib/types";
+import { isDemoUser, canPerformAction, incrementDemoTxCount } from "@/lib/freemium";
 
 interface QuickExpenseModalProps {
   isOpen: boolean;
@@ -11,6 +14,7 @@ interface QuickExpenseModalProps {
 }
 
 export function QuickExpenseModal({ isOpen, onClose, onSuccess }: QuickExpenseModalProps) {
+  const router = useRouter();
   const [type, setType] = useState<"expense" | "income">("expense");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
@@ -42,13 +46,62 @@ export function QuickExpenseModal({ isOpen, onClose, onSuccess }: QuickExpenseMo
 
   if (!isOpen) return null;
 
+  const isDemo = isDemoUser();
+  const canAdd = canPerformAction("add_transaction").allowed;
+
+  if (isDemo && !canAdd) {
+    return (
+      <DraggableWindow
+        isOpen={isOpen}
+        onClose={onClose}
+        title="Límite alcanzado"
+        windowId="quick-expense-limit"
+      >
+        <div className="text-center space-y-4 py-4">
+          <div
+            className="w-14 h-14 rounded-2xl mx-auto flex items-center justify-center border shadow-lg"
+            style={{
+              background: "linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.05))",
+              borderColor: "hsl(var(--primary) / 0.3)",
+            }}
+          >
+            <Lock className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <h3 className="text-lg font-black text-foreground">Límite de transacciones alcanzado</h3>
+            <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
+              En modo demo podés registrar hasta 5 transacciones de prueba. Creá tu cuenta gratis para registrar movimientos ilimitados y guardar tus datos.
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              onClose();
+              router.push("/login?tab=register");
+            }}
+            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-black text-black gradient-primary btn-3d cursor-pointer"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Crear Cuenta Gratis</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+          <button
+            onClick={onClose}
+            className="w-full py-2.5 rounded-xl text-xs font-bold text-muted-foreground hover:text-foreground cursor-pointer"
+          >
+            Cerrar
+          </button>
+        </div>
+      </DraggableWindow>
+    );
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) return;
     setSubmitting(true);
 
     try {
-      await fetch("/api/transactions", {
+      const res = await fetch("/api/transactions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -61,6 +114,16 @@ export function QuickExpenseModal({ isOpen, onClose, onSuccess }: QuickExpenseMo
           date: new Date().toISOString().split("T")[0],
         }),
       });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        alert(errData.error || "Error al registrar movimiento");
+        return;
+      }
+
+      if (isDemo) {
+        incrementDemoTxCount();
+      }
 
       onClose();
       setAmount("");
@@ -76,48 +139,67 @@ export function QuickExpenseModal({ isOpen, onClose, onSuccess }: QuickExpenseMo
   const filteredCategories = categories.filter((c) => c.type === type || c.type === "both");
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-md animate-fade-in">
-      <div className="w-full max-w-lg rounded-t-3xl sm:rounded-3xl glass-strong border border-white/10 p-5 sm:p-6 shadow-2xl relative animate-slide-up pb-safe">
-        {/* Drag handle for mobile */}
-        <div className="w-12 h-1.5 rounded-full bg-white/20 mx-auto mb-4 sm:hidden" />
-
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setType("expense")}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                type === "expense"
-                  ? "bg-red-500/20 text-red-400 border border-red-500/30"
-                  : "text-muted-foreground hover:bg-white/5"
-              }`}
-            >
-              <ArrowDownRight className="w-3.5 h-3.5" /> Gasto
-            </button>
-            <button
-              type="button"
-              onClick={() => setType("income")}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                type === "income"
-                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                  : "text-muted-foreground hover:bg-white/5"
-              }`}
-            >
-              <ArrowUpRight className="w-3.5 h-3.5" /> Ingreso
-            </button>
-          </div>
-
+    <DraggableWindow
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Registro Rápido"
+      windowId="quick-expense-modal"
+      defaultPosition={{ x: 0, y: -40 }}
+      footer={
+        <div className="flex w-full gap-2">
           <button
+            type="button"
             onClick={onClose}
-            className="p-1 rounded-xl text-muted-foreground hover:text-foreground hover:bg-white/10"
+            className="flex-1 py-3 rounded-xl text-xs font-bold text-muted-foreground hover:bg-white/5 border border-white/10 transition-colors"
           >
-            <X className="w-5 h-5" />
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            form="quick-expense-form"
+            disabled={submitting || !amount}
+            className="flex-1 py-3 rounded-xl text-xs font-black text-black gradient-primary btn-3d flex items-center justify-center gap-1.5 disabled:opacity-50"
+          >
+            {submitting ? (
+              <Loader2 className="w-4 h-4 animate-spin text-black" />
+            ) : (
+              <>
+                <Check className="w-4 h-4" />
+                <span>Registrar Ahora</span>
+              </>
+            )}
+          </button>
+        </div>
+      }
+    >
+      <div className="flex flex-col space-y-4">
+        {/* Toggle Gasto/Ingreso */}
+        <div className="flex items-center gap-2 mb-2">
+          <button
+            type="button"
+            onClick={() => setType("expense")}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              type === "expense"
+                ? "bg-red-500/20 text-red-400 border border-red-500/30 shadow-sm"
+                : "text-muted-foreground hover:bg-white/5 border border-transparent"
+            }`}
+          >
+            <ArrowDownRight className="w-3.5 h-3.5" /> Gasto
+          </button>
+          <button
+            type="button"
+            onClick={() => setType("income")}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              type === "income"
+                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-sm"
+                : "text-muted-foreground hover:bg-white/5 border border-transparent"
+            }`}
+          >
+            <ArrowUpRight className="w-3.5 h-3.5" /> Ingreso
           </button>
         </div>
 
-        {/* Formulario */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form id="quick-expense-form" onSubmit={handleSubmit} className="space-y-4">
           {/* Input de Monto Grande estilo Fintech */}
           <div className="text-center py-2">
             <span className="text-xs font-bold text-muted-foreground block mb-1">
@@ -160,10 +242,10 @@ export function QuickExpenseModal({ isOpen, onClose, onSuccess }: QuickExpenseMo
               <select
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl bg-card border border-white/10 text-xs text-foreground outline-none focus:border-primary"
+                className="w-full px-3 py-2.5 rounded-xl bg-card border border-white/10 text-xs text-foreground outline-none focus:border-primary cursor-pointer"
               >
                 {filteredCategories.map((c) => (
-                  <option key={c.id} value={c.id}>
+                  <option key={c.id} value={c.id} className="bg-neutral-900">
                     {c.name}
                   </option>
                 ))}
@@ -177,42 +259,18 @@ export function QuickExpenseModal({ isOpen, onClose, onSuccess }: QuickExpenseMo
               <select
                 value={accountId}
                 onChange={(e) => setAccountId(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl bg-card border border-white/10 text-xs text-foreground outline-none focus:border-primary"
+                className="w-full px-3 py-2.5 rounded-xl bg-card border border-white/10 text-xs text-foreground outline-none focus:border-primary cursor-pointer"
               >
                 {accounts.map((a) => (
-                  <option key={a.id} value={a.id}>
+                  <option key={a.id} value={a.id} className="bg-neutral-900">
                     {a.name}
                   </option>
                 ))}
               </select>
             </div>
           </div>
-
-          <div className="flex gap-2 pt-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 py-3 rounded-xl text-xs font-bold text-muted-foreground hover:bg-white/5 border border-white/10"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={submitting || !amount}
-              className="flex-1 py-3 rounded-xl text-xs font-black text-black gradient-primary btn-3d flex items-center justify-center gap-1.5"
-            >
-              {submitting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <>
-                  <Check className="w-4 h-4" />
-                  <span>Registrar Ahora</span>
-                </>
-              )}
-            </button>
-          </div>
         </form>
       </div>
-    </div>
+    </DraggableWindow>
   );
 }

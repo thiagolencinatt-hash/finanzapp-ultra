@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { verifyUserPassword, getUserByEmail } from "@/lib/auth/user-store";
+import { verifyUserPassword, getUserByEmail, registerUser } from "@/lib/auth/user-store";
 
 export async function POST(request: Request) {
   try {
@@ -15,13 +15,14 @@ export async function POST(request: Request) {
     }
 
     const normalizedEmail = email.trim().toLowerCase();
-    let authenticatedUser: { name: string; email: string; currency: string; salary: number } | null = null;
+    let authenticatedUser: { id: string; name: string; email: string; currency: string; salary: number } | null = null;
     let authSource = "local";
 
     // 1. Verificar primero en el almacén persistente local
     const localVerification = verifyUserPassword(normalizedEmail, password);
     if (localVerification.valid && localVerification.user) {
       authenticatedUser = {
+        id: localVerification.user.id,
         name: localVerification.user.name,
         email: localVerification.user.email,
         currency: localVerification.user.currency,
@@ -50,6 +51,7 @@ export async function POST(request: Request) {
           if (!supaErr && data.user) {
             authSource = "supabase";
             authenticatedUser = {
+              id: data.user.id,
               name: data.user.user_metadata?.name || normalizedEmail.split("@")[0],
               email: data.user.email || normalizedEmail,
               currency: data.user.user_metadata?.currency || "ARS",
@@ -64,20 +66,58 @@ export async function POST(request: Request) {
 
     if (!authenticatedUser) {
       const existingUser = getUserByEmail(normalizedEmail);
-      if (existingUser && !existingUser.passwordHash) {
+      if (existingUser) {
         return NextResponse.json(
-          {
-            error:
-              "Esta cuenta fue creada por código de verificación y no tiene contraseña aún. Puedes ingresar con código OTP o crear una contraseña.",
-          },
-          { status: 400 }
+          { error: "Contraseña incorrecta. Por favor verifica tus datos." },
+          { status: 401 }
         );
       }
 
+      // Si el usuario no existe aún y la contraseña tiene >= 6 caracteres, crearlo automáticamente para máxima comodidad
+      if (password.length >= 6) {
+        const reg = registerUser({
+          email: normalizedEmail,
+          password,
+          name: normalizedEmail.split("@")[0],
+          currency: "ARS",
+          salary: 980000,
+        });
+        if (reg.success && reg.user) {
+          authenticatedUser = {
+            id: reg.user.id,
+            name: reg.user.name,
+            email: reg.user.email,
+            currency: reg.user.currency,
+            salary: reg.user.salary,
+          };
+          authSource = "local-auto-created";
+        }
+      } else {
+        return NextResponse.json(
+          { error: "La contraseña debe tener al menos 6 caracteres" },
+          { status: 400 }
+        );
+      }
+    }
+
+    if (!authenticatedUser) {
       return NextResponse.json(
-        { error: "Correo o contraseña incorrectos. Verifica tus datos." },
-        { status: 401 }
+        { error: "Error al iniciar sesión" },
+        { status: 400 }
       );
+    }
+
+    // Asegurar que el cloud store esté inicializado
+    try {
+      const { getUserStore } = await import("@/lib/db/cloud-store");
+      getUserStore(authenticatedUser.id, {
+        email: authenticatedUser.email,
+        name: authenticatedUser.name,
+        currency: authenticatedUser.currency,
+        salary: authenticatedUser.salary,
+      });
+    } catch (e) {
+      console.warn("Could not pre-init user store in login:", e);
     }
 
     const response = NextResponse.json({
@@ -93,14 +133,33 @@ export async function POST(request: Request) {
       maxAge,
       sameSite: "lax",
     });
-    response.cookies.set("finance_demo_session", "true", {
+    // BORRAR explícitamente cualquier cookie de demo previa para que la cuenta tenga todas las funciones desbloqueadas
+    response.cookies.set("finance_demo_session", "", {
       path: "/",
-      maxAge,
+      maxAge: 0,
       sameSite: "lax",
     });
     response.cookies.set(
       "finance_user_name",
       encodeURIComponent(authenticatedUser.name),
+      {
+        path: "/",
+        maxAge,
+        sameSite: "lax",
+      }
+    );
+    response.cookies.set(
+      "finance_user_email",
+      encodeURIComponent(authenticatedUser.email),
+      {
+        path: "/",
+        maxAge,
+        sameSite: "lax",
+      }
+    );
+    response.cookies.set(
+      "finance_user_id",
+      encodeURIComponent(authenticatedUser.id),
       {
         path: "/",
         maxAge,
