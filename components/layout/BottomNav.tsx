@@ -67,14 +67,15 @@ export function BottomNav() {
 
           {/* IA Chat */}
           <button
+            type="button"
             onClick={() => openAIAssistant()}
-            className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-2xl transition-all duration-200 min-w-[54px] text-muted-foreground hover:text-foreground cursor-pointer"
+            className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-2xl transition-all duration-200 min-w-[54px] text-muted-foreground hover:text-foreground active:scale-90 cursor-pointer"
           >
             <div className="w-5 h-5 rounded-md overflow-hidden border border-emerald-400/40 shadow-sm">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/ai-dollar-icon.jpg" alt="IA Dólar" className="w-full h-full object-cover" />
             </div>
-            <span className="text-[10px] tracking-tight font-semibold">IA Coach</span>
+            <span className="text-[11px] tracking-tight font-bold text-emerald-400">IA Coach</span>
           </button>
 
           {/* Metas */}

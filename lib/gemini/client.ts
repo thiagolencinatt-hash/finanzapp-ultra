@@ -9,6 +9,6 @@ export function getGenAI(customApiKey?: string) {
 }
 
 // Modelos soportados con orden de prioridad (evita caídas si Google tiene picos de demanda 503)
-export const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
-export const GEMINI_FALLBACK_MODELS = [GEMINI_MODEL, "gemini-3.5-flash", "gemini-flash-latest"];
+export const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+export const GEMINI_FALLBACK_MODELS = [GEMINI_MODEL, "gemini-2.0-flash", "gemini-1.5-flash"];
 

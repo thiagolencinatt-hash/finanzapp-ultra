@@ -88,7 +88,7 @@ export default function DashboardPage() {
           <Loader2 className="w-8 h-8 animate-spin" style={{ color: "hsl(var(--primary))" }} />
         </div>
       ) : (
-        <div className="flex-1 p-4 lg:p-6 space-y-5">
+        <div className="flex-1 p-3 sm:p-5 lg:p-6 space-y-3.5 sm:space-y-5 max-w-7xl mx-auto w-full">
 
           {/* 1. 💡 Smart Tip — Coach IA */}
           <div className="animate-slide-up">

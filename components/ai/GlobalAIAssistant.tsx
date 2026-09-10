@@ -36,8 +36,8 @@ export function GlobalAIAssistant() {
 
   return (
     <>
-      {/* Botón flotante siempre visible (FAB) en la esquina inferior derecha */}
-      <div className="fixed bottom-20 lg:bottom-6 right-5 z-40">
+      {/* Botón flotante visible en desktop (en móvil se usa la barra inferior BottomNav) */}
+      <div className="hidden lg:block fixed bottom-6 right-6 z-40">
         <button
           type="button"
           onClick={() => {

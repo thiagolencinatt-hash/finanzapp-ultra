@@ -107,15 +107,15 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={disabled}
-          className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors mb-0.5 disabled:opacity-40 cursor-pointer"
+          className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors mb-0.5 disabled:opacity-40 active:scale-95 cursor-pointer"
           style={{
-            background: imageBase64 ? "hsl(var(--primary) / 0.2)" : "hsl(var(--muted))",
+            background: imageBase64 ? "hsl(var(--primary) / 0.25)" : "hsl(var(--muted))",
             color: imageBase64 ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
             border: imageBase64 ? "1px solid hsl(var(--primary) / 0.5)" : "none",
           }}
           title="Adjuntar imagen para analizar"
         >
-          <ImagePlus className="w-4 h-4" />
+          <ImagePlus className="w-5 h-5" />
         </button>
 
         <textarea
@@ -123,10 +123,10 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
           value={text}
           onChange={handleInput}
           onKeyDown={handleKeyDown}
-          placeholder={imageBase64 ? "Preguntame algo sobre esta imagen..." : 'Escribí algo... Ej: "Gasté $3000 en taxi con efectivo"'}
+          placeholder={imageBase64 ? "Preguntame algo sobre esta imagen..." : 'Escribí algo... Ej: "Gasté $3000 en taxi con MP"'}
           disabled={disabled}
           rows={1}
-          className="flex-1 bg-transparent text-sm outline-none resize-none py-2 px-2 min-h-[40px]"
+          className="flex-1 bg-transparent text-base sm:text-sm outline-none resize-none py-2.5 px-2.5 min-h-[42px] max-h-[120px]"
           style={{ color: "hsl(var(--foreground))" }}
         />
 
@@ -134,13 +134,13 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
         <button
           onClick={handleSend}
           disabled={!canSend}
-          className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all mb-0.5 disabled:opacity-40 cursor-pointer"
+          className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all mb-0.5 disabled:opacity-40 active:scale-95 cursor-pointer shadow-md"
           style={{
             background: canSend ? "hsl(var(--primary))" : "hsl(var(--muted))",
-            color: canSend ? "white" : "hsl(var(--muted-foreground))",
+            color: canSend ? "#0a0f1e" : "hsl(var(--muted-foreground))",
           }}
         >
-          <Send className="w-4 h-4" />
+          <Send className="w-4 h-4 font-bold stroke-[2.5]" />
         </button>
       </div>
     </div>

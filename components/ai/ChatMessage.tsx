@@ -23,7 +23,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
         }}
       >
         {isUser ? (
-          <User className="w-4 h-4 text-white" />
+          <User className="w-4 h-4 text-black" />
         ) : (
           <div className="w-full h-full rounded-xl overflow-hidden border border-emerald-400/40">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -35,10 +35,10 @@ export function ChatMessage({ message }: ChatMessageProps) {
       <div className={`flex flex-col max-w-[85%] ${isUser ? "items-end" : "items-start"} gap-1`}>
         {/* Bubble */}
         <div
-          className="px-4 py-3 rounded-2xl text-sm leading-relaxed"
+          className="px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm font-medium"
           style={{
             background: isUser ? "hsl(var(--primary))" : "hsl(var(--card))",
-            color: isUser ? "white" : "hsl(var(--foreground))",
+            color: isUser ? "#0a0f1e" : "hsl(var(--foreground))",
             border: isUser ? "none" : "1px solid hsl(var(--border))",
             borderBottomRightRadius: isUser ? "4px" : "16px",
             borderBottomLeftRadius: isUser ? "16px" : "4px",

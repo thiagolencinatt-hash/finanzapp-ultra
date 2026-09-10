@@ -79,29 +79,32 @@ export async function POST(req: NextRequest) {
       const systemInstruction = buildSystemPrompt(financialContext);
       const genai = getGenAI();
 
+      // Preparar historial estructurado para @google/genai (alternando user / model)
+      const previousMessages = getUserChatMessages(user.id, 6);
+      const history: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }> = [];
+      for (const prev of previousMessages) {
+        if (!prev.content?.trim()) continue;
+        const role = prev.role === "assistant" ? "model" : "user";
+        if (history.length === 0 && role !== "user") continue;
+        if (history.length > 0 && history[history.length - 1].role === role) continue;
+        history.push({
+          role,
+          parts: [{ text: prev.content }],
+        });
+      }
+
       let lastError = null;
       for (const modelName of GEMINI_FALLBACK_MODELS) {
         try {
           const chat = genai.chats.create({
             model: modelName,
+            history: history.length > 0 ? history : undefined,
             config: {
               systemInstruction,
               tools: financialTools,
               temperature: 0.7,
             },
           });
-
-          // Historial de usuario
-          const previousMessages = getUserChatMessages(user.id, 6);
-          for (const prev of previousMessages) {
-            if (prev.role === "user" || prev.role === "assistant") {
-              try {
-                await chat.sendMessage({ message: prev.content });
-              } catch {
-                // ignore
-              }
-            }
-          }
 
           const contents: Array<string | { inlineData: { mimeType: string; data: string } }> = [];
           if (image_base64) {
@@ -118,7 +121,7 @@ export async function POST(req: NextRequest) {
 
           const sendPromise = chat.sendMessage({ message: contents });
           const timeoutPromise = new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error("Gemini response timeout")), 8000)
+            setTimeout(() => reject(new Error("Gemini response timeout")), 5000)
           );
 
           let response = await Promise.race([sendPromise, timeoutPromise]);
