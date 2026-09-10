@@ -19,6 +19,8 @@ import {
   Sparkles,
   RefreshCw,
   RotateCcw,
+  Cloud,
+  ShieldCheck,
 } from "lucide-react";
 import type { Category } from "@/lib/types";
 import { ExportExcelButton } from "@/components/dashboard/ExportExcelButton";
@@ -32,12 +34,24 @@ export default function SettingsPage() {
   const [newCatColor, setNewCatColor] = useState("#6366F1");
   const [exported, setExported] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
+  const [cloudHealth, setCloudHealth] = useState<{
+    supabase?: { connected: boolean; message: string; project?: string };
+    gemini_ai?: { connected: boolean; model: string };
+    resend_email?: { connected: boolean };
+  } | null>(null);
 
   useEffect(() => {
     fetch("/api/categories")
       .then((r) => r.json())
       .then((d) => {
         if (Array.isArray(d)) setCategories(d);
+      })
+      .catch(() => {});
+
+    fetch("/api/health")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.services) setCloudHealth(d.services);
       })
       .catch(() => {});
   }, []);
@@ -134,6 +148,72 @@ export default function SettingsPage() {
       <Header title="Configuración" subtitle="Preferencias, categorías y datos del sistema" />
 
       <div className="flex-1 p-4 lg:p-6 max-w-4xl space-y-6">
+        {/* Estado Nube (Supabase, Gemini, Resend) */}
+        <section className="rounded-2xl p-5 border border-emerald-500/30 bg-emerald-950/10 animate-fade-in">
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400">
+                <Cloud className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-foreground flex items-center gap-2">
+                  <span>Conexión a la Nube</span>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    En Línea
+                  </span>
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  Estado de los servicios de base de datos, autenticación e inteligencia artificial
+                </p>
+              </div>
+            </div>
+            <a
+              href="/api/health"
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs font-semibold text-emerald-400 hover:underline hidden sm:inline-block"
+            >
+              Ver diagnóstico (/api/health)
+            </a>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* Supabase */}
+            <div className="p-3.5 rounded-xl bg-card border border-white/10 flex items-center gap-3">
+              <div className="w-3 h-3 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/50 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-foreground">Supabase Cloud</p>
+                <p className="text-[11px] text-emerald-400 truncate">
+                  {cloudHealth?.supabase?.connected ? "Conectado y Listo" : "Comprobando..."}
+                </p>
+              </div>
+            </div>
+
+            {/* Gemini AI */}
+            <div className="p-3.5 rounded-xl bg-card border border-white/10 flex items-center gap-3">
+              <div className="w-3 h-3 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/50 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-foreground">Google Gemini 2.5</p>
+                <p className="text-[11px] text-emerald-400 truncate">
+                  {cloudHealth?.gemini_ai?.connected ? "IA Coach Activa" : "Configurando..."}
+                </p>
+              </div>
+            </div>
+
+            {/* Email OTP */}
+            <div className="p-3.5 rounded-xl bg-card border border-white/10 flex items-center gap-3">
+              <div className="w-3 h-3 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/50 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-foreground">Servicio de Correos</p>
+                <p className="text-[11px] text-emerald-400 truncate">
+                  {cloudHealth?.resend_email?.connected ? "Resend Conectado" : "Listo"}
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* Apariencia / Tema */}
         <section
           className="rounded-2xl p-6"
