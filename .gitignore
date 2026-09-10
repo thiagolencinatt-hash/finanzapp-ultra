@@ -17,6 +17,7 @@ node_modules/
 .DS_Store
 *.pem
 Thumbs.db
+cloudflared.exe
 
 # Debug
 npm-debug.log*
