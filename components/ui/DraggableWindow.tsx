@@ -45,6 +45,17 @@ export function DraggableWindow({
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
+  // Bloquear scroll de fondo mientras la ventana esté abierta
+  useEffect(() => {
+    if (isOpen) {
+      const prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prevOverflow;
+      };
+    }
+  }, [isOpen]);
+
   // Al hacer click en la ventana, la trae al frente
   const bringToFront = useCallback(() => {
     setZIndex(getNextZ());

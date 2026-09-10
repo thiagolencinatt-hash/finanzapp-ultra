@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { ChatMessage } from "@/components/ai/ChatMessage";
 import { ChatInput } from "@/components/ai/ChatInput";
 import type { ChatMessage as ChatMessageType } from "@/lib/types";
@@ -147,6 +148,17 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt }: AIAssistant
     return () => window.removeEventListener("resize", check);
   }, []);
 
+  // Bloquear scroll de fondo cuando la ventana del asistente está abierta
+  useEffect(() => {
+    if (isOpen) {
+      const prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prevOverflow;
+      };
+    }
+  }, [isOpen]);
+
   const isEmpty = messages.length === 0 && historyLoaded;
 
   const chatContent = (
@@ -212,7 +224,7 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt }: AIAssistant
   // En celulares iPhone / Android: Render a pantalla completa nativa sin desbordes ni problemas de teclado
   if (isMobile) {
     if (typeof document === "undefined") return null;
-    return (
+    return createPortal(
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -265,7 +277,8 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt }: AIAssistant
             </div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body
     );
   }
 
