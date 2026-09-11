@@ -187,3 +187,16 @@ export function setPasswordForUser(
   console.log(`✅ [User Store] Contraseña fijada exitosamente para: ${normalized}`);
   return { success: true, user };
 }
+
+export function updateUserSalary(userId: string, salary: number): void {
+  ensureLoaded();
+  for (const user of usersCache.values()) {
+    if (user.id === userId) {
+      user.salary = Number(salary) || user.salary;
+      user.updatedAt = new Date().toISOString();
+      persistToFile();
+      break;
+    }
+  }
+}
+

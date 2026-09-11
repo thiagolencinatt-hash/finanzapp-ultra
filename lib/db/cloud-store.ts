@@ -1,4 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
+import fs from "fs";
+import path from "path";
 import type {
   Account,
   Category,
@@ -10,71 +11,221 @@ import type {
   Subscription,
   ChatMessage,
 } from "@/lib/types";
+import {
+  demoAccounts,
+  demoCategories,
+  demoTransactions,
+  demoInstallments,
+  demoGoals,
+  demoBudgets,
+  demoSubscriptions,
+} from "@/lib/demo-data";
+import { updateUserSalary } from "@/lib/auth/user-store";
 
-// ============================================================
-// Métodos de lectura y mutación por usuario en SUPABASE
-// ============================================================
-
-export async function getUserStore(userId: string, userInfo?: any): Promise<{ user: any, accounts: any[], goals: any[], budgets: any[], subscriptions: any[], installments: any[], transactions: any[] }> {
-  return { user: {}, accounts: [], goals: [], budgets: [], subscriptions: [], installments: [], transactions: [] }; 
+export interface UserFinancialStore {
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    currency: string;
+    salary: number;
+    payDay: number;
+  };
+  accounts: Account[];
+  categories: Category[];
+  transactions: Transaction[];
+  installments: Installment[];
+  goals: SavingsGoal[];
+  budgets: CategoryBudget[];
+  subscriptions: Subscription[];
+  chatMessages: ChatMessage[];
+  lastUpdated: string;
 }
 
-export async function saveUserStore(userId: string) {
+function getDataDir(): string {
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    return path.join("/tmp", "users_data");
+  }
+  return path.join(process.cwd(), "data", "users_data");
 }
+
+const memoryCache = new Map<string, UserFinancialStore>();
+
+function sanitizeId(id: string): string {
+  return id.replace(/[^a-zA-Z0-9_-]/g, "_");
+}
+
+function getFilePath(userId: string): string {
+  return path.join(getDataDir(), `${sanitizeId(userId)}.json`);
+}
+
+function ensureDirectory() {
+  const dir = getDataDir();
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+}
+
+function createInitialUserStore(
+  userId: string,
+  userInfo?: { email?: string; name?: string; currency?: string; salary?: number }
+): UserFinancialStore {
+  const now = new Date().toISOString();
+  const isDemo = userId === "demo-user";
+
+  if (isDemo) {
+    return {
+      user: {
+        id: "demo-user",
+        email: "demo@finanzapp.com",
+        name: "Usuario Demo",
+        currency: "ARS",
+        salary: 980000,
+        payDay: 5,
+      },
+      accounts: JSON.parse(JSON.stringify(demoAccounts)),
+      categories: JSON.parse(JSON.stringify(demoCategories)),
+      transactions: JSON.parse(JSON.stringify(demoTransactions)),
+      installments: JSON.parse(JSON.stringify(demoInstallments)),
+      goals: JSON.parse(JSON.stringify(demoGoals)),
+      budgets: JSON.parse(JSON.stringify(demoBudgets)),
+      subscriptions: JSON.parse(JSON.stringify(demoSubscriptions)),
+      chatMessages: [],
+      lastUpdated: now,
+    };
+  }
+
+  // Usuario real nuevo: Comienza en limpio con su configuración personalizada
+  const defaultAccId = `acc-${Date.now()}-1`;
+  const defaultAcc: Account = {
+    id: defaultAccId,
+    user_id: userId,
+    name: "Mi Billetera Principal",
+    type: "digital_wallet",
+    balance: 0,
+    currency: userInfo?.currency || "ARS",
+    color: "#10B981",
+    icon: "Wallet",
+    is_active: true,
+    created_at: now,
+    updated_at: now,
+  };
+
+  const initialCategories: Category[] = demoCategories.map((c, i) => ({
+    ...c,
+    id: `cat-user-${Date.now()}-${i}`,
+    user_id: userId,
+    created_at: now,
+  }));
+
+  return {
+    user: {
+      id: userId,
+      email: userInfo?.email || "usuario@finanzapp.com",
+      name: userInfo?.name || "Usuario",
+      currency: userInfo?.currency || "ARS",
+      salary: userInfo?.salary || 980000,
+      payDay: 5,
+    },
+    accounts: [defaultAcc],
+    categories: initialCategories,
+    transactions: [],
+    installments: [],
+    goals: [],
+    budgets: [],
+    subscriptions: [],
+    chatMessages: [],
+    lastUpdated: now,
+  };
+}
+
+export async function getUserStore(
+  userId: string,
+  userInfo?: { email?: string; name?: string; currency?: string; salary?: number }
+): Promise<UserFinancialStore> {
+  const cached = memoryCache.get(userId);
+  if (cached) return cached;
+
+  ensureDirectory();
+  const filePath = getFilePath(userId);
+
+  if (fs.existsSync(filePath)) {
+    try {
+      const raw = fs.readFileSync(filePath, "utf-8");
+      const store: UserFinancialStore = JSON.parse(raw);
+      if (userInfo?.salary && store.user) {
+        store.user.salary = userInfo.salary;
+      }
+      if (userInfo?.name && store.user) {
+        store.user.name = userInfo.name;
+      }
+      memoryCache.set(userId, store);
+      return store;
+    } catch (e) {
+      console.warn(`[CloudStore] Error leyendo datos de ${userId}, regenerando:`, e);
+    }
+  }
+
+  const initial = createInitialUserStore(userId, userInfo);
+  memoryCache.set(userId, initial);
+  await saveUserStore(userId);
+  return initial;
+}
+
+export async function saveUserStore(userId: string): Promise<void> {
+  const store = memoryCache.get(userId);
+  if (!store) return;
+
+  store.lastUpdated = new Date().toISOString();
+  ensureDirectory();
+  const filePath = getFilePath(userId);
+
+  try {
+    fs.writeFileSync(filePath, JSON.stringify(store, null, 2), "utf-8");
+  } catch (err) {
+    console.error(`[CloudStore] Error guardando datos de ${userId} en disco:`, err);
+  }
+}
+
+// ============================================================
+// Métodos de lectura y mutación por usuario
+// ============================================================
 
 export async function getUserSummary(
   userId: string,
   userInfo?: { email?: string; name?: string; currency?: string; salary?: number }
 ): Promise<FinancialSummary> {
-  const supabase = await createClient();
-
-  const [
-    { data: accounts },
-    { data: transactions },
-    { data: installments },
-    { data: goals },
-    { data: categories },
-  ] = await Promise.all([
-    supabase.from("accounts").select("*").eq("user_id", userId),
-    supabase.from("transactions").select("*, category:categories(*), account:accounts(*)").eq("user_id", userId).order("date", { ascending: false }),
-    supabase.from("installments").select("*").eq("user_id", userId).eq("is_active", true),
-    supabase.from("savings_goals").select("*").eq("user_id", userId),
-    supabase.from("categories").select("*").or(`user_id.eq.${userId},user_id.is.null`),
-  ]);
-
-  const accs = (accounts as Account[]) || [];
-  const txs = (transactions as Transaction[]) || [];
-  const insts = (installments as Installment[]) || [];
-  const gls = (goals as SavingsGoal[]) || [];
+  const store = await getUserStore(userId, userInfo);
 
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const thirtyDaysStr = thirtyDaysAgo.toISOString().split("T")[0];
 
-  const totalBalance = accs
+  const totalBalance = store.accounts
     .filter((a) => a.is_active)
     .reduce((sum, a) => sum + (Number(a.balance) || 0), 0);
 
-  const income30d = txs
+  const income30d = store.transactions
     .filter((t) => t.type === "income" && t.date >= thirtyDaysStr)
     .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
-  const expense30d = txs
+  const expense30d = store.transactions
     .filter((t) => t.type === "expense" && t.date >= thirtyDaysStr)
     .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
-  const totalInstallmentsMonthly = insts
+  const totalInstallmentsMonthly = store.installments
     .filter((i) => i.is_active)
     .reduce((sum, i) => sum + (Number(i.installment_amount) || 0), 0);
 
   // Categorías de gastos
   const categoryMap: Record<string, { category_name: string; total: number; count: number; color?: string; icon?: string }> = {};
-  txs
+  store.transactions
     .filter((t) => t.type === "expense" && t.date >= thirtyDaysStr)
     .forEach((t) => {
-      const name = t.category?.name || "Sin categoría";
+      const cat = store.categories.find((c) => c.id === t.category_id);
+      const name = cat?.name || t.category?.name || "Sin categoría";
       if (!categoryMap[name]) {
-        categoryMap[name] = { category_name: name, total: 0, count: 0, color: t.category?.color, icon: t.category?.icon };
+        categoryMap[name] = { category_name: name, total: 0, count: 0, color: cat?.color, icon: cat?.icon };
       }
       categoryMap[name].total += Number(t.amount) || 0;
       categoryMap[name].count++;
@@ -89,11 +240,11 @@ export async function getUserSummary(
   in7Days.setDate(in7Days.getDate() + 7);
   const in7DaysStr = in7Days.toISOString().split("T")[0];
 
-  const upcomingInstallments = insts
+  const upcomingInstallments = store.installments
     .filter((i) => i.is_active && (i as any).next_due_date && (i as any).next_due_date >= todayStr && (i as any).next_due_date <= in7DaysStr)
     .slice(0, 5)
     .map((i) => {
-      const acc = accs.find((a) => a.id === i.account_id);
+      const acc = store.accounts.find((a) => a.id === i.account_id);
       return {
         description: i.description,
         amount: Number(i.installment_amount) || 0,
@@ -102,29 +253,39 @@ export async function getUserSummary(
       };
     });
 
+  const recentTransactions = [...store.transactions]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 8)
+    .map((t) => ({
+      ...t,
+      account: store.accounts.find((a) => a.id === t.account_id),
+      category: store.categories.find((c) => c.id === t.category_id),
+    }));
+
   return {
     total_balance: totalBalance,
     total_balance_ars: totalBalance,
     income_30d: income30d,
     expense_30d: expense30d,
     total_installments_monthly: totalInstallmentsMonthly,
-    active_installments_count: insts.filter((i) => i.is_active).length,
-    savings_goals_progress: gls.length > 0
-      ? gls.reduce((acc, g) => acc + (g.target_amount > 0 ? (g.current_amount / g.target_amount) * 100 : 0), 0) / gls.length
+    active_installments_count: store.installments.filter((i) => i.is_active).length,
+    savings_goals_progress: store.goals.length > 0
+      ? store.goals.reduce((acc, g) => acc + (g.target_amount > 0 ? (g.current_amount / g.target_amount) * 100 : 0), 0) / store.goals.length
       : 0,
     top_categories: topCategories,
     upcoming_installments: upcomingInstallments,
-    recent_transactions: txs.slice(0, 8),
-    configured_salary: userInfo?.salary || 980000,
-    salary_pay_day: 5,
-    accounts: accs,
-    savings_goals: gls,
-    active_installments: insts,
-    category_budgets: [],
-    subscriptions: [],
+    recent_transactions: recentTransactions,
+    configured_salary: store.user.salary || userInfo?.salary || 980000,
+    salary_pay_day: store.user.payDay || 5,
+    accounts: store.accounts,
+    savings_goals: store.goals,
+    active_installments: store.installments,
+    category_budgets: store.budgets || [],
+    subscriptions: store.subscriptions || [],
   };
 }
 
+// ---- Transacciones ----
 export async function getUserTransactions(
   userId: string,
   options?: {
@@ -137,277 +298,396 @@ export async function getUserTransactions(
     offset?: number;
   }
 ): Promise<{ data: Transaction[]; count: number }> {
-  const supabase = await createClient();
-  let query = supabase
-    .from("transactions")
-    .select("*, category:categories(*), account:accounts(*)", { count: "exact" })
-    .eq("user_id", userId)
-    .order("date", { ascending: false });
+  const store = await getUserStore(userId);
+  let list = [...store.transactions];
 
-  if (options?.type) query = query.eq("type", options.type);
-  if (options?.accountId) query = query.eq("account_id", options.accountId);
-  if (options?.categoryId) query = query.eq("category_id", options.categoryId);
-  if (options?.from) query = query.gte("date", options.from);
-  if (options?.to) query = query.lte("date", options.to);
+  if (options?.type) list = list.filter((t) => t.type === options.type);
+  if (options?.accountId) list = list.filter((t) => t.account_id === options.accountId);
+  if (options?.categoryId) list = list.filter((t) => t.category_id === options.categoryId);
+  if (options?.from) list = list.filter((t) => t.date >= options.from!);
+  if (options?.to) list = list.filter((t) => t.date <= options.to!);
 
-  const limit = options?.limit || 50;
+  list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  const count = list.length;
   const offset = options?.offset || 0;
-  
-  query = query.range(offset, offset + limit - 1);
+  const limit = options?.limit || 50;
+  const paged = list.slice(offset, offset + limit).map((t) => ({
+    ...t,
+    account: store.accounts.find((a) => a.id === t.account_id),
+    category: store.categories.find((c) => c.id === t.category_id),
+  }));
 
-  const { data, count } = await query;
-  return { data: (data as Transaction[]) || [], count: count || 0 };
+  return { data: paged, count };
 }
 
 export async function addUserTransaction(userId: string, input: Partial<Transaction>): Promise<Transaction> {
-  const supabase = await createClient();
-  
-  let targetAccountId = input.account_id;
-  if (!targetAccountId) {
-    const { data: accounts } = await supabase.from("accounts").select("id").eq("user_id", userId).limit(1);
-    if (accounts && accounts.length > 0) {
-      targetAccountId = accounts[0].id;
-    } else {
-      const acc = await addUserAccount(userId, { name: "Billetera Principal" });
-      targetAccountId = acc.id;
+  const store = await getUserStore(userId);
+  const now = new Date().toISOString();
+
+  let targetAccount = store.accounts.find((a) => a.id === input.account_id);
+  if (!targetAccount && store.accounts.length > 0) {
+    targetAccount = store.accounts[0];
+  }
+
+  const amount = Number(input.amount) || 0;
+  const type = input.type || "expense";
+
+  // Actualizar saldo de cuenta automáticamente
+  if (targetAccount) {
+    if (type === "income") {
+      targetAccount.balance += amount;
+    } else if (type === "expense") {
+      targetAccount.balance -= amount;
+    } else if (type === "transfer" && input.transfer_to_account_id) {
+      targetAccount.balance -= amount;
+      const destAcc = store.accounts.find((a) => a.id === input.transfer_to_account_id);
+      if (destAcc) destAcc.balance += amount;
     }
   }
 
-  const { data: inserted, error } = await supabase
-    .from("transactions")
-    .insert({
-      user_id: userId,
-      account_id: targetAccountId,
-      type: input.type || "expense",
-      amount: Number(input.amount) || 0,
-      currency: input.currency || "ARS",
-      category_id: input.category_id || null,
-      description: input.description || null,
-      date: input.date || new Date().toISOString().split("T")[0],
-    })
-    .select()
-    .single();
+  const newTx: Transaction = {
+    id: `tx-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    user_id: userId,
+    account_id: targetAccount?.id || store.accounts[0]?.id || "acc-default",
+    type,
+    amount,
+    currency: input.currency || targetAccount?.currency || "ARS",
+    category_id: input.category_id || null,
+    description: input.description || (type === "income" ? "Ingreso" : "Gasto"),
+    date: input.date || now.split("T")[0],
+    installment_id: input.installment_id || null,
+    transfer_to_account_id: input.transfer_to_account_id || null,
+    exchange_rate: input.exchange_rate || null,
+    urgency: input.urgency || null,
+    tags: input.tags || [],
+    created_at: now,
+    updated_at: now,
+    account: targetAccount,
+    category: store.categories.find((c) => c.id === input.category_id),
+  };
 
-  if (error) throw error;
-  
-  const amount = Number(input.amount) || 0;
-  if (input.type === "income" && targetAccountId) {
-    await updateBalance(targetAccountId, amount);
-  } else if (input.type === "expense" && targetAccountId) {
-    await updateBalance(targetAccountId, -amount);
-  } else if (input.type === "transfer" && input.transfer_to_account_id && targetAccountId) {
-    await updateBalance(targetAccountId, -amount);
-    await updateBalance(input.transfer_to_account_id, amount);
-  }
-
-  return inserted as Transaction;
+  store.transactions.unshift(newTx);
+  await saveUserStore(userId);
+  return newTx;
 }
 
 export async function updateUserTransaction(userId: string, id: string, updates: Partial<Transaction>): Promise<Transaction | null> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("transactions")
-    .update({
-      type: updates.type,
-      amount: updates.amount !== undefined ? Number(updates.amount) : undefined,
-      currency: updates.currency,
-      category_id: updates.category_id,
-      description: updates.description,
-      date: updates.date,
-      account_id: updates.account_id,
-      transfer_to_account_id: updates.transfer_to_account_id,
-    })
-    .eq("id", id)
-    .eq("user_id", userId)
-    .select()
-    .single();
+  const store = await getUserStore(userId);
+  const idx = store.transactions.findIndex((t) => t.id === id);
+  if (idx === -1) return null;
 
-  if (error) return null;
-  return data as Transaction;
+  const old = store.transactions[idx];
+  const updated: Transaction = {
+    ...old,
+    ...updates,
+    amount: updates.amount !== undefined ? Number(updates.amount) : old.amount,
+    updated_at: new Date().toISOString(),
+  };
+
+  store.transactions[idx] = updated;
+  await saveUserStore(userId);
+  return updated;
 }
 
 export async function deleteUserTransaction(userId: string, id: string): Promise<boolean> {
-  const supabase = await createClient();
-  const { error } = await supabase.from("transactions").delete().eq("id", id).eq("user_id", userId);
-  return !error;
-}
-
-async function updateBalance(accountId: string, amountChange: number) {
-  const supabase = await createClient();
-  const { data: acc } = await supabase.from("accounts").select("balance").eq("id", accountId).single();
-  if (acc) {
-    await supabase.from("accounts").update({ balance: Number(acc.balance) + amountChange }).eq("id", accountId);
+  const store = await getUserStore(userId);
+  const initialLen = store.transactions.length;
+  store.transactions = store.transactions.filter((t) => t.id !== id);
+  if (store.transactions.length !== initialLen) {
+    await saveUserStore(userId);
+    return true;
   }
+  return false;
 }
 
+// ---- Cuentas ----
 export async function getUserAccounts(userId: string): Promise<Account[]> {
-  const supabase = await createClient();
-  const { data } = await supabase.from("accounts").select("*").eq("user_id", userId);
-  return (data as Account[]) || [];
+  const store = await getUserStore(userId);
+  return store.accounts;
 }
 
 export async function addUserAccount(userId: string, input: Partial<Account>): Promise<Account> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("accounts")
-    .insert({
-      user_id: userId,
-      name: input.name || "Nueva Cuenta",
-      type: input.type || "digital_wallet",
-      balance: Number(input.balance) || 0,
-      currency: input.currency || "ARS",
-      color: input.color || "#3B82F6",
-      icon: input.icon || "Wallet",
-    })
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data as Account;
+  const store = await getUserStore(userId);
+  const now = new Date().toISOString();
+  const newAcc: Account = {
+    id: `acc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    user_id: userId,
+    name: input.name || "Nueva Cuenta",
+    type: input.type || "digital_wallet",
+    balance: Number(input.balance) || 0,
+    currency: input.currency || "ARS",
+    color: input.color || "#3B82F6",
+    icon: input.icon || "Wallet",
+    is_active: input.is_active !== undefined ? input.is_active : true,
+    created_at: now,
+    updated_at: now,
+  };
+  store.accounts.push(newAcc);
+  await saveUserStore(userId);
+  return newAcc;
 }
 
 export async function updateUserAccount(userId: string, id: string, updates: Partial<Account>): Promise<Account | null> {
-  const supabase = await createClient();
-  const { data, error } = await supabase.from("accounts").update(updates).eq("id", id).eq("user_id", userId).select().single();
-  if (error) return null;
-  return data as Account;
+  const store = await getUserStore(userId);
+  const acc = store.accounts.find((a) => a.id === id);
+  if (!acc) return null;
+
+  Object.assign(acc, updates);
+  acc.updated_at = new Date().toISOString();
+  await saveUserStore(userId);
+  return acc;
 }
 
 export async function deleteUserAccount(userId: string, id: string): Promise<boolean> {
-  const supabase = await createClient();
-  const { error } = await supabase.from("accounts").delete().eq("id", id).eq("user_id", userId);
-  return !error;
+  const store = await getUserStore(userId);
+  const initialLen = store.accounts.length;
+  store.accounts = store.accounts.filter((a) => a.id !== id);
+  if (store.accounts.length !== initialLen) {
+    await saveUserStore(userId);
+    return true;
+  }
+  return false;
 }
 
+// ---- Categorías ----
 export async function getUserCategories(userId: string): Promise<Category[]> {
-  const supabase = await createClient();
-  const { data } = await supabase.from("categories").select("*").or(`user_id.eq.${userId},user_id.is.null`);
-  return (data as Category[]) || [];
+  const store = await getUserStore(userId);
+  return store.categories;
 }
 
 export async function addUserCategory(userId: string, input: Partial<Category>): Promise<Category> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("categories")
-    .insert({
-      user_id: userId,
-      name: input.name || "Nueva Categoría",
-      icon: input.icon || "tag",
-      color: input.color || "#6366F1",
-      type: input.type || "expense",
-    })
-    .select()
-    .single();
-  if (error) throw error;
-  return data as Category;
+  const store = await getUserStore(userId);
+  const newCat: Category = {
+    id: `cat-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    user_id: userId,
+    name: input.name || "Nueva Categoría",
+    icon: input.icon || "tag",
+    color: input.color || "#6366F1",
+    type: input.type || "expense",
+    is_default: false,
+    created_at: new Date().toISOString(),
+  };
+  store.categories.push(newCat);
+  await saveUserStore(userId);
+  return newCat;
 }
 
+// ---- Metas de Ahorro ----
 export async function getUserGoals(userId: string, type?: string): Promise<SavingsGoal[]> {
-  const supabase = await createClient();
-  let query = supabase.from("savings_goals").select("*").eq("user_id", userId);
-  if (type) query = query.eq("type", type);
-  const { data } = await query;
-  return (data as SavingsGoal[]) || [];
+  const store = await getUserStore(userId);
+  if (type) return store.goals.filter((g) => g.type === type);
+  return store.goals;
 }
 
 export async function addUserGoal(userId: string, input: Partial<SavingsGoal>): Promise<SavingsGoal> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("savings_goals")
-    .insert({
-      user_id: userId,
-      name: input.name || "Meta",
-      type: input.type || "goal",
-      description: input.description || null,
-      target_amount: Number(input.target_amount) || 0,
-      current_amount: Number(input.current_amount) || 0,
-      target_date: input.target_date || null,
-      monthly_contribution: Number(input.monthly_contribution) || 0,
-      icon: input.icon || "Target",
-      color: input.color || "#10B981",
-    })
-    .select()
-    .single();
-  if (error) throw error;
-  return data as SavingsGoal;
+  const store = await getUserStore(userId);
+  const now = new Date().toISOString();
+  const newGoal: SavingsGoal = {
+    id: `goal-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    user_id: userId,
+    name: input.name || "Meta de Ahorro",
+    type: input.type || "goal",
+    description: input.description || null,
+    target_amount: Number(input.target_amount) || 0,
+    current_amount: Number(input.current_amount) || 0,
+    target_date: input.target_date || null,
+    monthly_contribution: Number(input.monthly_contribution) || 0,
+    priority: input.priority || 1,
+    icon: input.icon || "Target",
+    color: input.color || "#10B981",
+    currency: input.currency || "ARS",
+    image_url: input.image_url || null,
+    product_url: input.product_url || null,
+    is_completed: Boolean(input.is_completed),
+    completed_at: null,
+    created_at: now,
+    updated_at: now,
+  };
+  store.goals.push(newGoal);
+  await saveUserStore(userId);
+  return newGoal;
 }
 
 export async function updateUserGoal(userId: string, id: string, updates: Partial<SavingsGoal>): Promise<SavingsGoal | null> {
-  const supabase = await createClient();
-  const { data, error } = await supabase.from("savings_goals").update(updates).eq("id", id).eq("user_id", userId).select().single();
-  if (error) return null;
-  return data as SavingsGoal;
+  const store = await getUserStore(userId);
+  const goal = store.goals.find((g) => g.id === id);
+  if (!goal) return null;
+
+  Object.assign(goal, updates);
+  goal.updated_at = new Date().toISOString();
+  await saveUserStore(userId);
+  return goal;
 }
 
 export async function deleteUserGoal(userId: string, id: string): Promise<boolean> {
-  const supabase = await createClient();
-  const { error } = await supabase.from("savings_goals").delete().eq("id", id).eq("user_id", userId);
-  return !error;
+  const store = await getUserStore(userId);
+  const len = store.goals.length;
+  store.goals = store.goals.filter((g) => g.id !== id);
+  if (store.goals.length !== len) {
+    await saveUserStore(userId);
+    return true;
+  }
+  return false;
 }
 
+// ---- Cuotas (Installments) ----
 export async function getUserInstallments(userId: string): Promise<Installment[]> {
-  const supabase = await createClient();
-  const { data } = await supabase.from("installments").select("*").eq("user_id", userId);
-  return (data as Installment[]) || [];
+  const store = await getUserStore(userId);
+  return store.installments;
 }
 
 export async function addUserInstallment(userId: string, input: Partial<Installment>): Promise<Installment> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("installments")
-    .insert({
-      user_id: userId,
-      account_id: input.account_id,
-      description: input.description,
-      category_id: input.category_id || null,
-      total_amount: Number(input.total_amount) || 0,
-      total_installments: Number(input.total_installments) || 1,
-      paid_installments: Number(input.paid_installments) || 0,
-      installment_amount: Number(input.installment_amount) || 0,
-      has_interest: Boolean(input.has_interest),
-      interest_rate: Number(input.interest_rate) || 0,
-      due_day: Number(input.due_day) || 10,
-      start_date: input.start_date || new Date().toISOString().split("T")[0],
-    })
-    .select()
-    .single();
-  if (error) throw error;
-  return data as Installment;
+  const store = await getUserStore(userId);
+  const now = new Date().toISOString();
+
+  const totalAmount = Number(input.total_amount) || 0;
+  const totalInstallments = Number(input.total_installments) || 1;
+  const paid = Number(input.paid_installments) || 0;
+  const installmentAmount = Number(input.installment_amount) || (totalInstallments > 0 ? totalAmount / totalInstallments : 0);
+
+  const newInst: Installment = {
+    id: `inst-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    user_id: userId,
+    account_id: input.account_id || store.accounts[0]?.id || "acc-default",
+    description: input.description || "Compra en cuotas",
+    category_id: input.category_id || null,
+    total_amount: totalAmount,
+    total_installments: totalInstallments,
+    paid_installments: paid,
+    installment_amount: installmentAmount,
+    has_interest: Boolean(input.has_interest),
+    interest_rate: Number(input.interest_rate) || 0,
+    cft_total: Number(input.cft_total) || 0,
+    net_amount: input.net_amount || null,
+    due_day: Number(input.due_day) || 10,
+    start_date: input.start_date || now.split("T")[0],
+    currency: input.currency || "ARS",
+    notes: input.notes || null,
+    is_active: input.is_active !== undefined ? input.is_active : true,
+    created_at: now,
+    updated_at: now,
+  };
+
+  store.installments.unshift(newInst);
+  await saveUserStore(userId);
+  return newInst;
 }
 
 export async function updateUserInstallment(userId: string, id: string, updates: Partial<Installment>): Promise<Installment | null> {
-  const supabase = await createClient();
-  const { data, error } = await supabase.from("installments").update(updates).eq("id", id).eq("user_id", userId).select().single();
-  if (error) return null;
-  return data as Installment;
+  const store = await getUserStore(userId);
+  const inst = store.installments.find((i) => i.id === id);
+  if (!inst) return null;
+
+  Object.assign(inst, updates);
+  inst.updated_at = new Date().toISOString();
+  await saveUserStore(userId);
+  return inst;
 }
 
 export async function deleteUserInstallment(userId: string, id: string): Promise<boolean> {
-  const supabase = await createClient();
-  const { error } = await supabase.from("installments").delete().eq("id", id).eq("user_id", userId);
-  return !error;
+  const store = await getUserStore(userId);
+  const len = store.installments.length;
+  store.installments = store.installments.filter((i) => i.id !== id);
+  if (store.installments.length !== len) {
+    await saveUserStore(userId);
+    return true;
+  }
+  return false;
 }
 
-export async function quickAdjustUserFinances(userId: string, params: any): Promise<FinancialSummary> {
+// ---- Acciones directas de ajuste rápido y reset ----
+
+export async function quickAdjustUserFinances(
+  userId: string,
+  params: {
+    totalBalance?: number;
+    monthlyIncome?: number;
+    accountName?: string;
+    clearExpenses?: boolean;
+  }
+): Promise<FinancialSummary> {
+  const store = await getUserStore(userId);
+
+  if (params.accountName && store.accounts[0]) {
+    store.accounts[0].name = params.accountName;
+  }
+
+  if (params.totalBalance !== undefined && store.accounts[0]) {
+    store.accounts[0].balance = params.totalBalance;
+  }
+
+  if (params.monthlyIncome !== undefined) {
+    store.user.salary = params.monthlyIncome;
+    updateUserSalary(userId, params.monthlyIncome);
+  }
+
+  if (params.clearExpenses) {
+    store.transactions = store.transactions.filter((t) => t.type !== "expense");
+  }
+
+  await saveUserStore(userId);
   return getUserSummary(userId);
 }
 
-export async function resetUserFinances(userId: string, params: any): Promise<FinancialSummary> {
+export async function resetUserFinances(
+  userId: string,
+  params: {
+    initialBalanceARS: number;
+    configuredSalary: number;
+    primaryAccountName: string;
+  }
+): Promise<FinancialSummary> {
+  const store = await getUserStore(userId);
+
+  store.transactions = [];
+  store.installments = [];
+  store.goals = [];
+  store.budgets = [];
+  store.subscriptions = [];
+  store.chatMessages = [];
+  store.user.salary = params.configuredSalary;
+  updateUserSalary(userId, params.configuredSalary);
+
+  if (store.accounts.length === 0) {
+    store.accounts.push({
+      id: `acc-${Date.now()}-1`,
+      user_id: userId,
+      name: params.primaryAccountName,
+      type: "bank",
+      balance: params.initialBalanceARS,
+      currency: "ARS",
+      color: "#10B981",
+      icon: "Building2",
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+  } else {
+    store.accounts[0].name = params.primaryAccountName;
+    store.accounts[0].balance = params.initialBalanceARS;
+    for (let i = 1; i < store.accounts.length; i++) {
+      store.accounts[i].balance = 0;
+    }
+  }
+
+  await saveUserStore(userId);
   return getUserSummary(userId);
 }
+
+// ---- Chat IA con memoria persistente por usuario ----
 
 export async function getUserChatMessages(userId: string, limit: number = 30): Promise<ChatMessage[]> {
-  const supabase = await createClient();
-  const { data } = await supabase.from("ai_memories").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(limit);
-  return (data?.reverse() as ChatMessage[]) || [];
+  const store = await getUserStore(userId);
+  return (store.chatMessages || []).slice(-limit);
 }
 
 export async function addUserChatMessage(userId: string, message: ChatMessage): Promise<void> {
-  const supabase = await createClient();
-  await supabase.from("ai_memories").insert({
-    user_id: userId,
-    role: message.role,
-    content: message.content,
-    metadata: message.metadata || {},
-  });
+  const store = await getUserStore(userId);
+  if (!store.chatMessages) store.chatMessages = [];
+  store.chatMessages.push(message);
+  if (store.chatMessages.length > 100) {
+    store.chatMessages = store.chatMessages.slice(-100);
+  }
+  await saveUserStore(userId);
 }

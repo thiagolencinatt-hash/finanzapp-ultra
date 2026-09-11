@@ -18,6 +18,22 @@ export interface AuthenticatedUser {
  * 3. Modo demo (`finance_demo_session=true`)
  * 4. Fallback seguro: usuario demo por defecto
  */
+function safeDecode(val: string): string {
+  try {
+    let decoded = decodeURIComponent(val);
+    if (decoded.includes("%")) {
+      try {
+        decoded = decodeURIComponent(decoded);
+      } catch {
+        // ignore
+      }
+    }
+    return decoded;
+  } catch {
+    return val;
+  }
+}
+
 export async function getUserFromRequest(req: NextRequest): Promise<AuthenticatedUser> {
   const isDemoCookie = req.cookies.get("finance_demo_session")?.value === "true";
   const userIdCookie = req.cookies.get("finance_user_id")?.value;
@@ -25,8 +41,39 @@ export async function getUserFromRequest(req: NextRequest): Promise<Authenticate
   const userNameCookie = req.cookies.get("finance_user_name")?.value;
   const sessionCookie = req.cookies.get("finance_session")?.value;
 
-  // 1. Si explícitamente está en modo demo
-  if (isDemoCookie) {
+  const rawEmail = userEmailCookie ? safeDecode(userEmailCookie).toLowerCase().trim() : "";
+  const isRealEmail = rawEmail && rawEmail.includes("@") && !rawEmail.includes("demo@");
+
+  // 1. Prioridad Máxima: Usuario registrado con correo real en cookies
+  if (isRealEmail) {
+    const name = userNameCookie ? safeDecode(userNameCookie) : (rawEmail.split("@")[0] || "Usuario");
+    const rawUserId = userIdCookie ? safeDecode(userIdCookie).trim() : "";
+
+    const storedUser = getUserByEmail(rawEmail);
+    if (storedUser) {
+      return {
+        id: storedUser.id,
+        email: storedUser.email,
+        name: storedUser.name,
+        currency: storedUser.currency,
+        salary: storedUser.salary,
+        isDemo: false,
+      };
+    }
+
+    const derivedId = rawUserId || `user_${rawEmail.replace(/[^a-zA-Z0-9]/g, "_")}`;
+    return {
+      id: derivedId,
+      email: rawEmail,
+      name,
+      currency: "ARS",
+      salary: 980000,
+      isDemo: false,
+    };
+  }
+
+  // 2. Si explícitamente está en modo demo
+  if (isDemoCookie && !isRealEmail) {
     return {
       id: "demo-user",
       email: "demo@finanzapp.com",
@@ -55,58 +102,15 @@ export async function getUserFromRequest(req: NextRequest): Promise<Authenticate
     // Supabase no disponible o sin sesión activa
   }
 
-function safeDecode(val: string): string {
-  try {
-    let decoded = decodeURIComponent(val);
-    if (decoded.includes("%")) {
-      try {
-        decoded = decodeURIComponent(decoded);
-      } catch {
-        // ignore
-      }
-    }
-    return decoded;
-  } catch {
-    return val;
-  }
-}
-
-  // 3. Usuario registrado mediante cookie de email o user ID
-  if (userEmailCookie || userIdCookie) {
-    const rawEmail = userEmailCookie ? safeDecode(userEmailCookie).toLowerCase().trim() : "";
-    const name = userNameCookie ? safeDecode(userNameCookie) : (rawEmail.split("@")[0] || "Usuario");
-    const rawUserId = userIdCookie ? safeDecode(userIdCookie).trim() : "";
-
-    if (rawEmail) {
-      const storedUser = getUserByEmail(rawEmail);
-      if (storedUser) {
-        return {
-          id: storedUser.id,
-          email: storedUser.email,
-          name: storedUser.name,
-          currency: storedUser.currency,
-          salary: storedUser.salary,
-          isDemo: false,
-        };
-      }
-
-      // Si tiene cookie de email pero no está en user-store todavía
-      const derivedId = rawUserId || `user_${rawEmail.replace(/[^a-zA-Z0-9]/g, "_")}`;
-      return {
-        id: derivedId,
-        email: rawEmail,
-        name,
-        currency: "ARS",
-        salary: 980000,
-        isDemo: false,
-      };
-    }
-
+  // 4. Usuario con solo cookie de user ID
+  if (userIdCookie) {
+    const rawUserId = safeDecode(userIdCookie).trim();
     if (rawUserId) {
+      const name = userNameCookie ? safeDecode(userNameCookie) : "Usuario";
       return {
         id: rawUserId,
         email: "usuario@finanzapp.com",
-        name: name || "Usuario",
+        name,
         currency: "ARS",
         salary: 980000,
         isDemo: false,
