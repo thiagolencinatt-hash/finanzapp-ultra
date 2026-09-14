@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Send, ImagePlus, X } from "lucide-react";
+import { Send, ImagePlus, X, Camera } from "lucide-react";
 
 interface ChatInputProps {
   onSend: (message: string, imageBase64?: string, imageMimeType?: string) => void;
@@ -95,7 +95,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
           border: "1px solid hsl(var(--border))",
         }}
       >
-        {/* Botón subir imagen */}
+        {/* Botón subir imagen desde galería */}
         <input
           ref={fileInputRef}
           type="file"
@@ -103,20 +103,40 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
           className="hidden"
           onChange={handleImageChange}
         />
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={disabled}
-          className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors mb-0.5 disabled:opacity-40 active:scale-95 cursor-pointer"
-          style={{
-            background: imageBase64 ? "hsl(var(--primary) / 0.25)" : "hsl(var(--muted))",
-            color: imageBase64 ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
-            border: imageBase64 ? "1px solid hsl(var(--primary) / 0.5)" : "none",
-          }}
-          title="Adjuntar imagen para analizar"
-        >
-          <ImagePlus className="w-5 h-5" />
-        </button>
+        {/* Input directo para cámara móvil */}
+        <input
+          id="camera-ticket-input"
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={handleImageChange}
+        />
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={disabled}
+            className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors mb-0.5 disabled:opacity-40 active:scale-95 cursor-pointer"
+            style={{
+              background: imageBase64 ? "hsl(var(--primary) / 0.25)" : "hsl(var(--muted))",
+              color: imageBase64 ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
+              border: imageBase64 ? "1px solid hsl(var(--primary) / 0.5)" : "none",
+            }}
+            title="Adjuntar imagen de la galería"
+          >
+            <ImagePlus className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => document.getElementById("camera-ticket-input")?.click()}
+            disabled={disabled}
+            className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors mb-0.5 disabled:opacity-40 active:scale-95 cursor-pointer text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20"
+            title="Sacar foto a ticket con la cámara"
+          >
+            <Camera className="w-4 h-4" />
+          </button>
+        </div>
 
         <textarea
           ref={textareaRef}

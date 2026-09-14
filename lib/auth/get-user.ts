@@ -11,13 +11,6 @@ export interface AuthenticatedUser {
   isDemo: boolean;
 }
 
-/**
- * Obtiene la identidad del usuario actual a partir de la solicitud:
- * 1. Supabase Auth (si está autenticado en la nube)
- * 2. Cookies de sesión de FinanzApp (`finance_user_id` o `finance_user_email`)
- * 3. Modo demo (`finance_demo_session=true`)
- * 4. Fallback seguro: usuario demo por defecto
- */
 function safeDecode(val: string): string {
   try {
     let decoded = decodeURIComponent(val);
@@ -34,21 +27,55 @@ function safeDecode(val: string): string {
   }
 }
 
+/**
+ * Resuelve la identidad del usuario en orden de prioridad:
+ * 1. Supabase Auth Oficial (Sesión de token en cookies / SSR) -> Sincronización en la Nube
+ * 2. Cookie de usuario registrado (Fallback local / offline)
+ * 3. Modo demo explícito
+ */
 export async function getUserFromRequest(req: NextRequest): Promise<AuthenticatedUser> {
+  // 1. Prioridad Suprema: Supabase Auth
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user && user.id) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("name, salary, currency, pay_day")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      return {
+        id: user.id,
+        email: user.email || "usuario@finanzapp.com",
+        name:
+          profile?.name ||
+          (user.user_metadata?.name as string) ||
+          user.email?.split("@")[0] ||
+          "Usuario",
+        currency: profile?.currency || (user.user_metadata?.currency as string) || "ARS",
+        salary: Number(profile?.salary) || Number(user.user_metadata?.salary) || 800000,
+        isDemo: false,
+      };
+    }
+  } catch (err) {
+    // Supabase no configurado o sin conexión momentánea
+  }
+
+  // 2. Fallback de cookies locales para compatibilidad
   const isDemoCookie = req.cookies.get("finance_demo_session")?.value === "true";
   const userIdCookie = req.cookies.get("finance_user_id")?.value;
   const userEmailCookie = req.cookies.get("finance_user_email")?.value;
   const userNameCookie = req.cookies.get("finance_user_name")?.value;
-  const sessionCookie = req.cookies.get("finance_session")?.value;
 
   const rawEmail = userEmailCookie ? safeDecode(userEmailCookie).toLowerCase().trim() : "";
   const isRealEmail = rawEmail && rawEmail.includes("@") && !rawEmail.includes("demo@");
 
-  // 1. Prioridad Máxima: Usuario registrado con correo real en cookies
   if (isRealEmail) {
     const name = userNameCookie ? safeDecode(userNameCookie) : (rawEmail.split("@")[0] || "Usuario");
-    const rawUserId = userIdCookie ? safeDecode(userIdCookie).trim() : "";
-
     const storedUser = getUserByEmail(rawEmail);
     if (storedUser) {
       return {
@@ -61,18 +88,19 @@ export async function getUserFromRequest(req: NextRequest): Promise<Authenticate
       };
     }
 
+    const rawUserId = userIdCookie ? safeDecode(userIdCookie).trim() : "";
     const derivedId = rawUserId || `user_${rawEmail.replace(/[^a-zA-Z0-9]/g, "_")}`;
     return {
       id: derivedId,
       email: rawEmail,
       name,
       currency: "ARS",
-      salary: 980000,
+      salary: 800000,
       isDemo: false,
     };
   }
 
-  // 2. Si explícitamente está en modo demo
+  // 3. Modo demo
   if (isDemoCookie && !isRealEmail) {
     return {
       id: "demo-user",
@@ -84,57 +112,7 @@ export async function getUserFromRequest(req: NextRequest): Promise<Authenticate
     };
   }
 
-  // 2. Intentar obtener de Supabase Auth
-  try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user && user.id) {
-      return {
-        id: user.id,
-        email: user.email || "usuario@finanzapp.com",
-        name: (user.user_metadata?.name as string) || user.email?.split("@")[0] || "Usuario",
-        currency: (user.user_metadata?.currency as string) || "ARS",
-        salary: Number(user.user_metadata?.salary) || 980000,
-        isDemo: false,
-      };
-    }
-  } catch {
-    // Supabase no disponible o sin sesión activa
-  }
-
-  // 4. Usuario con solo cookie de user ID
-  if (userIdCookie) {
-    const rawUserId = safeDecode(userIdCookie).trim();
-    if (rawUserId) {
-      const name = userNameCookie ? safeDecode(userNameCookie) : "Usuario";
-      return {
-        id: rawUserId,
-        email: "usuario@finanzapp.com",
-        name,
-        currency: "ARS",
-        salary: 980000,
-        isDemo: false,
-      };
-    }
-  }
-
-  // 4. Si hay sesión activa con nombre de usuario
-  if (sessionCookie === "active" && userNameCookie) {
-    const name = decodeURIComponent(userNameCookie).trim();
-    if (name && name !== "Usuario Demo" && name !== "Thiago Demo") {
-      const derivedId = `user_${name.toLowerCase().replace(/[^a-zA-Z0-9]/g, "_")}`;
-      return {
-        id: derivedId,
-        email: `${derivedId}@finanzapp.com`,
-        name,
-        currency: "ARS",
-        salary: 980000,
-        isDemo: false,
-      };
-    }
-  }
-
-  // 5. Fallback por defecto: usuario demo
+  // 4. Default demo fallback
   return {
     id: "demo-user",
     email: "demo@finanzapp.com",

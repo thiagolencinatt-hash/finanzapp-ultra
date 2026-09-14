@@ -10,13 +10,14 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  applicationName: "Finanzas",
   title: {
-    default: "FinanzApp Ultra — Control de Gastos & Finanzas Pro",
-    template: "%s | FinanzApp Ultra",
+    default: "Finanzas — Control de Gastos Pro",
+    template: "%s | Finanzas",
   },
   description:
-    "Controlá tus gastos, cuotas y metas de ahorro con la ayuda de un asistente de IA personal. Gestión financiera inteligente para uso personal.",
-  keywords: ["finanzas personales", "control de gastos", "ahorro", "IA", "Gemini", "FinanzApp Ultra"],
+    "Controlá tus gastos, cuotas y metas de ahorro con la ayuda de un asistente de IA personal. Gestión financiera inteligente.",
+  keywords: ["finanzas", "finanzas personales", "control de gastos", "ahorro", "IA"],
   manifest: "/manifest.json",
   icons: {
     icon: "/favicon.ico",
@@ -25,7 +26,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "FinanzApp Ultra",
+    title: "Finanzas",
   },
   formatDetection: {
     telephone: false,
@@ -45,6 +46,7 @@ export const viewport: Viewport = {
 
 import { Toaster } from "@/components/ui/Toaster";
 import { ViewModeProvider } from "@/components/providers/ViewModeProvider";
+import { PWARegister } from "@/components/providers/PWARegister";
 
 export default function RootLayout({
   children,
@@ -61,6 +63,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <ViewModeProvider>
+            <PWARegister />
             {children}
             <Toaster position="top-center" />
           </ViewModeProvider>

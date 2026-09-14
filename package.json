@@ -4,9 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev -H 0.0.0.0",
+    "dev:https": "next dev --experimental-https -H 0.0.0.0",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "migrate:supabase": "tsx scripts/migrate-json-to-supabase.ts"
   },
   "dependencies": {
     "@google/genai": "^2.19.0",

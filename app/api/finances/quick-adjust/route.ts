@@ -1,145 +1,92 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth/get-user";
-import { getUserStore, saveUserStore, getUserSummary } from "@/lib/db/cloud-store";
+import {
+  getAccounts,
+  updateAccount,
+  addAccount,
+  getSummary,
+} from "@/lib/db/supabase-store";
+import { createClient } from "@/lib/supabase/server";
 
 export async function POST(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req);
-    const store = await getUserStore(user.id);
     const body = await req.json();
 
     const {
       action,
       totalBalance,
       monthlyIncome,
-      monthlyExpense,
       accountName,
-      clearExpenses,
       salaryAmount,
       payDay,
       alsoUpdateBalance,
       accountId,
     } = body;
 
+    // 1. Modificar sueldo y día de cobro
     if (action === "set_salary") {
       const amount = parseFloat(salaryAmount) || 0;
-      store.user.salary = amount;
-      if (payDay) store.user.payDay = parseInt(payDay) || 5;
+      const day = parseInt(payDay) || 5;
+
+      try {
+        const supabase = await createClient();
+        await supabase
+          .from("profiles")
+          .update({ salary: amount, pay_day: day, updated_at: new Date().toISOString() })
+          .eq("id", user.id);
+      } catch (err) {
+        console.warn("[quick-adjust set_salary profile fallback]:", err);
+      }
 
       if (alsoUpdateBalance) {
+        const accounts = await getAccounts(user.id);
         const targetAcc = accountId
-          ? store.accounts.find((a) => a.id === accountId)
-          : store.accounts[0];
+          ? accounts.find((a) => a.id === accountId)
+          : accounts[0];
         if (targetAcc) {
-          targetAcc.balance = amount;
+          await updateAccount(user.id, targetAcc.id, { balance: amount });
         }
       }
 
-      await saveUserStore(user.id);
-      return NextResponse.json({ success: true, summary: await getUserSummary(user.id) });
+      return NextResponse.json({
+        success: true,
+        summary: await getSummary(user.id, { salary: amount }),
+      });
     }
 
-    if (action === "set_cash") {
+    // 2. Establecer saldo directo
+    if (action === "set_cash" || action === "set_direct") {
       const amount = parseFloat(totalBalance) || 0;
-      if (store.accounts.length === 0) {
-        store.accounts.push({
-          id: `acc-${Date.now()}-1`,
-          user_id: user.id,
-          name: accountName || "Mi Billetera Principal",
-          type: "bank",
+      const accounts = await getAccounts(user.id);
+
+      if (accounts.length === 0) {
+        await addAccount(user.id, {
+          name: accountName || "Billetera Principal",
           balance: amount,
-          currency: store.user.currency || "ARS",
-          color: "#10B981",
-          icon: "Wallet",
-          is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          type: "bank",
         });
       } else {
-        if (accountName) store.accounts[0].name = accountName;
-        store.accounts[0].balance = amount;
+        await updateAccount(user.id, accounts[0].id, {
+          balance: amount,
+          name: accountName || accounts[0].name,
+        });
       }
 
       if (monthlyIncome !== undefined) {
-        store.user.salary = parseFloat(monthlyIncome) || store.user.salary;
+        try {
+          const supabase = await createClient();
+          await supabase
+            .from("profiles")
+            .update({ salary: parseFloat(monthlyIncome) || 0 })
+            .eq("id", user.id);
+        } catch {}
       }
 
-      if (clearExpenses) {
-        store.transactions = store.transactions.filter((t) => t.type !== "expense");
-      }
-
-      await saveUserStore(user.id);
-      return NextResponse.json({ success: true, summary: await getUserSummary(user.id) });
-    }
-
-    if (action === "clear_expenses") {
-      store.transactions = store.transactions.filter((t) => t.type !== "expense");
-      await saveUserStore(user.id);
-      return NextResponse.json({ success: true, summary: await getUserSummary(user.id) });
-    }
-
-    if (action === "reset_clean") {
-      const amount = parseFloat(totalBalance) || 0;
-      store.transactions = [];
-      store.installments = [];
-      store.goals = [];
-
-      if (store.accounts.length === 0) {
-        store.accounts.push({
-          id: `acc-${Date.now()}-1`,
-          user_id: user.id,
-          name: accountName || "Mi Billetera Principal",
-          type: "bank",
-          balance: amount,
-          currency: store.user.currency || "ARS",
-          color: "#10B981",
-          icon: "Wallet",
-          is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        });
-      } else {
-        store.accounts[0].name = accountName || "Mi Billetera Principal";
-        store.accounts[0].balance = amount;
-        for (let i = 1; i < store.accounts.length; i++) {
-          store.accounts[i].balance = 0;
-        }
-      }
-
-      await saveUserStore(user.id);
-      return NextResponse.json({ success: true, account: store.accounts[0], summary: await getUserSummary(user.id) });
-    }
-
-    if (action === "set_direct") {
-      if (store.accounts.length === 0) {
-        store.accounts.push({
-          id: `acc-${Date.now()}-1`,
-          user_id: user.id,
-          name: accountName || "Mi Billetera Principal",
-          type: "bank",
-          balance: totalBalance !== undefined ? parseFloat(totalBalance) : 0,
-          currency: store.user.currency || "ARS",
-          color: "#10B981",
-          icon: "Wallet",
-          is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        });
-      } else {
-        if (accountName) store.accounts[0].name = accountName;
-        if (totalBalance !== undefined) store.accounts[0].balance = parseFloat(totalBalance) || 0;
-      }
-
-      if (monthlyIncome !== undefined) {
-        store.user.salary = parseFloat(monthlyIncome) || 0;
-      }
-
-      if (clearExpenses) {
-        store.transactions = store.transactions.filter((t) => t.type !== "expense");
-      }
-
-      await saveUserStore(user.id);
-      return NextResponse.json({ success: true, summary: await getUserSummary(user.id) });
+      return NextResponse.json({
+        success: true,
+        summary: await getSummary(user.id),
+      });
     }
 
     return NextResponse.json({ error: "Acción no reconocida" }, { status: 400 });

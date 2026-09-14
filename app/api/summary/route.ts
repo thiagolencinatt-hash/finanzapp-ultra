@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth/get-user";
-import { getUserSummary } from "@/lib/db/cloud-store";
+import { getSummary } from "@/lib/db/supabase-store";
 
 export async function GET(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req);
-    const summary = await getUserSummary(user.id, {
+    const summary = await getSummary(user.id, {
       email: user.email,
       name: user.name,
       currency: user.currency,

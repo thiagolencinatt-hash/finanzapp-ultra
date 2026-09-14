@@ -38,12 +38,18 @@ export default function InstallmentsPage() {
   const withoutInterest = installments.filter((i) => !i.has_interest);
 
   async function handlePay(id: string) {
-    await fetch("/api/installments", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, action: "pay" }),
-    });
-    load();
+    try {
+      const res = await fetch("/api/installments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, action: "pay_due" }),
+      });
+      if (res.ok) {
+        await load();
+      }
+    } catch (err) {
+      console.error("Error al pagar cuota:", err);
+    }
   }
 
   async function handleClearAll() {

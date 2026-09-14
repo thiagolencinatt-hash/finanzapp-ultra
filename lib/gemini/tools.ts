@@ -197,6 +197,47 @@ export const financialTools: Tool[] = [
           required: ["from_account", "to_account", "amount"],
         },
       },
+      {
+        name: "distribute_income",
+        description:
+          "Distribuye un ingreso o sueldo recibido hacia metas de ahorro, fondos de reserva o pagos fijos, actualizando las metas en la base de datos.",
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            income_amount: {
+              type: Type.NUMBER,
+              description: "Monto total del ingreso recibido",
+            },
+            allocations: {
+              type: Type.ARRAY,
+              description: "Lista de asignaciones monetarias hacia cada meta o reserva",
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  goal_name: {
+                    type: Type.STRING,
+                    description: "Nombre de la meta de ahorro receptora",
+                  },
+                  amount: {
+                    type: Type.NUMBER,
+                    description: "Monto de dinero a destinar",
+                  },
+                  percentage: {
+                    type: Type.NUMBER,
+                    description: "Porcentaje del ingreso total",
+                  },
+                },
+                required: ["goal_name", "amount"],
+              },
+            },
+            notes: {
+              type: Type.STRING,
+              description: "Explicación de la estrategia de distribución aplicada (ej. Regla 50/30/20)",
+            },
+          },
+          required: ["income_amount", "allocations"],
+        },
+      },
     ],
   },
 ];

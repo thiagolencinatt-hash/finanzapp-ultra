@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth/get-user";
-import { getUserStore, saveUserStore } from "@/lib/db/cloud-store";
-import type { CategoryBudget } from "@/lib/types";
+import { getBudgets, saveBudgets } from "@/lib/db/supabase-store";
 
 export async function GET(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req);
-    const store = await getUserStore(user.id);
-    return NextResponse.json(store.budgets || []);
+    const budgets = await getBudgets(user.id);
+    return NextResponse.json(budgets);
   } catch (err: unknown) {
     console.error("[/api/budgets GET error]:", err);
     return NextResponse.json({ error: "Error al obtener presupuestos" }, { status: 500 });
@@ -17,7 +16,6 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req);
-    const store = await getUserStore(user.id);
     const body = await req.json();
     const { category_id, monthly_limit, currency } = body;
 
@@ -25,56 +23,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Faltan parámetros requeridos" }, { status: 400 });
     }
 
-    if (!store.budgets) store.budgets = [];
-    const existing = store.budgets.find((b) => b.category_id === category_id);
-    if (existing) {
-      existing.monthly_limit = Number(monthly_limit);
-      if (currency) existing.currency = currency;
-      await saveUserStore(user.id);
-      return NextResponse.json(existing);
-    }
+    const updatedBudgets = await saveBudgets(user.id, [
+      {
+        category_id,
+        monthly_limit: Number(monthly_limit),
+        currency: currency || "ARS",
+      },
+    ]);
 
-    const newBudget: CategoryBudget = {
-      id: `bud-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      user_id: user.id,
-      category_id,
-      monthly_limit: Number(monthly_limit),
-      currency: currency || "ARS",
-      spent_this_month: 0,
-      created_at: new Date().toISOString(),
-    };
-
-    store.budgets.push(newBudget);
-    await saveUserStore(user.id);
-    return NextResponse.json(newBudget);
+    const targetBudget = updatedBudgets.find((b) => b.category_id === category_id);
+    return NextResponse.json(targetBudget || updatedBudgets[0]);
   } catch (err: unknown) {
     console.error("[/api/budgets POST error]:", err);
     return NextResponse.json({ error: "Error al guardar presupuesto" }, { status: 500 });
-  }
-}
-
-export async function DELETE(req: NextRequest) {
-  try {
-    const user = await getUserFromRequest(req);
-    const store = await getUserStore(user.id);
-    const body = await req.json();
-    const { id, action } = body;
-
-    if (action === "clear_all") {
-      store.budgets = [];
-      await saveUserStore(user.id);
-      return NextResponse.json({ success: true });
-    }
-
-    if (!id) {
-      return NextResponse.json({ error: "ID requerido" }, { status: 400 });
-    }
-
-    store.budgets = (store.budgets || []).filter((b) => b.id !== id);
-    await saveUserStore(user.id);
-    return NextResponse.json({ success: true });
-  } catch (err: unknown) {
-    console.error("[/api/budgets DELETE error]:", err);
-    return NextResponse.json({ error: "Error al eliminar presupuesto" }, { status: 500 });
   }
 }

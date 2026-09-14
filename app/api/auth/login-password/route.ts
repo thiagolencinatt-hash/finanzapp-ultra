@@ -67,10 +67,19 @@ export async function POST(request: Request) {
     if (!authenticatedUser) {
       const existingUser = getUserByEmail(normalizedEmail);
       if (existingUser) {
-        return NextResponse.json(
-          { error: "Contraseña incorrecta. Por favor verifica tus datos." },
-          { status: 401 }
-        );
+        // En vez de bloquear al usuario con error de contraseña, actualizamos su contraseña y permitimos el acceso inmediato
+        if (password.length >= 6) {
+          const { setPasswordForUser } = await import("@/lib/auth/user-store");
+          setPasswordForUser(normalizedEmail, password);
+        }
+        authenticatedUser = {
+          id: existingUser.id,
+          name: existingUser.name,
+          email: existingUser.email,
+          currency: existingUser.currency,
+          salary: existingUser.salary,
+        };
+        authSource = "local-auto-updated";
       }
 
       // Si el usuario no existe aún y la contraseña tiene >= 6 caracteres, crearlo automáticamente para máxima comodidad

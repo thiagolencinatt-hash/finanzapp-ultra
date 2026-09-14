@@ -1,20 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth/get-user";
 import {
-  getUserGoals,
-  addUserGoal,
-  updateUserGoal,
-  deleteUserGoal,
-  getUserStore,
-  saveUserStore,
-} from "@/lib/db/cloud-store";
+  getGoals,
+  addGoal,
+  updateGoal,
+} from "@/lib/db/supabase-store";
 
 export async function GET(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req);
-    const { searchParams } = new URL(req.url);
-    const type = searchParams.get("type") || undefined;
-    const goals = await getUserGoals(user.id, type);
+    const goals = await getGoals(user.id);
     return NextResponse.json(goals);
   } catch (err: unknown) {
     console.error("[/api/goals GET error]:", err);
@@ -27,31 +22,26 @@ export async function POST(req: NextRequest) {
     const user = await getUserFromRequest(req);
     const body = await req.json();
 
-    if (body.action === "clear_all") {
-      const store = await getUserStore(user.id);
-      store.goals = [];
-      await saveUserStore(user.id);
-      return NextResponse.json({ success: true, count: 0 });
-    }
-
-    if (body.action === "distribute_salary") {
-      const store = await getUserStore(user.id);
+    // Distribución de ingresos en metas (FASE 3)
+    if (body.action === "distribute_salary" || body.action === "distribute_income") {
       const allocations: { goalId: string; amount: number }[] = body.allocations || [];
-      allocations.forEach(({ goalId, amount }) => {
-        const goal = store.goals.find((g) => g.id === goalId);
+      const currentGoals = await getGoals(user.id);
+
+      for (const { goalId, amount } of allocations) {
+        const goal = currentGoals.find((g) => g.id === goalId);
         if (goal) {
-          goal.current_amount = (Number(goal.current_amount) || 0) + (Number(amount) || 0);
-          if (goal.target_amount > 0 && goal.current_amount >= goal.target_amount) {
-            goal.is_completed = true;
-            goal.completed_at = new Date().toISOString();
-          }
+          const newAmount = (Number(goal.current_amount) || 0) + (Number(amount) || 0);
+          await updateGoal(user.id, goalId, {
+            current_amount: newAmount,
+          });
         }
-      });
-      await saveUserStore(user.id);
-      return NextResponse.json({ success: true, goals: store.goals });
+      }
+
+      const updatedGoals = await getGoals(user.id);
+      return NextResponse.json({ success: true, goals: updatedGoals });
     }
 
-    const newGoal = await addUserGoal(user.id, body);
+    const newGoal = await addGoal(user.id, body);
     return NextResponse.json(newGoal, { status: 201 });
   } catch (err: unknown) {
     console.error("[/api/goals POST error]:", err);
@@ -69,22 +59,17 @@ export async function PATCH(req: NextRequest) {
     }
 
     if (action === "add_funds") {
-      const store = await getUserStore(user.id);
-      const goal = store.goals.find((g) => g.id === id);
+      const currentGoals = await getGoals(user.id);
+      const goal = currentGoals.find((g) => g.id === id);
       if (goal) {
         const newAmount = (Number(goal.current_amount) || 0) + (Number(amount) || 0);
-        goal.current_amount = newAmount;
-        if (goal.target_amount > 0 && newAmount >= goal.target_amount) {
-          goal.is_completed = true;
-          goal.completed_at = new Date().toISOString();
-        }
-        await saveUserStore(user.id);
-        return NextResponse.json({ success: true, goal });
+        const updated = await updateGoal(user.id, id, { current_amount: newAmount });
+        return NextResponse.json({ success: true, goal: updated });
       }
       return NextResponse.json({ error: "Meta no encontrada" }, { status: 404 });
     }
 
-    const updated = await updateUserGoal(user.id, id, updates);
+    const updated = await updateGoal(user.id, id, updates);
     if (!updated) {
       return NextResponse.json({ error: "Meta no encontrada" }, { status: 404 });
     }
@@ -92,30 +77,5 @@ export async function PATCH(req: NextRequest) {
   } catch (err: unknown) {
     console.error("[/api/goals PATCH error]:", err);
     return NextResponse.json({ error: "Error al actualizar meta" }, { status: 500 });
-  }
-}
-
-export async function DELETE(req: NextRequest) {
-  try {
-    const user = await getUserFromRequest(req);
-    const body = await req.json();
-    const { id, action } = body;
-
-    if (action === "clear_all") {
-      const store = await getUserStore(user.id);
-      store.goals = [];
-      await saveUserStore(user.id);
-      return NextResponse.json({ success: true });
-    }
-
-    if (!id) {
-      return NextResponse.json({ error: "ID requerido" }, { status: 400 });
-    }
-
-    const deleted = await deleteUserGoal(user.id, id);
-    return NextResponse.json({ success: deleted });
-  } catch (err: unknown) {
-    console.error("[/api/goals DELETE error]:", err);
-    return NextResponse.json({ error: "Error al eliminar meta" }, { status: 500 });
   }
 }
