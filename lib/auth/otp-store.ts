@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
 interface OtpEntry {
   code: string;
@@ -67,34 +68,32 @@ export async function generateAndSendOtp({
   let emailSentReal = false;
   let emailError: string | null = null;
 
-  // 1. Intentar envío con RESEND si existe RESEND_API_KEY
+  // 1. Envío directo con la librería oficial de Resend
   if (process.env.RESEND_API_KEY) {
     try {
-      const res = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: process.env.EMAIL_FROM || "FinanzApp Ultra <onboarding@resend.dev>",
-          to: [normalizedEmail],
-          subject: `${code} es tu código de verificación para FinanzApp Ultra`,
-          html: getEmailHtml(code, name || normalizedEmail.split("@")[0]),
-        }),
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      const fromEmail = process.env.EMAIL_FROM || "FinanzApp Ultra <onboarding@resend.dev>";
+      const { data, error } = await resend.emails.send({
+        from: fromEmail,
+        to: [normalizedEmail],
+        subject: `Tu código de acceso es: ${code} - FinanzApp Ultra`,
+        html: getEmailHtml(code, name || normalizedEmail.split("@")[0]),
       });
-      if (res.ok) {
+
+      if (!error && data?.id) {
         emailSentReal = true;
-      } else {
-        const errJson = await res.json();
-        emailError = errJson.message || "Error al enviar con Resend";
+        console.log(`✅ [Resend] Correo con código de 6 dígitos enviado exitosamente a ${normalizedEmail} (ID: ${data.id})`);
+      } else if (error) {
+        emailError = error.message;
+        console.warn(`⚠️ [Resend error]:`, error.message);
       }
     } catch (e: unknown) {
       emailError = e instanceof Error ? e.message : "Error de red en Resend";
+      console.warn(`⚠️ [Resend exception]:`, emailError);
     }
   }
 
-  // 2. Intentar envío con SMTP si existe SMTP_HOST y SMTP_USER
+  // 2. Fallback con SMTP si existe configuración
   if (!emailSentReal && process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
     try {
       const transporter = nodemailer.createTransport({
@@ -110,7 +109,7 @@ export async function generateAndSendOtp({
       await transporter.sendMail({
         from: process.env.SMTP_FROM || `"FinanzApp Ultra" <${process.env.SMTP_USER}>`,
         to: normalizedEmail,
-        subject: `${code} es tu código de verificación para FinanzApp Ultra`,
+        subject: `Tu código de acceso es: ${code} - FinanzApp Ultra`,
         html: getEmailHtml(code, name || normalizedEmail.split("@")[0]),
       });
       emailSentReal = true;
@@ -122,7 +121,7 @@ export async function generateAndSendOtp({
   return {
     success: true,
     email: normalizedEmail,
-    code, // Se incluye para feedback interactivo y visual en la app
+    code,
     emailSentReal,
     emailError,
     expiresInSeconds: 600,
@@ -191,11 +190,12 @@ function getEmailHtml(code: string, name: string) {
         <p style="font-size: 14px; line-height: 1.6; color: #94a3b8; margin-bottom: 24px;">
           Usa el siguiente código de seguridad de 6 dígitos para verificar tu cuenta y completar tu inicio de sesión:
         </p>
-        <div style="background: #1e293b; border-radius: 14px; padding: 20px; text-align: center; border: 1px solid #334155; margin-bottom: 24px;">
-          <div style="font-size: 36px; font-weight: 900; letter-spacing: 10px; color: #10b981; font-family: monospace;">
+        <div style="background: #1e293b; border-radius: 16px; padding: 24px 20px; text-align: center; border: 1px solid #334155; margin-bottom: 24px;">
+          <p style="margin: 0 0 10px 0; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8;">Tu código de acceso es:</p>
+          <div style="font-size: 42px; font-weight: 900; letter-spacing: 12px; color: #10b981; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; padding: 8px 0;">
             ${code}
           </div>
-          <p style="margin: 8px 0 0 0; font-size: 12px; color: #64748b;">Válido durante los próximos 10 minutos</p>
+          <p style="margin: 8px 0 0 0; font-size: 12px; color: #64748b;">⏱️ Válido durante los próximos 10 minutos</p>
         </div>
         <p style="font-size: 12px; color: #64748b; line-height: 1.5;">
           Si tú no solicitaste este código, puedes ignorar este mensaje de forma segura. Tus fondos y datos continúan protegidos con cifrado privado.

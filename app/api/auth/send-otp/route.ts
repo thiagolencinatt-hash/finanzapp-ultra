@@ -15,7 +15,7 @@ export async function POST(request: Request) {
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    // Generar código numérico de 6 dígitos y despachar correo con Resend
+    // Generar código numérico de 6 dígitos y despachar correo exclusivamente por Resend
     const result = await generateAndSendOtp({
       email: normalizedEmail,
       name,
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
       salary,
     });
 
-    console.log(`✅ [Send-Code API] Código generado para ${normalizedEmail}. Email enviado por Resend: ${result.emailSentReal}`);
+    console.log(`✅ [Send-OTP API] Código de 6 dígitos procesado para: ${normalizedEmail}. Enviado real: ${result.emailSentReal}`);
 
     return NextResponse.json({
       success: true,
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
       note: result.emailError ? `Detalle envío: ${result.emailError}` : undefined,
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Error al procesar el código";
+    const message = error instanceof Error ? error.message : "Error al procesar el código OTP";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

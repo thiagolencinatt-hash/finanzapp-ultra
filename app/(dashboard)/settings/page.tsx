@@ -22,11 +22,16 @@ import {
   RotateCcw,
   Cloud,
   ShieldCheck,
+  Lock,
+  KeyRound,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import type { Category } from "@/lib/types";
 import { ExportExcelButton } from "@/components/dashboard/ExportExcelButton";
 import { ResetDataModal } from "@/components/dashboard/ResetDataModal";
 import { ViewModeSelector } from "@/components/ui/ViewModeSelector";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
@@ -42,7 +47,43 @@ export default function SettingsPage() {
     resend_email?: { connected: boolean };
   } | null>(null);
 
+  // Estados de gestión de contraseña y perfil
+  const [userEmail, setUserEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+
   useEffect(() => {
+    // 1. Obtener email del usuario actual desde storage o cookies
+    try {
+      const stored = localStorage.getItem("finanzapp_user_profile");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.email) setUserEmail(parsed.email);
+      } else {
+        const match = document.cookie.match(/finance_user_email=([^;]+)/);
+        if (match && match[1]) {
+          setUserEmail(decodeURIComponent(match[1]));
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    // Si Supabase está configurado, intentar sincronizar email desde auth session
+    if (isSupabaseConfigured()) {
+      try {
+        const supabase = createClient();
+        supabase.auth.getUser().then(({ data: { user } }) => {
+          if (user?.email) setUserEmail(user.email);
+        });
+      } catch {
+        // ignore
+      }
+    }
+
     fetch("/api/categories")
       .then((r) => r.json())
       .then((d) => {
@@ -57,6 +98,61 @@ export default function SettingsPage() {
       })
       .catch(() => {});
   }, []);
+
+  async function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newPassword || newPassword.length < 6) {
+      toast.error("La contraseña debe tener al menos 6 caracteres.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("Las contraseñas no coinciden.");
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    try {
+      let supabaseSuccess = false;
+
+      // 1. Integración oficial con Supabase Auth updateUser
+      if (isSupabaseConfigured()) {
+        try {
+          const supabase = createClient();
+          const { error: supaErr } = await supabase.auth.updateUser({
+            password: newPassword,
+          });
+          if (!supaErr) {
+            supabaseSuccess = true;
+          } else {
+            console.warn("Supabase updateUser notice:", supaErr.message);
+          }
+        } catch (supaErr) {
+          console.warn("Supabase updateUser error:", supaErr);
+        }
+      }
+
+      // 2. Actualizar también en el endpoint de backend (/api/auth/set-password)
+      const res = await fetch("/api/auth/set-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: userEmail, password: newPassword }),
+      });
+
+      if (!res.ok && !supabaseSuccess) {
+        const data = await res.json();
+        throw new Error(data.error || "No se pudo actualizar la contraseña.");
+      }
+
+      toast.success("¡Contraseña actualizada con éxito! Ya podés usarla para ingresar.");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error al actualizar la contraseña.";
+      toast.error(msg);
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  }
 
   async function handleAddCategory(e: React.FormEvent) {
     e.preventDefault();
@@ -216,6 +312,124 @@ export default function SettingsPage() {
               </div>
             </div>
           </div>
+        </section>
+
+        {/* Seguridad y Gestión de Contraseña */}
+        <section
+          className="rounded-2xl p-6"
+          style={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
+        >
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center text-white">
+              <KeyRound className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+                <span>Seguridad y Contraseña</span>
+                {userEmail && (
+                  <span className="text-[11px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                    {userEmail}
+                  </span>
+                )}
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Establecé o actualizá tu contraseña para acceder a FinanzApp Ultra en cualquier dispositivo
+              </p>
+            </div>
+          </div>
+
+          <form onSubmit={handleChangePassword} className="space-y-4 max-w-lg">
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
+                Nueva Contraseña
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-3 w-4 h-4 text-muted-foreground" />
+                <input
+                  type={showNewPassword ? "text" : "password"}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Mínimo 6 caracteres"
+                  required
+                  minLength={6}
+                  className="w-full pl-10 pr-10 py-2.5 rounded-xl text-sm outline-none transition-all"
+                  style={{
+                    background: "hsl(var(--input))",
+                    border: "1px solid hsl(var(--border))",
+                    color: "hsl(var(--foreground))",
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
+                >
+                  {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
+                Confirmar Nueva Contraseña
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-3 w-4 h-4 text-muted-foreground" />
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Repetí tu nueva contraseña"
+                  required
+                  minLength={6}
+                  className="w-full pl-10 pr-10 py-2.5 rounded-xl text-sm outline-none transition-all"
+                  style={{
+                    background: "hsl(var(--input))",
+                    border: "1px solid hsl(var(--border))",
+                    color: "hsl(var(--foreground))",
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
+                >
+                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            {newPassword && confirmPassword && (
+              <p
+                className={`text-xs font-medium flex items-center gap-1.5 ${
+                  newPassword === confirmPassword ? "text-emerald-400" : "text-rose-400"
+                }`}
+              >
+                {newPassword === confirmPassword ? (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Las contraseñas coinciden
+                  </>
+                ) : (
+                  <>
+                    <AlertCircle className="w-3.5 h-3.5" /> Las contraseñas no coinciden
+                  </>
+                )}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={isUpdatingPassword || !newPassword || newPassword.length < 6 || newPassword !== confirmPassword}
+              className="px-5 py-2.5 rounded-xl text-xs font-bold text-white gradient-primary flex items-center gap-2 shadow-sm cursor-pointer disabled:opacity-50 transition-opacity"
+            >
+              {isUpdatingPassword ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <ShieldCheck className="w-4 h-4" />
+              )}
+              <span>{isUpdatingPassword ? "Guardando..." : "Actualizar Contraseña"}</span>
+            </button>
+          </form>
         </section>
 
         {/* Apariencia / Tema */}

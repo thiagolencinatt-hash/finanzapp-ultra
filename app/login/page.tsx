@@ -67,7 +67,7 @@ function LoginPageContent() {
     });
   }, [router]);
 
-  // 1. ENVIAR CODIGO OTP
+  // 1. ENVIAR CODIGO OTP CON RESEND
   const handleSendOtp = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setError(null);
@@ -81,21 +81,20 @@ function LoginPageContent() {
 
     setIsLoading(true);
     try {
-      const supabase = createClient();
-      const { error: otpError } = await supabase.auth.signInWithOtp({
-        email: cleanEmail,
-        options: {
-          shouldCreateUser: true,
-        },
+      const res = await fetch("/api/auth/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: cleanEmail }),
       });
 
-      if (otpError) {
-        throw otpError;
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Error al despachar el código OTP.");
       }
 
       setStep("otp");
       setCountdown(60);
-      setSuccess(`Código de 6 dígitos enviado a ${cleanEmail}. Revisá tu bandeja de entrada o spam.`);
+      setSuccess(`¡Código de 6 dígitos enviado a ${cleanEmail}! Revisá tu bandeja de entrada.`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error al enviar el código.";
       setError(msg);
@@ -104,7 +103,7 @@ function LoginPageContent() {
     }
   };
 
-  // 2. VERIFICAR CODIGO OTP
+  // 2. VERIFICAR CODIGO OTP (6 DÍGITOS)
   const handleVerifyOtp = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setError(null);
@@ -118,24 +117,52 @@ function LoginPageContent() {
 
     setIsLoading(true);
     try {
-      const supabase = createClient();
-      const { data, error: verifyError } = await supabase.auth.verifyOtp({
-        email: email.trim().toLowerCase(),
-        token,
-        type: "email",
+      const cleanEmail = email.trim().toLowerCase();
+
+      // 1. Verificar contra nuestro endpoint seguro
+      const res = await fetch("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: cleanEmail, token }),
       });
 
-      if (verifyError) {
-        throw verifyError;
+      const data = await res.json();
+      if (!res.ok) {
+        // Fallback: Si Supabase tenía una verificación previa
+        if (isSupabaseConfigured()) {
+          try {
+            const supabase = createClient();
+            const { data: supaData, error: supaErr } = await supabase.auth.verifyOtp({
+              email: cleanEmail,
+              token,
+              type: "email",
+            });
+            if (supaErr || !supaData?.user) {
+              throw new Error(data.error || "Código inválido o expirado.");
+            }
+            data.user = {
+              id: supaData.user.id,
+              email: supaData.user.email,
+              name: supaData.user.user_metadata?.name || cleanEmail.split("@")[0],
+            };
+          } catch {
+            throw new Error(data.error || "Código inválido o expirado.");
+          }
+        } else {
+          throw new Error(data.error || "Código inválido o expirado.");
+        }
       }
 
       if (data?.user) {
-        // Asegurar cookies de persistencia para Next.js
+        // Persistir cookies y localStorage de sesión
         document.cookie = "finance_session=active; path=/; max-age=31536000; SameSite=Lax";
-        document.cookie = `finance_user_email=${encodeURIComponent(data.user.email || "")}; path=/; max-age=31536000; SameSite=Lax`;
-        document.cookie = `finance_user_id=${encodeURIComponent(data.user.id)}; path=/; max-age=31536000; SameSite=Lax`;
+        document.cookie = `finance_user_email=${encodeURIComponent(data.user.email || cleanEmail)}; path=/; max-age=31536000; SameSite=Lax`;
+        document.cookie = `finance_user_id=${encodeURIComponent(data.user.id || `user_${cleanEmail.replace(/[^a-zA-Z0-9]/g, "_")}`)}; path=/; max-age=31536000; SameSite=Lax`;
+        if (data.user.name) {
+          document.cookie = `finance_user_name=${encodeURIComponent(data.user.name)}; path=/; max-age=31536000; SameSite=Lax`;
+        }
+        localStorage.setItem("finanzapp_user_profile", JSON.stringify(data.user));
 
-        // Pasar al paso de seguridad: establecer contraseña para futuros logins
         setSuccess("¡Código verificado con éxito!");
         setStep("password-setup");
       }
@@ -164,11 +191,28 @@ function LoginPageContent() {
 
       setIsLoading(true);
       try {
-        const supabase = createClient();
-        const { error: updateError } = await supabase.auth.updateUser({
-          password: newPassword,
+        const cleanEmail = email.trim().toLowerCase();
+        // Guardar contraseña en el backend
+        const res = await fetch("/api/auth/set-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: cleanEmail, password: newPassword }),
         });
-        if (updateError) throw updateError;
+
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.error || "Error al guardar contraseña.");
+        }
+
+        // Si Supabase client está configurado, intentar sincronizar usuario
+        if (isSupabaseConfigured()) {
+          try {
+            const supabase = createClient();
+            await supabase.auth.updateUser({ password: newPassword });
+          } catch {
+            // silent fallback
+          }
+        }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : "Error al guardar contraseña.";
         setError(msg);
@@ -181,7 +225,7 @@ function LoginPageContent() {
     router.push("/");
   };
 
-  // 4. INGRESO DIRECTO CON CONTRASEÑA (Para usuarios que ya la tienen configurada)
+  // 4. INGRESO DIRECTO CON CONTRASEÑA
   const handleLoginWithPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -195,18 +239,52 @@ function LoginPageContent() {
 
     setIsLoading(true);
     try {
-      const supabase = createClient();
-      const { data, error: loginErr } = await supabase.auth.signInWithPassword({
-        email: cleanEmail,
-        password,
+      const res = await fetch("/api/auth/login-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: cleanEmail, password }),
       });
 
-      if (loginErr) throw loginErr;
+      const data = await res.json();
+      if (!res.ok) {
+        // Fallback con Supabase si está disponible
+        if (isSupabaseConfigured()) {
+          const supabase = createClient();
+          const { data: supaData, error: supaErr } = await supabase.auth.signInWithPassword({
+            email: cleanEmail,
+            password,
+          });
+          if (supaErr || !supaData?.user) {
+            throw new Error(data.error || "Credenciales inválidas.");
+          }
+          data.user = {
+            id: supaData.user.id,
+            email: supaData.user.email,
+            name: supaData.user.user_metadata?.name || cleanEmail.split("@")[0],
+          };
+        } else {
+          throw new Error(data.error || "Credenciales inválidas.");
+        }
+      }
 
       if (data?.user) {
         document.cookie = "finance_session=active; path=/; max-age=31536000; SameSite=Lax";
-        document.cookie = `finance_user_email=${encodeURIComponent(data.user.email || "")}; path=/; max-age=31536000; SameSite=Lax`;
-        document.cookie = `finance_user_id=${encodeURIComponent(data.user.id)}; path=/; max-age=31536000; SameSite=Lax`;
+        document.cookie = `finance_user_email=${encodeURIComponent(data.user.email || cleanEmail)}; path=/; max-age=31536000; SameSite=Lax`;
+        document.cookie = `finance_user_id=${encodeURIComponent(data.user.id || `user_${cleanEmail.replace(/[^a-zA-Z0-9]/g, "_")}`)}; path=/; max-age=31536000; SameSite=Lax`;
+        if (data.user.name) {
+          document.cookie = `finance_user_name=${encodeURIComponent(data.user.name)}; path=/; max-age=31536000; SameSite=Lax`;
+        }
+        localStorage.setItem("finanzapp_user_profile", JSON.stringify(data.user));
+
+        if (isSupabaseConfigured()) {
+          try {
+            const supabase = createClient();
+            await supabase.auth.signInWithPassword({ email: cleanEmail, password });
+          } catch {
+            // silent fallback
+          }
+        }
+
         router.push("/");
       }
     } catch (err: unknown) {
