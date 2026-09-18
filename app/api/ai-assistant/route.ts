@@ -46,185 +46,239 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const clientIp =
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    req.headers.get("x-real-ip") ||
-    "unknown";
-
-  if (!checkRateLimit(clientIp)) {
-    return NextResponse.json(
-      { error: "Demasiadas solicitudes. Esperá unos segundos antes de reintentar." },
-      { status: 429 }
-    );
-  }
-
-  const user = await getUserFromRequest(req);
-  let body: Record<string, unknown>;
   try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "JSON inválido" }, { status: 400 });
-  }
+    const clientIp =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      req.headers.get("x-real-ip") ||
+      "unknown";
 
-  const { message, image_base64, image_mime_type } = body as {
-    message?: string;
-    image_base64?: string;
-    image_mime_type?: string;
-  };
+    if (!checkRateLimit(clientIp)) {
+      return NextResponse.json(
+        { error: "Demasiadas solicitudes. Esperá unos segundos antes de reintentar." },
+        { status: 429 }
+      );
+    }
 
-  if (!message?.trim() && !image_base64) {
-    return NextResponse.json({ error: "Mensaje o imagen requeridos" }, { status: 400 });
-  }
-
-  if (image_base64 && image_base64.length > MAX_IMAGE_BASE64_LENGTH) {
-    return NextResponse.json(
-      { error: "La imagen es demasiado pesada. Máximo 5MB." },
-      { status: 413 }
-    );
-  }
-
-  const summary = await getSummary(user.id, {
-    email: user.email,
-    name: user.name,
-    currency: user.currency,
-    salary: user.salary,
-  });
-
-  const financialContext = buildFinancialContext(summary);
-  const isGeminiConfigured = Boolean(process.env.GEMINI_API_KEY && !process.env.GEMINI_API_KEY.includes("your-gemini"));
-
-  if (isGeminiConfigured) {
+    let user;
     try {
-      const systemInstruction = buildSystemPrompt(financialContext);
-      const genai = getGenAI();
+      user = await getUserFromRequest(req);
+    } catch {
+      user = {
+        id: "demo-user",
+        email: "demo@finanzapp.com",
+        name: "Usuario",
+        currency: "ARS",
+        salary: 980000,
+        isDemo: true,
+      };
+    }
 
-      // Recuperar últimos 6 mensajes para contexto conversacional
-      const previousMessages = await getChatMessages(user.id, 6);
-      const history: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }> = [];
+    let body: Record<string, unknown>;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "JSON inválido" }, { status: 400 });
+    }
 
-      for (const prev of previousMessages) {
-        if (!prev.content?.trim()) continue;
-        const role = prev.role === "assistant" ? "model" : "user";
-        if (history.length === 0 && role !== "user") continue;
-        if (history.length > 0 && history[history.length - 1].role === role) continue;
-        history.push({
-          role,
-          parts: [{ text: prev.content }],
-        });
-      }
+    const { message, image_base64, image_mime_type } = body as {
+      message?: string;
+      image_base64?: string;
+      image_mime_type?: string;
+    };
 
-      let lastError = null;
+    if (!message?.trim() && !image_base64) {
+      return NextResponse.json({ error: "Mensaje o imagen requeridos" }, { status: 400 });
+    }
 
-      for (const modelName of GEMINI_FALLBACK_MODELS) {
+    if (image_base64 && image_base64.length > MAX_IMAGE_BASE64_LENGTH) {
+      return NextResponse.json(
+        { error: "La imagen es demasiado pesada. Máximo 5MB." },
+        { status: 413 }
+      );
+    }
+
+    let summary: FinancialSummary;
+    try {
+      summary = await getSummary(user.id, {
+        email: user.email,
+        name: user.name,
+        currency: user.currency,
+        salary: user.salary,
+      });
+    } catch {
+      summary = {
+        accounts: [],
+        total_balance: 0,
+        total_balance_ars: 0,
+        income_30d: user.salary || 980000,
+        expense_30d: 0,
+        total_installments_monthly: 0,
+        upcoming_installments: [],
+        top_categories: [],
+        active_installments: [],
+        savings_goals: [],
+      };
+    }
+
+    const financialContext = buildFinancialContext(summary);
+    const isGeminiConfigured = Boolean(process.env.GEMINI_API_KEY && !process.env.GEMINI_API_KEY.includes("your-gemini"));
+
+    if (isGeminiConfigured) {
+      try {
+        const systemInstruction = buildSystemPrompt(financialContext);
+        const genai = getGenAI();
+
+        // Recuperar últimos 6 mensajes para contexto conversacional
+        let history: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }> = [];
         try {
-          const chat = genai.chats.create({
-            model: modelName,
-            history: history.length > 0 ? history : undefined,
-            config: {
-              systemInstruction,
-              tools: financialTools,
-              temperature: 0.6,
-            },
-          });
+          const previousMessages = await getChatMessages(user.id, 6);
+          for (const prev of previousMessages) {
+            if (!prev.content?.trim()) continue;
+            const role = prev.role === "assistant" ? "model" : "user";
+            if (history.length === 0 && role !== "user") continue;
+            if (history.length > 0 && history[history.length - 1].role === role) continue;
+            history.push({
+              role,
+              parts: [{ text: prev.content }],
+            });
+          }
+        } catch {
+          history = [];
+        }
 
-          const contents: Array<string | { inlineData: { mimeType: string; data: string } }> = [];
+        let lastError = null;
 
-          if (image_base64) {
-            contents.push({
-              inlineData: {
-                mimeType: image_mime_type || "image/jpeg",
-                data: image_base64.replace(/^data:image\/\w+;base64,/, ""),
+        for (const modelName of GEMINI_FALLBACK_MODELS) {
+          try {
+            const chat = genai.chats.create({
+              model: modelName,
+              history: history.length > 0 ? history : undefined,
+              config: {
+                systemInstruction,
+                tools: financialTools,
+                temperature: 0.6,
               },
             });
-            contents.push(
-              `[VISIÓN ARTIFICIAL OCR]: Analizá esta foto de comprobante, ticket de compra, factura o recibo. Extraé comercio, fecha, monto exacto e inferí la categoría. Registrá o proponé el gasto usando create_transaction.`
-            );
-          }
 
-          if (message?.trim()) {
-            contents.push(message.trim());
-          }
+            const contents: Array<string | { inlineData: { mimeType: string; data: string } }> = [];
 
-          const sendPromise = chat.sendMessage({ message: contents });
-          const timeoutPromise = new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error("Gemini timeout")), 8000)
-          );
-
-          let response = await Promise.race([sendPromise, timeoutPromise]);
-          const executedActions: ExecutedAction[] = [];
-
-          // Procesar llamadas a herramientas (function calling)
-          while (response.functionCalls && response.functionCalls.length > 0) {
-            const toolResults = [];
-
-            for (const call of response.functionCalls) {
-              if (!call.name) continue;
-              const result = await executeTool(call.name, (call.args as Record<string, unknown>) || {}, user.id);
-              toolResults.push({
-                functionResponse: {
-                  name: call.name,
-                  response: { output: JSON.stringify(result.data), summary: result.summary, error: result.error },
+            if (image_base64) {
+              contents.push({
+                inlineData: {
+                  mimeType: image_mime_type || "image/jpeg",
+                  data: image_base64.replace(/^data:image\/\w+;base64,/, ""),
                 },
               });
-              executedActions.push({
-                tool: call.name,
-                status: result.error ? "error" : "success",
-                summary: result.summary,
-                data: result.data,
-              });
-            }
-
-            try {
-              const toolSendPromise = chat.sendMessage({ message: toolResults });
-              const toolTimeoutPromise = new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error("Tool timeout")), 5000)
+              contents.push(
+                `[VISIÓN ARTIFICIAL OCR]: Analizá esta foto de comprobante, ticket de compra, factura o recibo. Extraé comercio, fecha, monto exacto e inferí la categoría. Registrá o proponé el gasto usando create_transaction.`
               );
-              response = await Promise.race([toolSendPromise, toolTimeoutPromise]);
-            } catch (toolErr) {
-              console.warn("Tool submission notice:", toolErr);
-              break;
             }
-          }
 
-          let assistantText = response.text;
-          if (!assistantText && executedActions.length > 0) {
-            assistantText = executedActions.map((a) => a.summary).join("\n");
-          }
-          if (!assistantText) {
-            assistantText = "He analizado tus datos y procesado la solicitud correctamente.";
-          }
+            if (message?.trim()) {
+              contents.push(message.trim());
+            }
 
-          // Guardar mensajes en Supabase chat_messages
-          await addChatMessage(user.id, "user", message || "[Foto de ticket o comprobante enviada]");
-          await addChatMessage(user.id, "assistant", assistantText);
+            const sendPromise = chat.sendMessage({ message: contents });
+            const timeoutPromise = new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error("Gemini timeout (25s)")), 25000)
+            );
 
-          return NextResponse.json({
-            message: assistantText,
-            actions: executedActions,
-            model: modelName,
-          });
-        } catch (modelErr: unknown) {
-          lastError = modelErr;
-          console.warn(`Model ${modelName} encountered issue, trying fallback...`, modelErr);
-          continue;
+            let response = await Promise.race([sendPromise, timeoutPromise]);
+            const executedActions: ExecutedAction[] = [];
+
+            // Procesar llamadas a herramientas (function calling)
+            while (response.functionCalls && response.functionCalls.length > 0) {
+              const toolResults = [];
+
+              for (const call of response.functionCalls) {
+                if (!call.name) continue;
+                const result = await executeTool(call.name, (call.args as Record<string, unknown>) || {}, user.id);
+                toolResults.push({
+                  functionResponse: {
+                    name: call.name,
+                    response: { output: JSON.stringify(result.data), summary: result.summary, error: result.error },
+                  },
+                });
+                executedActions.push({
+                  tool: call.name,
+                  status: result.error ? "error" : "success",
+                  summary: result.summary,
+                  data: result.data,
+                });
+              }
+
+              try {
+                const toolSendPromise = chat.sendMessage({ message: toolResults });
+                const toolTimeoutPromise = new Promise<never>((_, reject) =>
+                  setTimeout(() => reject(new Error("Tool timeout (12s)")), 12000)
+                );
+                response = await Promise.race([toolSendPromise, toolTimeoutPromise]);
+              } catch (toolErr) {
+                console.warn("Tool submission notice:", toolErr);
+                break;
+              }
+            }
+
+            let assistantText = response.text;
+            if (!assistantText && executedActions.length > 0) {
+              assistantText = executedActions.map((a) => a.summary).join("\n");
+            }
+            if (!assistantText) {
+              assistantText = "He analizado tus datos y procesado la solicitud correctamente.";
+            }
+
+            // Guardar mensajes en DB de forma segura sin bloquear respuesta
+            try {
+              await addChatMessage(user.id, "user", message || "[Foto de ticket o comprobante enviada]");
+              await addChatMessage(user.id, "assistant", assistantText);
+            } catch (dbErr) {
+              console.warn("Could not persist chat message:", dbErr);
+            }
+
+            return NextResponse.json({
+              message: assistantText,
+              actions: executedActions,
+              model: modelName,
+            });
+          } catch (modelErr: unknown) {
+            lastError = modelErr;
+            console.warn(`Model ${modelName} encountered issue, trying fallback...`, modelErr);
+            continue;
+          }
         }
+        if (lastError) throw lastError;
+      } catch (err) {
+        console.warn("Gemini call failed, using resilient local advisor:", err);
       }
-      if (lastError) throw lastError;
-    } catch (err) {
-      console.warn("Gemini call failed, using resilient local advisor:", err);
     }
+
+    // Fallback Asesor Financiero inteligente local
+    const advisor = generateSmartAdvisorReply(message || "", summary);
+    try {
+      await addChatMessage(user.id, "user", message || "Consulta financiera");
+      await addChatMessage(user.id, "assistant", advisor.text);
+    } catch {
+      // silent
+    }
+
+    return NextResponse.json({
+      message: advisor.text,
+      actions: advisor.actions,
+      model: "FinanzApp Smart Advisor",
+    });
+  } catch (globalErr: unknown) {
+    const errorMsg = globalErr instanceof Error ? globalErr.message : "Error inesperado en el asistente IA";
+    console.error("[/api/ai-assistant fatal error]:", globalErr);
+    return NextResponse.json(
+      {
+        message: "Ocurrió un inconveniente temporal al conectar con la IA. Por favor reintentá en un instante.",
+        error: errorMsg,
+        actions: [],
+        model: "offline-fallback",
+      },
+      { status: 200 } // Devolver 200 con mensaje amigable para no congelar la UI
+    );
   }
-
-  // Fallback Asesor Financiero inteligente local
-  const advisor = generateSmartAdvisorReply(message || "", summary);
-  await addChatMessage(user.id, "user", message || "Consulta financiera");
-  await addChatMessage(user.id, "assistant", advisor.text);
-
-  return NextResponse.json({
-    message: advisor.text,
-    actions: advisor.actions,
-    model: "FinanzApp Smart Advisor",
-  });
 }
 
 // Ejecutor de Function Calling conectado a Supabase

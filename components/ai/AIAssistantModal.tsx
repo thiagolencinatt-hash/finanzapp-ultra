@@ -67,7 +67,16 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt }: AIAssistant
 
     const userMsgCount = messages.filter((m) => m.role === "user").length;
     if (isDemoUser() && userMsgCount >= DEMO_LIMITS.MAX_AI_MESSAGES) {
-      return; 
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: "🔒 Has alcanzado el límite de mensajes del modo demo. Creá tu cuenta gratis en 1 minuto para tener consultas y reconocimiento de comprobantes ilimitados.",
+          timestamp: new Date(),
+        },
+      ]);
+      return;
     }
 
     const userMsg: ChatMessageType = {
