@@ -26,6 +26,7 @@ export default function DashboardPage() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [dateSubtitle, setDateSubtitle] = useState("");
   const [greeting, setGreeting] = useState("¡Hola");
+  const [mounted, setMounted] = useState(false);
 
   const loadSummary = useCallback(async () => {
     try {
@@ -41,6 +42,7 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
+    setMounted(true);
     loadSummary();
     const now = new Date();
     const h = now.getHours();
@@ -58,7 +60,7 @@ export default function DashboardPage() {
         title={`${greeting}! 👋`}
         subtitle={dateSubtitle || "Tu panel de finanzas"}
         actionButton={
-          isDemoUser() ? (
+          mounted && isDemoUser() ? (
             <button
               onClick={() => router.push("/login?tab=register")}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all"
@@ -74,7 +76,7 @@ export default function DashboardPage() {
             </button>
           ) : (
             <button
-              onClick={() => setShowQuickModal(true)}
+              onClick={() => (mounted ? setShowQuickModal(true) : undefined)}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-black gradient-primary btn-3d cursor-pointer"
               title="Ajustar saldo real, sueldo mensual y gastos"
             >
