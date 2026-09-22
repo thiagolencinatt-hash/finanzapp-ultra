@@ -11,6 +11,8 @@ import { ExportExcelButton } from "@/components/dashboard/ExportExcelButton";
 import { ResetDataModal } from "@/components/dashboard/ResetDataModal";
 import { exportFinancialsToExcel } from "@/lib/export/excel-generator";
 import { ViewModeSelector } from "@/components/ui/ViewModeSelector";
+import { QRConnectModal } from "@/components/ui/QRConnectModal";
+import { QrCode } from "lucide-react";
 
 interface HeaderProps {
   title: string;
@@ -26,6 +28,7 @@ export function Header({ title, subtitle, actionButton }: HeaderProps) {
   const [userEmail, setUserEmail] = useState("");
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -117,6 +120,16 @@ export function Header({ title, subtitle, actionButton }: HeaderProps) {
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span>Empezar en Limpio</span>
+          </button>
+
+          {/* Botón Conectar Móvil (QR) */}
+          <button
+            onClick={() => setShowQRModal(true)}
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 transition-all cursor-pointer"
+            title="Conectar celular escaneando código QR"
+          >
+            <QrCode className="w-3.5 h-3.5" />
+            <span className="hidden md:inline">Conectar Móvil</span>
           </button>
 
           {/* Botón rápido Exportar Excel */}
@@ -252,6 +265,12 @@ export function Header({ title, subtitle, actionButton }: HeaderProps) {
         isOpen={showResetModal}
         onClose={() => setShowResetModal(false)}
         onSuccess={() => router.refresh()}
+      />
+
+      {/* Modal de Conexión Móvil QR */}
+      <QRConnectModal 
+        isOpen={showQRModal}
+        onClose={() => setShowQRModal(false)}
       />
     </>
   );
