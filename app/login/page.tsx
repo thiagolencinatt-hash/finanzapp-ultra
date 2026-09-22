@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   TrendingUp,
   Mail,
@@ -26,6 +27,7 @@ function LoginPageContent() {
   // Estados del flujo: "email" -> "otp" -> "password-setup"
   const [step, setStep] = useState<"email" | "otp" | "password-setup">("email");
   const [authMode, setAuthMode] = useState<"otp" | "password">("otp");
+  const [passwordMode, setPasswordMode] = useState<"login" | "signup">("login");
 
   // Campos de formulario
   const [email, setEmail] = useState("");
@@ -98,6 +100,7 @@ function LoginPageContent() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error al enviar el código.";
       setError(msg);
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }
@@ -225,8 +228,8 @@ function LoginPageContent() {
     router.push("/");
   };
 
-  // 4. INGRESO DIRECTO CON CONTRASEÑA
-  const handleLoginWithPassword = async (e: React.FormEvent) => {
+  // 4. INGRESO DIRECTO CON CONTRASEÑA O REGISTRO
+  const handleAuthWithPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
@@ -237,59 +240,99 @@ function LoginPageContent() {
       return;
     }
 
+    if (passwordMode === "signup") {
+      if (password.length < 6) {
+        setError("La contraseña debe tener al menos 6 caracteres.");
+        return;
+      }
+      if (password !== confirmNewPassword) {
+        setError("Las contraseñas no coinciden.");
+        return;
+      }
+    }
+
     setIsLoading(true);
     try {
-      const res = await fetch("/api/auth/login-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: cleanEmail, password }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        // Fallback con Supabase si está disponible
+      if (passwordMode === "signup") {
         if (isSupabaseConfigured()) {
           const supabase = createClient();
-          const { data: supaData, error: supaErr } = await supabase.auth.signInWithPassword({
+          const { data, error: supaErr } = await supabase.auth.signUp({
             email: cleanEmail,
             password,
           });
-          if (supaErr || !supaData?.user) {
+          if (supaErr) throw new Error(supaErr.message);
+          
+          if (data.session) {
+            // Auto-login success
+            document.cookie = "finance_session=active; path=/; max-age=31536000; SameSite=Lax";
+            document.cookie = `finance_user_email=${encodeURIComponent(data.user!.email || cleanEmail)}; path=/; max-age=31536000; SameSite=Lax`;
+            document.cookie = `finance_user_id=${encodeURIComponent(data.user!.id)}; path=/; max-age=31536000; SameSite=Lax`;
+            router.push("/");
+          } else {
+            toast.success("¡Cuenta creada! Revisa tu email para confirmar (si es requerido).");
+            setSuccess("¡Cuenta creada! Revisa tu email para confirmar (si es requerido).");
+            setPasswordMode("login");
+            setPassword("");
+            setConfirmNewPassword("");
+          }
+        } else {
+          throw new Error("Supabase no está configurado. No se puede crear la cuenta.");
+        }
+      } else {
+        // Login mode
+        const res = await fetch("/api/auth/login-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: cleanEmail, password }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          // Fallback con Supabase si está disponible
+          if (isSupabaseConfigured()) {
+            const supabase = createClient();
+            const { data: supaData, error: supaErr } = await supabase.auth.signInWithPassword({
+              email: cleanEmail,
+              password,
+            });
+            if (supaErr || !supaData?.user) {
+              throw new Error(data.error || "Credenciales inválidas.");
+            }
+            data.user = {
+              id: supaData.user.id,
+              email: supaData.user.email,
+              name: supaData.user.user_metadata?.name || cleanEmail.split("@")[0],
+            };
+          } else {
             throw new Error(data.error || "Credenciales inválidas.");
           }
-          data.user = {
-            id: supaData.user.id,
-            email: supaData.user.email,
-            name: supaData.user.user_metadata?.name || cleanEmail.split("@")[0],
-          };
-        } else {
-          throw new Error(data.error || "Credenciales inválidas.");
         }
-      }
 
-      if (data?.user) {
-        document.cookie = "finance_session=active; path=/; max-age=31536000; SameSite=Lax";
-        document.cookie = `finance_user_email=${encodeURIComponent(data.user.email || cleanEmail)}; path=/; max-age=31536000; SameSite=Lax`;
-        document.cookie = `finance_user_id=${encodeURIComponent(data.user.id || `user_${cleanEmail.replace(/[^a-zA-Z0-9]/g, "_")}`)}; path=/; max-age=31536000; SameSite=Lax`;
-        if (data.user.name) {
-          document.cookie = `finance_user_name=${encodeURIComponent(data.user.name)}; path=/; max-age=31536000; SameSite=Lax`;
-        }
-        localStorage.setItem("finanzapp_user_profile", JSON.stringify(data.user));
-
-        if (isSupabaseConfigured()) {
-          try {
-            const supabase = createClient();
-            await supabase.auth.signInWithPassword({ email: cleanEmail, password });
-          } catch {
-            // silent fallback
+        if (data?.user) {
+          document.cookie = "finance_session=active; path=/; max-age=31536000; SameSite=Lax";
+          document.cookie = `finance_user_email=${encodeURIComponent(data.user.email || cleanEmail)}; path=/; max-age=31536000; SameSite=Lax`;
+          document.cookie = `finance_user_id=${encodeURIComponent(data.user.id || `user_${cleanEmail.replace(/[^a-zA-Z0-9]/g, "_")}`)}; path=/; max-age=31536000; SameSite=Lax`;
+          if (data.user.name) {
+            document.cookie = `finance_user_name=${encodeURIComponent(data.user.name)}; path=/; max-age=31536000; SameSite=Lax`;
           }
-        }
+          localStorage.setItem("finanzapp_user_profile", JSON.stringify(data.user));
 
-        router.push("/");
+          if (isSupabaseConfigured()) {
+            try {
+              const supabase = createClient();
+              await supabase.auth.signInWithPassword({ email: cleanEmail, password });
+            } catch {
+              // silent fallback
+            }
+          }
+
+          router.push("/");
+        }
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Credenciales inválidas.";
       setError(msg);
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }
@@ -417,7 +460,10 @@ function LoginPageContent() {
                     className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-sm transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 disabled:opacity-50"
                   >
                     {isLoading ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Enviando...</span>
+                      </>
                     ) : (
                       <>
                         <span>Enviar Código de 6 Dígitos</span>
@@ -427,63 +473,104 @@ function LoginPageContent() {
                   </button>
                 </form>
               ) : (
-                <form onSubmit={handleLoginWithPassword} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">
-                      Correo Electrónico
-                    </label>
-                    <div className="relative">
-                      <Mail className="absolute left-3.5 top-3 w-4 h-4 text-slate-500" />
-                      <input
-                        type="email"
-                        required
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="tu@email.com"
-                        className="w-full pl-10 pr-4 py-2.5 bg-slate-950/60 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                      />
-                    </div>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-center gap-4 mb-4">
+                    <button
+                      type="button"
+                      onClick={() => { setPasswordMode("login"); setError(null); }}
+                      className={`text-sm font-semibold border-b-2 pb-1 transition-colors ${passwordMode === "login" ? "border-emerald-500 text-emerald-400" : "border-transparent text-slate-500 hover:text-slate-300"}`}
+                    >
+                      Iniciar Sesión
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setPasswordMode("signup"); setError(null); }}
+                      className={`text-sm font-semibold border-b-2 pb-1 transition-colors ${passwordMode === "signup" ? "border-emerald-500 text-emerald-400" : "border-transparent text-slate-500 hover:text-slate-300"}`}
+                    >
+                      Crear Cuenta
+                    </button>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">
-                      Contraseña
-                    </label>
-                    <div className="relative">
-                      <Lock className="absolute left-3.5 top-3 w-4 h-4 text-slate-500" />
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        required
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Tu contraseña registrada"
-                        className="w-full pl-10 pr-10 py-2.5 bg-slate-950/60 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-3 text-slate-500 hover:text-slate-300"
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
+                  <form onSubmit={handleAuthWithPassword} className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-300 mb-1">
+                        Correo Electrónico
+                      </label>
+                      <div className="relative">
+                        <Mail className="absolute left-3.5 top-3 w-4 h-4 text-slate-500" />
+                        <input
+                          type="email"
+                          required
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="tu@email.com"
+                          className="w-full pl-10 pr-4 py-2.5 bg-slate-950/60 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                        />
+                      </div>
                     </div>
-                  </div>
 
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-sm transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 disabled:opacity-50"
-                  >
-                    {isLoading ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <>
-                        <span>Ingresar a mi Cuenta</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-300 mb-1">
+                        Contraseña
+                      </label>
+                      <div className="relative">
+                        <Lock className="absolute left-3.5 top-3 w-4 h-4 text-slate-500" />
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          required
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder={passwordMode === "login" ? "Tu contraseña registrada" : "Mínimo 6 caracteres"}
+                          className="w-full pl-10 pr-10 py-2.5 bg-slate-950/60 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-3 text-slate-500 hover:text-slate-300"
+                        >
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {passwordMode === "signup" && (
+                      <div>
+                        <label className="block text-xs font-medium text-slate-300 mb-1">
+                          Confirmar Contraseña
+                        </label>
+                        <div className="relative">
+                          <Lock className="absolute left-3.5 top-3 w-4 h-4 text-slate-500" />
+                          <input
+                            type={showPassword ? "text" : "password"}
+                            required
+                            value={confirmNewPassword}
+                            onChange={(e) => setConfirmNewPassword(e.target.value)}
+                            placeholder="Repetí la contraseña"
+                            className="w-full pl-10 pr-10 py-2.5 bg-slate-950/60 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                          />
+                        </div>
+                      </div>
                     )}
-                  </button>
-                </form>
+
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-sm transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>{passwordMode === "login" ? "Ingresando..." : "Creando..."}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>{passwordMode === "login" ? "Ingresar a mi Cuenta" : "Crear mi Cuenta"}</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+                  </form>
+                </div>
               )}
             </div>
           )}

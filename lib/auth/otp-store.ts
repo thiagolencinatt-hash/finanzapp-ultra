@@ -86,10 +86,12 @@ export async function generateAndSendOtp({
       } else if (error) {
         emailError = error.message;
         console.warn(`⚠️ [Resend error]:`, error.message);
+        throw new Error(`Resend Error: ${error.message}`);
       }
     } catch (e: unknown) {
       emailError = e instanceof Error ? e.message : "Error de red en Resend";
       console.warn(`⚠️ [Resend exception]:`, emailError);
+      throw new Error(emailError);
     }
   }
 
