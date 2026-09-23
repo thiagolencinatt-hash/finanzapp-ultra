@@ -1,4 +1,4 @@
-# LARI Global Error Ledger (BitÃ¡cora Universal)
+﻿# LARI Global Error Ledger (BitÃ¡cora Universal)
 
 AquÃ­ Lari documenta cada incidente crÃ­tico y la lecciÃ³n definitiva para la posteridad.
 
@@ -105,10 +105,10 @@ AquÃ­ Lari documenta cada incidente crÃ­tico y la lecciÃ³n definitiva para
 * **Causa Raíz**: 1. Supabase permite `accounts` vacío para nuevos usuarios. 2. `addTransaction` intentaba insertar sin una Foreign Key válida. 3. `getSummary` sumaba solo `accounts.balance` ignorando `transactions` cuando `accounts` estaba vacío.
 * **Solución**: 1. Se implementó `ensureDefaultAccount(userId)` en `supabase-store.ts` que inyecta automáticamente una cuenta "Efectivo" si el usuario no tiene ninguna. 2. `addTransaction` ahora usa `ensureDefaultAccount` y actualiza atómicamente `accounts.balance` (+ o - amount) en PostgreSQL. 3. `getSummary` recalculando el `total_balance` leyendo y sumando directo desde `transactions` si detecta que `accounts.balance` es 0 pero existen movimientos, eliminando por completo el "Flicker de Balance en Cero".
 * **Regla Preventiva**: Nunca confiar ciegamente en tablas padre (como `accounts`) para calcular resúmenes si pueden estar desfasadas o no sembradas. Siempre proveer fallbacks matemáticos basados en tablas hijo inmutables (`transactions`) y garantizar Auto-Seed en flujos críticos.
-# #   G E L - 0 1 4 :   H i s t o r i a l   d e   t r a n s a c c i o n e s   v a c � o   y   r e s e t   a l   e x p o r t a r   ( R e s u e l t o )  
- * * S � n t o m a s : * *   A l   e x p o r t a r   a   E x c e l ,   l a   U I   s e   r e i n i c i a b a .   E l   h i s t o r i a l   n o   m o s t r a b a   t r a n s a c c i o n e s   c r e a d a s   p o r   l a   I A .  
- * * C a u s a : * *   L o s   b o t o n e s   d e   e x p o r t a c i � n   n o   t e n � a n   \ 	 y p e = \  
- b u t t o n \ \ ,   c a u s a n d o   s u b m i t   d e   f o r m u l a r i o s   o   r e f r e s h   d e   p � g i n a .   \ / a p i / a i - a s s i s t a n t \   n o   i n c l u � a   \ u s e r _ i d \   n i   \ c r e a t e d _ a t \   e n   e l   p a y l o a d   o p t i m i s t a .   \ 	 r a n s a c t i o n s / p a g e . t s x \   n o   e s c u c h a b a   \  i n a n c e - r e f r e s h \   n i   m e r g e a b a   \ l o c a l _ t r a n s a c t i o n s \ .  
- * * S o l u c i � n : * *   S e   a g r e g �   \ 	 y p e = \  
- b u t t o n \ \   a   l o s   b o t o n e s .   S e   a c t u a l i z �   e l   p a y l o a d   d e   l a   I A .   S e   a � a d i �   u n   l i s t e n e r   d e   \  i n a n c e - r e f r e s h \   y   s e   u n i f i c �   l a   l e c t u r a   d e   \ l o c a l _ t r a n s a c t i o n s \   e n   l a   v i s t a   d e l   h i s t o r i a l .  
- 
+## GEL-014: Historial de transacciones vac�o y reset al exportar (Resuelto)
+**S�ntomas:** Al exportar a Excel, la UI se reiniciaba. El historial no mostraba transacciones creadas por la IA.
+**Causa:** Los botones de exportaci�n no ten�an \	ype=\
+button\\, causando submit de formularios o refresh de p�gina. \/api/ai-assistant\ no inclu�a \user_id\ ni \created_at\ en el payload optimista. \	ransactions/page.tsx\ no escuchaba \inance-refresh\ ni mergeaba \local_transactions\.
+**Soluci�n:** Se agreg� \	ype=\
+button\\ a los botones. Se actualiz� el payload de la IA. Se a�adi� un listener de \inance-refresh\ y se unific� la lectura de \local_transactions\ en la vista del historial.
+
