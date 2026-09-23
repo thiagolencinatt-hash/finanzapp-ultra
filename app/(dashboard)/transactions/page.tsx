@@ -33,14 +33,29 @@ export default function TransactionsPage() {
     try {
       const res = await fetch(`/api/transactions?${params}`);
       const data = await res.json();
+      let serverTxs = data.data || [];
+      
+      try {
+        const localTxs = JSON.parse(localStorage.getItem("local_transactions") || "[]");
+        const unsynced = localTxs.filter((t: any) => !t.synced);
+        // Evitar duplicados por id
+        const unsyncedIds = new Set(unsynced.map((t: any) => t.id));
+        serverTxs = serverTxs.filter((t: any) => !unsyncedIds.has(t.id));
+        
+        // Combinar locales no sincronizadas con las del servidor
+        serverTxs = [...unsynced, ...serverTxs];
+      } catch (e) {
+        // Ignorar si falla lectura local
+      }
+
       if (reset) {
-        setTransactions(data.data || []);
+        setTransactions(serverTxs);
         setOffset(LIMIT);
       } else {
-        setTransactions((prev) => [...prev, ...(data.data || [])]);
+        setTransactions((prev) => [...prev, ...serverTxs]);
         setOffset((o) => o + LIMIT);
       }
-      setTotal(data.count || 0);
+      setTotal((data.count || 0) + (serverTxs.length - (data.data?.length || 0)));
     } catch {
       // fallback
     } finally {
@@ -50,6 +65,10 @@ export default function TransactionsPage() {
 
   useEffect(() => {
     loadTransactions(true);
+    
+    const handleRefresh = () => loadTransactions(true);
+    window.addEventListener("finance-refresh", handleRefresh);
+    return () => window.removeEventListener("finance-refresh", handleRefresh);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters]);
 
@@ -198,8 +217,13 @@ export default function TransactionsPage() {
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold truncate" style={{ color: "hsl(var(--foreground))" }}>
+                      <p className="text-sm font-semibold truncate flex items-center gap-2" style={{ color: "hsl(var(--foreground))" }}>
                         {t.description || t.category?.name || "Sin descripción"}
+                        {(t as any).synced === false && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-500">
+                            Local
+                          </span>
+                        )}
                       </p>
                       <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                         {t.category && (

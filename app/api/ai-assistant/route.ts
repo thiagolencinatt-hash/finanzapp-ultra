@@ -303,14 +303,16 @@ async function executeTool(
         const description = (args.description as string) || (args.category_name as string) || "Operación IA";
         const date = (args.date as string) || new Date().toISOString();
 
-        const payload = {
+        let payload: any = {
           id: crypto.randomUUID(),
+          user_id: userId,
           amount,
           type,
           description,
           date,
           account_id: "default_cash",
           account_name: args.account_name || "Efectivo",
+          created_at: new Date().toISOString(),
           synced: false
         };
 
@@ -322,8 +324,7 @@ async function executeTool(
             description,
             date,
           });
-          payload.id = newTx.id;
-          payload.synced = true;
+          payload = { ...newTx, synced: true };
         } catch (e) {
           console.warn("AI DB write failed, deferring to local-first client storage", e);
         }

@@ -594,6 +594,7 @@ export default function SettingsPage() {
               </p>
             </div>
             <button
+              type="button"
               onClick={handleExportData}
               className="px-4 py-2 rounded-xl text-xs font-bold text-white gradient-primary flex items-center gap-2 shadow-sm cursor-pointer"
             >

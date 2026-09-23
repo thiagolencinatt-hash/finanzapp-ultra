@@ -73,12 +73,14 @@ export function HealthBadge() {
             </pre>
             <div className="flex gap-2">
               <button
+                type="button"
                 onClick={handleExport}
                 className="flex-1 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 font-bold py-3 rounded-xl transition-colors text-sm"
               >
                 Exportar Respaldo
               </button>
               <button
+                type="button"
                 onClick={() => setShowModal(false)}
                 className="flex-1 bg-white/10 hover:bg-white/20 text-white font-bold py-3 rounded-xl transition-colors text-sm"
               >

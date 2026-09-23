@@ -49,6 +49,7 @@ export function ExportExcelButton({
 
   return (
     <button
+      type="button"
       onClick={handleExport}
       disabled={loading}
       className={`${baseStyle} ${variantStyle} ${className}`}
