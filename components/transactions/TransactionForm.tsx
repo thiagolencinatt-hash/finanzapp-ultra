@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2, Lock } from "lucide-react";
 import type { Account, Category, Transaction } from "@/lib/types";
 import { toast } from "sonner";
@@ -34,6 +35,7 @@ export function TransactionForm({
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const router = useRouter();
   const isEditing = Boolean(transaction);
 
   // Clave para persistir el borrador en localStorage sólo al crear nuevas transacciones
@@ -92,7 +94,10 @@ export function TransactionForm({
       setCategories(cats || []);
       if (!transaction) {
         setForm((f) => {
-          if (!f.account_id && accs?.[0]) return { ...f, account_id: accs[0].id };
+          if (!f.account_id && accs && accs.length > 0) {
+            const preferred = accs.find((a: Account) => a.name === "Mercado Pago" || a.name === "Efectivo") || accs[0];
+            return { ...f, account_id: preferred.id };
+          }
           return f;
         });
       }
@@ -153,6 +158,8 @@ export function TransactionForm({
         }
       }
       toast.success(isEditing ? "Movimiento actualizado con éxito" : "Movimiento registrado con éxito");
+      window.dispatchEvent(new Event("finance-refresh"));
+      router.refresh();
       onSuccess();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Error";
@@ -264,7 +271,10 @@ export function TransactionForm({
               Seleccionar cuenta...
             </option>
             {accounts.length === 0 && (
-              <option value="default_cash" className="bg-neutral-900">Efectivo (General)</option>
+              <>
+                <option value="default_cash" className="bg-neutral-900">Mercado Pago (General)</option>
+                <option value="cash" className="bg-neutral-900">Efectivo</option>
+              </>
             )}
             {accounts.map((a) => (
               <option key={a.id} value={a.id} className="bg-neutral-900">

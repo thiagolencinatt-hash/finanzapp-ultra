@@ -154,9 +154,9 @@ export async function POST(req: NextRequest) {
               model: modelName,
               history: history.length > 0 ? history : undefined,
               config: {
-                systemInstruction,
+                systemInstruction: systemInstruction + "\nREGLA ESTRICTA: Cuando el usuario te pida registrar o agregar plata (ingreso/gasto), DEBES y TIENES QUE usar SIEMPRE la herramienta 'create_transaction'. NUNCA respondas diciendo 'ya lo registré' sin haber llamado a la herramienta. Solo responde texto para confirmar o analizar, pero la acción DEBE ejecutarse.",
                 tools: financialTools,
-                temperature: 0.6,
+                temperature: 0.2,
               },
             });
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2, Sparkles, Trash2, CheckCircle2, DollarSign, Wallet, Briefcase } from "lucide-react";
 import { DraggableWindow } from "../ui/DraggableWindow";
 
@@ -27,6 +28,7 @@ export function QuickFinanceModal({
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
   const [error, setError] = useState("");
+  const router = useRouter();
 
   async function handleSaveDirect(e: React.FormEvent) {
     e.preventDefault();
@@ -54,6 +56,8 @@ export function QuickFinanceModal({
 
       if (!res.ok) throw new Error("Error al guardar montos");
       setSuccessMsg("¡Tus números fueron actualizados exitosamente!");
+      window.dispatchEvent(new Event("finance-refresh"));
+      router.refresh();
       setTimeout(() => {
         onSuccess();
         onClose();
@@ -81,6 +85,8 @@ export function QuickFinanceModal({
       });
       if (!res.ok) throw new Error("Error al reiniciar");
       setSuccessMsg("¡Cuenta limpia creada!");
+      window.dispatchEvent(new Event("finance-refresh"));
+      router.refresh();
       setTimeout(() => {
         onSuccess();
         onClose();

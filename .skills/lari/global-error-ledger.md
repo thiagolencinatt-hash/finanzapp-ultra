@@ -57,3 +57,11 @@ AquÃ­ Lari documenta cada incidente crÃ­tico y la lecciÃ³n definitiva para
 * **Causa Raíz**: El cliente dependía exclusivamente de refetches atados a acciones locales, ignorando cambios externos en la base de datos.
 * **Solución**: Se inyectó `<RealtimeSync />` global escuchando eventos `visibilitychange`, `focus` y `supabase.channel("schema-db-changes")`.
 * **Regla Preventiva**: Las PWA financieras modernas no pueden ser reactivas pasivas. Deben estar conectadas por sockets/canales o invalidar caché al re-enfocar la pestaña.
+
+---
+### ID: GEL-008 | Balance Congelado y Falsa Ejecución IA (Turbo Execution)
+* **Fecha**: 2026-09-22
+* **Síntomas**: El balance no se actualizaba tras registrar un gasto; el bot de IA confirmaba registro pero no impactaba en la DB.
+* **Causa Raíz**: Ausencia de invalidación del App Router (`router.refresh()`) post-mutación. El prompt del IA era laxo (temperature 0.6) y a veces respondía texto simulando ejecución sin llamar la tool.
+* **Solución**: Inyección de `router.refresh()` y evento `finance-refresh` en todos los form-handlers. Ajuste de Gemini a `temperature: 0.2` con `REGLA ESTRICTA` de forzar `create_transaction`.
+* **Regla Preventiva**: Toda acción mutativa del cliente debe ir sucedida de `router.refresh()` en App Router, y los agentes IA deben tener strict prompt constraints para ejecutar tools en lugar de alucinar acciones.

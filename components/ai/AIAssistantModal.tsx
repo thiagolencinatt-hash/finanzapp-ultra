@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import { ChatMessage } from "@/components/ai/ChatMessage";
 import { ChatInput } from "@/components/ai/ChatInput";
 import type { ChatMessage as ChatMessageType } from "@/lib/types";
@@ -32,6 +33,7 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt }: AIAssistant
   const [historyLoaded, setHistoryLoaded] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const initialPromptSent = useRef(false);
+  const router = useRouter();
 
   useEffect(() => {
     if (!isOpen) {
@@ -110,6 +112,11 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt }: AIAssistant
         }),
       });
       const data = await res.json();
+
+      if (data.actions && data.actions.length > 0) {
+        window.dispatchEvent(new Event("finance-refresh"));
+        router.refresh();
+      }
 
       setMessages((prev) =>
         prev.map((m) =>
