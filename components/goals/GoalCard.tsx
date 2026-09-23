@@ -4,30 +4,22 @@ import { useState } from "react";
 import { Target, ShoppingBag, ExternalLink, PlusCircle, Trash2 } from "lucide-react";
 import type { SavingsGoal } from "@/lib/types";
 import { formatCurrency, formatPercent, monthsToGoal, monthsToText } from "@/lib/utils/currency";
+import { AddFundsModal } from "./AddFundsModal";
 
 interface GoalCardProps {
   goal: SavingsGoal;
-  onAddFunds: (amount: number) => void;
+  onAddFunds: (amount: number, accountId?: string) => void;
   onDelete: () => void;
   onRefresh: () => void;
 }
 
 export function GoalCard({ goal, onAddFunds, onDelete }: GoalCardProps) {
-  const [addAmount, setAddAmount] = useState("");
   const [showAdd, setShowAdd] = useState(false);
 
   const progress = goal.target_amount > 0 ? (goal.current_amount / goal.target_amount) * 100 : 0;
   const remaining = goal.target_amount - goal.current_amount;
   const months = monthsToGoal(goal.target_amount, goal.current_amount, goal.monthly_contribution);
   const isWishlist = goal.type === "wishlist";
-
-  function handleAdd() {
-    const amount = parseFloat(addAmount);
-    if (!amount || amount <= 0) return;
-    onAddFunds(amount);
-    setAddAmount("");
-    setShowAdd(false);
-  }
 
   return (
     <div
@@ -65,7 +57,7 @@ export function GoalCard({ goal, onAddFunds, onDelete }: GoalCardProps) {
               ¡Completada! 🎉
             </span>
           )}
-          <button onClick={onDelete} className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:opacity-100 transition-opacity"
+          <button type="button" onClick={onDelete} className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:opacity-100 transition-opacity"
             style={{ color: "hsl(var(--muted-foreground))" }}>
             <Trash2 className="w-3.5 h-3.5" />
           </button>
@@ -114,26 +106,22 @@ export function GoalCard({ goal, onAddFunds, onDelete }: GoalCardProps) {
 
       {/* Add funds */}
       {!goal.is_completed && (
-        showAdd ? (
-          <div className="flex gap-2">
-            <input
-              type="number" step="0.01" value={addAmount} onChange={(e) => setAddAmount(e.target.value)}
-              placeholder="Monto a agregar" autoFocus
-              className="flex-1 px-3 py-2 rounded-xl text-sm outline-none"
-              style={{ background: "hsl(var(--input))", border: "1px solid hsl(var(--border))", color: "hsl(var(--foreground))" }}
-              onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); if (e.key === "Escape") setShowAdd(false); }}
-            />
-            <button onClick={handleAdd} className="px-3 py-2 rounded-xl text-sm font-medium text-white" style={{ background: goal.color }}>OK</button>
-            <button onClick={() => setShowAdd(false)} className="px-2 py-2 rounded-xl text-sm" style={{ background: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" }}>✕</button>
-          </div>
-        ) : (
-          <button onClick={() => setShowAdd(true)}
-            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium transition-colors"
-            style={{ background: `${goal.color}15`, color: goal.color }}>
-            <PlusCircle className="w-3.5 h-3.5" /> Agregar fondos
-          </button>
-        )
+        <button type="button" onClick={() => setShowAdd(true)}
+          className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium transition-colors"
+          style={{ background: `${goal.color}15`, color: goal.color }}>
+          <PlusCircle className="w-3.5 h-3.5" /> Agregar fondos
+        </button>
       )}
+
+      <AddFundsModal
+        isOpen={showAdd}
+        goal={goal}
+        onClose={() => setShowAdd(false)}
+        onSuccess={(amount, accId) => {
+          setShowAdd(false);
+          onAddFunds(amount, accId);
+        }}
+      />
     </div>
   );
 }

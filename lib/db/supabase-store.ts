@@ -687,6 +687,24 @@ export async function updateGoal(
   return localStore.updateUserGoal(userId, goalId, updates);
 }
 
+export async function deleteGoal(userId: string, goalId: string): Promise<boolean> {
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase
+      .from("goals")
+      .delete()
+      .eq("id", goalId)
+      .eq("user_id", userId);
+
+    if (!error) {
+      return localStore.deleteUserGoal(userId, goalId);
+    }
+  } catch (err) {
+    console.warn("[supabase-store] deleteGoal fallback:", err);
+  }
+  return localStore.deleteUserGoal(userId, goalId);
+}
+
 // 6. PRESUPUESTOS (BUDGETS)
 export async function getBudgets(userId: string): Promise<CategoryBudget[]> {
   const store = await localStore.getUserStore(userId);

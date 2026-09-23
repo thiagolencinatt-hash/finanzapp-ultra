@@ -134,3 +134,15 @@ button\\ a los botones. Se actualiz el payload de la IA. Se aadi un listener de 
   2. Implementación de botones con `type="button"` y disparo del evento `finance-refresh` tras cualquier mutación.
   3. API reestructurada con métodos GET, POST, DELETE.
 * **Regla Preventiva**: Nunca guardar un número "gastado" en la tabla de presupuestos; el gasto siempre debe calcularse dinámicamente sumando la tabla inmutable de transacciones.
+
+---
+### ID: GEL-017 | Módulo de Metas de Ahorro y Aportes Híbridos (Misión LARI 13)
+* **Fecha**: 2026-09-23
+* **Síntomas**: Las metas de ahorro no permitían descontar fondos directamente de una cuenta (`accounts`), y los modales integrados no poseían una protección robusta contra envíos de formularios.
+* **Causa Raíz**: Falta de abstracción en el flujo de aportes (`add_funds`), el cual solo sumaba a `current_amount` sin asentar el egreso patrimonial de la cuenta bancaria del usuario si este lo deseaba.
+* **Solución**: 
+  1. Se creó el componente `AddFundsModal` con selector de `accounts` y la opción de "Solo registrar".
+  2. La API `/api/goals` con método `PATCH` ahora detecta `account_id` y llama atómicamente a `addTransaction` simulando un gasto de tipo "Aporte a meta".
+  3. Se aseguraron todos los `type="button"` en botones para cumplir GEL-014.
+  4. La UI emite `finance-refresh` permitiendo a toda la app reflejar los saldos caídos.
+* **Regla Preventiva**: Al manejar flujos de ahorro (metas/goals), siempre ofrecer la opción de descontar ese dinero del flujo patrimonial general (transacción expense hacia una cuenta origen) para mantener la contabilidad en suma cero.

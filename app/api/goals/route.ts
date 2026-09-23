@@ -1,11 +1,7 @@
 export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth/get-user";
-import {
-  getGoals,
-  addGoal,
-  updateGoal,
-} from "@/lib/db/supabase-store";
+import { getGoals, addGoal, updateGoal, deleteGoal } from "@/lib/db/supabase-store";
 
 export async function GET(req: NextRequest) {
   try {
@@ -23,7 +19,6 @@ export async function POST(req: NextRequest) {
     const user = await getUserFromRequest(req);
     const body = await req.json();
 
-    // Distribución de ingresos en metas (FASE 3)
     if (body.action === "distribute_salary" || body.action === "distribute_income") {
       const allocations: { goalId: string; amount: number }[] = body.allocations || [];
       const currentGoals = await getGoals(user.id);
@@ -32,9 +27,7 @@ export async function POST(req: NextRequest) {
         const goal = currentGoals.find((g) => g.id === goalId);
         if (goal) {
           const newAmount = (Number(goal.current_amount) || 0) + (Number(amount) || 0);
-          await updateGoal(user.id, goalId, {
-            current_amount: newAmount,
-          });
+          await updateGoal(user.id, goalId, { current_amount: newAmount });
         }
       }
 
@@ -53,7 +46,8 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req);
-    const { id, action, amount, ...updates } = await req.json();
+    const body = await req.json();
+    const { id, action, amount, account_id, ...updates } = body;
 
     if (!id) {
       return NextResponse.json({ error: "ID requerido" }, { status: 400 });
@@ -65,6 +59,20 @@ export async function PATCH(req: NextRequest) {
       if (goal) {
         const newAmount = (Number(goal.current_amount) || 0) + (Number(amount) || 0);
         const updated = await updateGoal(user.id, id, { current_amount: newAmount });
+        
+        if (account_id) {
+          const { addTransaction } = await import("@/lib/db/supabase-store");
+          await addTransaction(user.id, {
+            type: "expense",
+            amount: Number(amount),
+            currency: goal.currency || "ARS",
+            account_id: account_id,
+            category_id: null,
+            description: `Aporte a meta: ${goal.name}`,
+            date: new Date().toISOString().split("T")[0],
+          });
+        }
+        
         return NextResponse.json({ success: true, goal: updated });
       }
       return NextResponse.json({ error: "Meta no encontrada" }, { status: 404 });
@@ -78,5 +86,31 @@ export async function PATCH(req: NextRequest) {
   } catch (err: unknown) {
     console.error("[/api/goals PATCH error]:", err);
     return NextResponse.json({ error: "Error al actualizar meta" }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const user = await getUserFromRequest(req);
+    const body = await req.json();
+    const { id, action } = body;
+
+    if (action === "clear_all") {
+      const goals = await getGoals(user.id);
+      for (const g of goals) {
+        await deleteGoal(user.id, g.id);
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    if (!id) {
+      return NextResponse.json({ error: "Falta el ID de la meta" }, { status: 400 });
+    }
+
+    await deleteGoal(user.id, id);
+    return NextResponse.json({ success: true });
+  } catch (err: unknown) {
+    console.error("[/api/goals DELETE error]:", err);
+    return NextResponse.json({ error: "Error al eliminar meta" }, { status: 500 });
   }
 }

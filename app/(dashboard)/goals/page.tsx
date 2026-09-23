@@ -53,12 +53,13 @@ export default function GoalsPage() {
     setShowForm(true);
   }
 
-  async function handleAddFunds(id: string, amount: number) {
+  async function handleAddFunds(id: string, amount: number, accountId?: string) {
     await fetch("/api/goals", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, action: "add_funds", amount }),
+      body: JSON.stringify({ id, action: "add_funds", amount, account_id: accountId }),
     });
+    window.dispatchEvent(new Event("finance-refresh"));
     load();
   }
 
@@ -69,6 +70,7 @@ export default function GoalsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id }),
     });
+    window.dispatchEvent(new Event("finance-refresh"));
     load();
   }
 
@@ -79,6 +81,7 @@ export default function GoalsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "clear_all" }),
     });
+    window.dispatchEvent(new Event("finance-refresh"));
     load();
   }
 
@@ -116,6 +119,7 @@ export default function GoalsPage() {
 
             <div className="flex items-center gap-2 flex-wrap">
               <button
+                type="button"
                 onClick={() => setShowSalaryAlloc(true)}
                 className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold text-black gradient-primary btn-3d cursor-pointer"
                 title="Distribuir tu sueldo entre varias metas según prioridad"
@@ -125,6 +129,7 @@ export default function GoalsPage() {
               </button>
 
               <button
+                type="button"
                 onClick={handleClearAll}
                 className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold text-red-400 bg-red-950/40 hover:bg-red-900/50 border border-red-800/40 cursor-pointer transition-all"
                 title="Borrar todas las metas de prueba"
@@ -140,6 +145,7 @@ export default function GoalsPage() {
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex gap-2">
             <button
+              type="button"
               onClick={() => setActiveTab("goals")}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === "goals" ? "gradient-primary text-black shadow-md" : "btn-3d-secondary"
@@ -148,6 +154,7 @@ export default function GoalsPage() {
               <Target className="w-4 h-4" /> Metas de Ahorro ({goals.length})
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab("wishlist")}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === "wishlist" ? "gradient-primary text-black shadow-md" : "btn-3d-secondary"
@@ -160,6 +167,7 @@ export default function GoalsPage() {
           <div className="flex items-center gap-2">
             {currentList.length === 0 && (
               <button
+                type="button"
                 onClick={handleClearAll}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-red-400 bg-red-950/40 border border-red-800/40 cursor-pointer"
               >
@@ -168,6 +176,7 @@ export default function GoalsPage() {
             )}
 
             <button
+              type="button"
               onClick={() => openForm(activeTab === "goals" ? "goal" : "wishlist")}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-black gradient-primary btn-3d cursor-pointer"
             >
@@ -203,6 +212,7 @@ export default function GoalsPage() {
               </>
             )}
             <button
+              type="button"
               onClick={() => openForm(activeTab === "goals" ? "goal" : "wishlist")}
               className="px-5 py-3 rounded-xl text-xs font-bold text-black gradient-primary btn-3d cursor-pointer"
             >
