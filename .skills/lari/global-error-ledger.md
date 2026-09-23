@@ -33,3 +33,11 @@ AquÃ­ Lari documenta cada incidente crÃ­tico y la lecciÃ³n definitiva para la po
 * **Causa Raíz**: Caché agresivo de peticiones GET de Next.js (browser side cache) impedía la rehidratación en las llamadas API (/api/summary) post-evento. En UI, no había pb-28 al final de página y botones < 44px.
 * **Solución**: Se inyectó { cache: 'no-store' } explícito a los fetches del dashboard, se agregó pb-28 md:pb-12 y min-h-[44px] a elementos de form.
 * **Regla Preventiva**: Todo fetch en Client Components en Next 13+ a una API que deba reflejar un saldo tras un cambio requiere strict cache-busting o 'no-store'.
+
+---
+### ID: GEL-005 | Borrado Accidental de Datos y Transparencia UI (Modal IA)
+* **Fecha**: 2026-09-22
+* **Síntomas**: Usuarios hacían click en 'Empezar de cero' por error al intentar exportar, el modal del IA Assistant permitía interactuar con el fondo por mala gestión del backdrop, y los saldos parpadeaban.
+* **Causa Raíz**: Colocación riesgosa de botones de destrucción masiva junto a opciones comunes; falta de backdrop opaco bloqueante; coexistencia híbrida de localStore (fallback) para usuarios autenticados que enmascaraba datos de Supabase tras timeouts.
+* **Solución**: Removido botón de reset de áreas comunes de navegación; modal IA 100% opaco y sin scroll document.body; eliminados los fallbacks a localStore si el usuario no es DEMO, forzando la consistencia transaccional (SSoT) en Supabase.
+* **Regla Preventiva**: (1) JAMÁS ubicar acciones destructivas junto a acciones de lectura/exportación. (2) Si el usuario está autenticado en la nube, NO hacer fallback de lectura en localStore a menos que haya un modo offline explícito.

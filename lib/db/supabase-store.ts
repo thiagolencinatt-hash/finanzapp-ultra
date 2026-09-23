@@ -29,7 +29,7 @@ export async function getAccounts(userId: string): Promise<Account[]> {
       .eq("is_active", true)
       .order("created_at", { ascending: true });
 
-    if (!error && Array.isArray(data) && data.length > 0) {
+    if (!error && Array.isArray(data)) {
       return data.map((a) => ({
         id: a.id,
         user_id: a.user_id,
@@ -47,7 +47,11 @@ export async function getAccounts(userId: string): Promise<Account[]> {
   } catch (err) {
     console.warn("[supabase-store] getAccounts fallback:", err);
   }
-  return localStore.getUserAccounts(userId);
+  
+  if (userId === "demo-user") {
+    return localStore.getUserAccounts(userId);
+  }
+  return [];
 }
 
 export async function addAccount(userId: string, account: Partial<Account>): Promise<Account> {
@@ -131,13 +135,16 @@ export async function getCategories(userId: string): Promise<Category[]> {
       .select("*")
       .eq("user_id", userId);
 
-    if (!error && Array.isArray(data) && data.length > 0) {
+    if (!error && Array.isArray(data)) {
       return data;
     }
   } catch (err) {
     console.warn("[supabase-store] getCategories fallback:", err);
   }
-  return localStore.getUserCategories(userId);
+  if (userId === "demo-user") {
+    return localStore.getUserCategories(userId);
+  }
+  return [];
 }
 
 // 3. TRANSACCIONES
@@ -171,10 +178,13 @@ export async function getTransactions(userId: string): Promise<Transaction[]> {
       }));
     }
   } catch (err) {
-    console.warn("[supabase-store] getTransactions fallback:", err);
+    console.warn("[supabase-store] getTransactions error:", err);
   }
-  const result = await localStore.getUserTransactions(userId);
-  return result.data || [];
+  if (userId === "demo-user") {
+    const result = await localStore.getUserTransactions(userId);
+    return result.data || [];
+  }
+  return [];
 }
 
 export async function addTransaction(
@@ -312,7 +322,10 @@ export async function getInstallments(userId: string): Promise<Installment[]> {
   } catch (err) {
     console.warn("[supabase-store] getInstallments fallback:", err);
   }
-  return localStore.getUserInstallments(userId);
+  if (userId === "demo-user") {
+    return localStore.getUserInstallments(userId);
+  }
+  return [];
 }
 
 export async function addInstallment(
@@ -488,9 +501,12 @@ export async function getGoals(userId: string): Promise<SavingsGoal[]> {
       }));
     }
   } catch (err) {
-    console.warn("[supabase-store] getGoals fallback:", err);
+    console.warn("[supabase-store] getGoals error:", err);
   }
-  return localStore.getUserGoals(userId);
+  if (userId === "demo-user") {
+    return localStore.getUserGoals(userId);
+  }
+  return [];
 }
 
 export async function addGoal(userId: string, goal: Partial<SavingsGoal>): Promise<SavingsGoal> {
@@ -606,10 +622,13 @@ export async function getBudgets(userId: string): Promise<CategoryBudget[]> {
       }));
     }
   } catch (err) {
-    console.warn("[supabase-store] getBudgets fallback:", err);
+    console.warn("[supabase-store] getBudgets error:", err);
   }
-  const store = await localStore.getUserStore(userId);
-  return store.budgets || [];
+  if (userId === "demo-user") {
+    const store = await localStore.getUserStore(userId);
+    return store.budgets || [];
+  }
+  return [];
 }
 
 export async function saveBudgets(
@@ -674,10 +693,13 @@ export async function getSubscriptions(userId: string): Promise<Subscription[]> 
       }));
     }
   } catch (err) {
-    console.warn("[supabase-store] getSubscriptions fallback:", err);
+    console.warn("[supabase-store] getSubscriptions error:", err);
   }
-  const store = await localStore.getUserStore(userId);
-  return store.subscriptions || [];
+  if (userId === "demo-user") {
+    const store = await localStore.getUserStore(userId);
+    return store.subscriptions || [];
+  }
+  return [];
 }
 
 export async function addSubscription(

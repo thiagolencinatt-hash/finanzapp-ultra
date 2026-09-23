@@ -112,16 +112,6 @@ export function Header({ title, subtitle, actionButton }: HeaderProps) {
 
           {actionButton}
 
-          {/* Botón rápido para nuevo usuario / reset a cero */}
-          <button
-            onClick={() => setShowResetModal(true)}
-            className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition-all cursor-pointer"
-            title="Reiniciar todos los datos a $0 para empezar con tus números reales"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>Empezar en Limpio</span>
-          </button>
-
           {/* Botón Conectar Móvil (QR) */}
           <button
             onClick={() => setShowQRModal(true)}
@@ -215,16 +205,6 @@ export function Header({ title, subtitle, actionButton }: HeaderProps) {
                   <span>Cambiar / Nuevo Usuario</span>
                 </button>
 
-                <button
-                  onClick={() => {
-                    setShowUserMenu(false);
-                    setShowResetModal(true);
-                  }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-amber-400 hover:bg-amber-500/10 transition-colors cursor-pointer"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  <span>Empezar de Cero ($0)</span>
-                </button>
 
                 <button
                   onClick={() => {

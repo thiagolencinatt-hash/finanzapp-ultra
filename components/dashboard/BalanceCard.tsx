@@ -54,15 +54,6 @@ export function BalanceCard({
                 Balance General
               </p>
             </div>
-
-            <button
-              onClick={() => setShowResetModal(true)}
-              className="flex items-center gap-1 px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl text-[10px] sm:text-xs font-bold text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition-all cursor-pointer active:scale-95 shrink-0"
-              title="Dejar todas las finanzas en $0 para arrancar como nuevo usuario"
-            >
-              <RotateCcw className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-              <span>Empezar en $0</span>
-            </button>
           </div>
 
           <motion.div

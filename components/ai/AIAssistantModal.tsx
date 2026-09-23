@@ -230,30 +230,33 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt }: AIAssistant
 
   if (!mounted) return null;
 
-  // En celulares iPhone / Android: Render a pantalla completa nativa sin desbordes ni problemas de teclado
-  if (isMobile) {
-    if (typeof document === "undefined") return null;
-    return createPortal(
-      <AnimatePresence>
-        {isOpen && (
+  if (typeof document === "undefined") return null;
+  
+  return createPortal(
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[99999] bg-black/85 backdrop-blur-md flex items-center justify-center p-0 sm:p-4"
+        >
           <motion.div
-            initial={{ opacity: 0, y: "100%" }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: "100%" }}
-            transition={{ type: "spring", damping: 26, stiffness: 280 }}
-            className="fixed inset-0 z-[99999] flex flex-col bg-background pt-safe"
-            style={{ height: "100dvh", minHeight: "-webkit-fill-available" }}
+            initial={{ scale: 0.95, y: 20 }}
+            animate={{ scale: 1, y: 0 }}
+            exit={{ scale: 0.95, y: 20 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            className="bg-zinc-950 border border-zinc-800 shadow-2xl rounded-none sm:rounded-2xl w-full max-w-2xl h-[100dvh] sm:h-[90dvh] flex flex-col overflow-hidden"
           >
-            {/* Header móvil nativo */}
-            <div className="flex items-center justify-between px-4 py-3.5 border-b border-border/60 bg-card/95 backdrop-blur-xl shrink-0 shadow-sm">
+            {/* Header unificado */}
+            <div className="flex items-center justify-between px-4 py-3.5 border-b border-zinc-800 bg-zinc-950 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="relative w-9 h-9 rounded-xl overflow-hidden border border-emerald-400/60 shadow-md flex-shrink-0">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src="/ai-dollar-icon.jpg" alt="IA Dólar" className="w-full h-full object-cover" />
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <span className="font-black text-sm text-foreground">FinanzApp AI Coach</span>
+                    <span className="font-black text-sm text-zinc-100">FinanzApp AI Coach</span>
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                   </div>
                   <span className="text-[11px] text-emerald-400 font-semibold">Listo para ayudarte en línea</span>
@@ -263,61 +266,29 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt }: AIAssistant
               <button
                 type="button"
                 onClick={onClose}
-                className="w-9 h-9 rounded-xl bg-white/10 active:bg-white/20 text-foreground flex items-center justify-center transition-colors cursor-pointer"
+                className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 active:bg-white/20 text-zinc-300 flex items-center justify-center transition-colors cursor-pointer"
                 title="Cerrar asistente"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Cuerpo con scroll táctil suave */}
-            <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar">
+            {/* Cuerpo con scroll */}
+            <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar bg-zinc-950/50">
               {chatContent}
             </div>
 
-            {/* Input fijo en el pie con safe-area para iOS home bar y teclado */}
-            <div
-              className="p-3 border-t border-border/60 bg-card/98 backdrop-blur-xl shrink-0 pb-safe"
-            >
+            {/* Input fijo en el pie con safe-area */}
+            <div className="p-3 sm:p-4 border-t border-zinc-800 bg-zinc-950 shrink-0 pb-safe">
               <ChatInput
                 onSend={sendMessage}
                 disabled={loading || (isDemoUser() && messages.filter((m) => m.role === "user").length >= DEMO_LIMITS.MAX_AI_MESSAGES)}
               />
             </div>
           </motion.div>
-        )}
-      </AnimatePresence>,
-      document.body
-    );
-  }
-
-  // En PC / Tablets: Ventana flotante arrastrable
-  return (
-    <DraggableWindow
-      isOpen={isOpen}
-      onClose={onClose}
-      title={
-        <div className="flex items-center gap-2">
-          <div className="w-5 h-5 rounded-md overflow-hidden border border-emerald-400/50 flex-shrink-0 shadow-sm">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/ai-dollar-icon.jpg" alt="AI Dólar" className="w-full h-full object-cover" />
-          </div>
-          <span className="font-extrabold tracking-tight">FinanzApp AI Coach</span>
-        </div>
-      }
-      windowId="ai-assistant-modal"
-      defaultPosition={{ x: 0, y: 0 }}
-      className="w-full sm:w-[580px] h-[85vh] max-h-[720px]"
-      footer={
-        <div className="w-full">
-          <ChatInput
-            onSend={sendMessage}
-            disabled={loading || (isDemoUser() && messages.filter((m) => m.role === "user").length >= DEMO_LIMITS.MAX_AI_MESSAGES)}
-          />
-        </div>
-      }
-    >
-      {chatContent}
-    </DraggableWindow>
+        </motion.div>
+      )}
+    </AnimatePresence>,
+    document.body
   );
 }

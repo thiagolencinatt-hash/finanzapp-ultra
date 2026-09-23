@@ -163,15 +163,23 @@ export async function POST(req: NextRequest) {
             const contents: Array<string | { inlineData: { mimeType: string; data: string } }> = [];
 
             if (image_base64) {
+              const mime = image_mime_type || "image/jpeg";
               contents.push({
                 inlineData: {
-                  mimeType: image_mime_type || "image/jpeg",
-                  data: image_base64.replace(/^data:image\/\w+;base64,/, ""),
+                  mimeType: mime,
+                  data: image_base64, // Ya viene limpio desde el cliente (split)
                 },
               });
-              contents.push(
-                `[VISIÓN ARTIFICIAL OCR]: Analizá esta foto de comprobante, ticket de compra, factura o recibo. Extraé comercio, fecha, monto exacto e inferí la categoría. Registrá o proponé el gasto usando create_transaction.`
-              );
+              
+              if (mime.startsWith("image/")) {
+                contents.push(
+                  `[VISIÓN ARTIFICIAL OCR]: Analizá esta foto de comprobante, ticket de compra, factura o recibo. Extraé comercio, fecha, monto exacto e inferí la categoría. Registrá o proponé el gasto usando create_transaction.`
+                );
+              } else {
+                contents.push(
+                  `[ANÁLISIS DE DOCUMENTO]: Analizá este documento (PDF, Excel, Word o CSV). Extraé los gastos, ingresos, saldos o información financiera detallada. Procesalos en lote si corresponde y usá las herramientas (create_transaction, etc.) para registrarlos automáticamente de ser necesario.`
+                );
+              }
             }
 
             if (message?.trim()) {
