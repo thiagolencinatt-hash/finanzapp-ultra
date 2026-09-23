@@ -24,6 +24,7 @@ export type FreemiumAction =
   | "manage_budgets"
   | "manage_subscriptions"
   | "adjust_amounts"
+  | "view_analytics"
   | "set_urgency";
 
 // Mensajes amigables para cada bloqueo
@@ -71,6 +72,10 @@ const GATE_MESSAGES: Record<FreemiumAction, { title: string; description: string
   adjust_amounts: {
     title: "Ajustar Montos",
     description: "Creá tu cuenta gratis para personalizar tus saldos, sueldo y configuración financiera.",
+  },
+  view_analytics: {
+    title: "Analíticas Avanzadas",
+    description: "Creá tu cuenta gratis para desbloquear gráficos históricos y el motor de business intelligence de la app.",
   },
   set_urgency: {
     title: "Categorizar Urgencia",

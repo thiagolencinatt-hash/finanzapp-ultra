@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, ArrowUpDown, Bot, Target, Plus } from "lucide-react";
+import { LayoutDashboard, ArrowUpDown, Bot, Target, Plus, BarChart2 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { QuickExpenseModal } from "./QuickExpenseModal";
 import { openAIAssistant } from "../ai/GlobalAIAssistant";
@@ -24,12 +24,12 @@ export function BottomNav() {
           borderTop: "1px solid hsl(var(--border) / 0.8)",
         }}
       >
-        <div className="flex items-center justify-around px-2 py-2 relative">
+        <div className="flex items-center justify-around px-1 py-2 relative">
           {/* Inicio */}
           <Link
             href="/"
             className={cn(
-              "flex flex-col items-center gap-1 px-3 py-1.5 rounded-2xl transition-all duration-200 min-w-[54px]",
+              "flex flex-col items-center gap-1 px-2 py-1.5 rounded-2xl transition-all duration-200",
               pathname === "/" ? "text-primary font-bold" : "text-muted-foreground hover:text-foreground"
             )}
           >
@@ -37,23 +37,24 @@ export function BottomNav() {
             <span className="text-[10px] tracking-tight">Inicio</span>
           </Link>
 
-          {/* Gastos */}
+          {/* Transacciones */}
           <Link
             href="/transactions"
             className={cn(
-              "flex flex-col items-center gap-1 px-3 py-1.5 rounded-2xl transition-all duration-200 min-w-[54px]",
+              "flex flex-col items-center gap-1 px-2 py-1.5 rounded-2xl transition-all duration-200",
               pathname.startsWith("/transactions")
                 ? "text-primary font-bold"
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
             <ArrowUpDown className="w-5 h-5" />
-            <span className="text-[10px] tracking-tight">Gastos</span>
+            <span className="text-[10px] tracking-tight">Cargas</span>
           </Link>
 
           {/* Floating Central Quick Action Button */}
           <div className="-mt-6 flex flex-col items-center">
             <button
+              type="button"
               onClick={() => setShowQuickModal(true)}
               className="w-13 h-13 rounded-2xl gradient-primary flex items-center justify-center text-black shadow-lg shadow-primary/30 active:scale-95 transition-transform cursor-pointer"
               title="Registrar Gasto Rápido"
@@ -65,32 +66,32 @@ export function BottomNav() {
             </span>
           </div>
 
+          {/* Analíticas */}
+          <Link
+            href="/analytics"
+            className={cn(
+              "flex flex-col items-center gap-1 px-2 py-1.5 rounded-2xl transition-all duration-200",
+              pathname.startsWith("/analytics")
+                ? "text-primary font-bold"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <BarChart2 className="w-5 h-5" />
+            <span className="text-[10px] tracking-tight">Análisis</span>
+          </Link>
+
           {/* IA Chat */}
           <button
             type="button"
             onClick={() => openAIAssistant()}
-            className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-2xl transition-all duration-200 min-w-[54px] text-muted-foreground hover:text-foreground active:scale-90 cursor-pointer"
+            className="flex flex-col items-center gap-1 px-2 py-1.5 rounded-2xl transition-all duration-200 text-muted-foreground hover:text-foreground active:scale-90 cursor-pointer"
           >
             <div className="w-5 h-5 rounded-md overflow-hidden border border-emerald-400/40 shadow-sm">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/ai-dollar-icon.jpg" alt="IA Dólar" className="w-full h-full object-cover" />
             </div>
-            <span className="text-[11px] tracking-tight font-bold text-emerald-400">IA Coach</span>
+            <span className="text-[10px] tracking-tight font-bold text-emerald-400">Coach</span>
           </button>
-
-          {/* Metas */}
-          <Link
-            href="/goals"
-            className={cn(
-              "flex flex-col items-center gap-1 px-3 py-1.5 rounded-2xl transition-all duration-200 min-w-[54px]",
-              pathname.startsWith("/goals")
-                ? "text-primary font-bold"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <Target className="w-5 h-5" />
-            <span className="text-[10px] tracking-tight">Metas</span>
-          </Link>
         </div>
       </nav>
 

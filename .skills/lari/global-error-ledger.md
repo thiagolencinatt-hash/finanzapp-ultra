@@ -146,3 +146,15 @@ button\\ a los botones. Se actualiz el payload de la IA. Se aadi un listener de 
   3. Se aseguraron todos los `type="button"` en botones para cumplir GEL-014.
   4. La UI emite `finance-refresh` permitiendo a toda la app reflejar los saldos caídos.
 * **Regla Preventiva**: Al manejar flujos de ahorro (metas/goals), siempre ofrecer la opción de descontar ese dinero del flujo patrimonial general (transacción expense hacia una cuenta origen) para mantener la contabilidad en suma cero.
+
+---
+### ID: GEL-018 | Módulo de Analíticas Avanzadas (Misión LARI 14)
+* **Fecha**: 2026-09-23
+* **Síntomas**: Ausencia de visualización integral de gastos, ingresos y salud financiera a través del tiempo y por categorías, dificultando el análisis patrimonial.
+* **Causa Raíz**: Falta de un endpoint agregador (`/api/analytics`) y una vista capaz de compilar métricas cruzadas usando `recharts` bajo el paradigma Local-First.
+* **Solución**: 
+  1. Se implementó `app/(dashboard)/analytics/page.tsx` con soporte para Recharts.
+  2. Se creó `/api/analytics/route.ts` que retorna toda la info cruda (`transactions`, `categories`, `accounts`) de la base de datos permitiendo procesamiento rápido en el cliente según diferentes rangos de fecha.
+  3. Se aseguraron botones con `type="button"` (GEL-014) y se integró el evento `finance-refresh` para rehidratar automáticamente ante cualquier cambio.
+  4. Se integró la navegación en el `Sidebar.tsx` y se ajustó `BottomNav.tsx`.
+* **Regla Preventiva**: Para vistas complejas de BI y analíticas, la arquitectura de procesamiento debe suceder del lado del cliente (React) previa bajada única de datos en crudo desde la DB o LocalStorage, a fin de maximizar la interactividad de los filtros.
