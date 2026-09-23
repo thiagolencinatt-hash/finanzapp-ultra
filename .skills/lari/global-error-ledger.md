@@ -171,3 +171,19 @@ button\\ a los botones. Se actualiz el payload de la IA. Se aadi un listener de 
   4. Se endureció el modal `ResetDataModal.tsx` requiriendo escribir "RESET" para confirmar.
   5. Las rutas API de `reset` y `transactions` fueron ajustadas para aceptar Query Params (`DELETE`) y ejecutar lógicas limpias sobre `supabase`.
 * **Regla Preventiva**: Toda acción de borrado sobre un asiento contable/financiero debe venir precedida por una reversión matemática obligatoria en los saldos involucrados (Inversión Contable Automática).
+
+---
+### ID: GEL-020 | Fallo de Sincronización Realtime en SSR y payload erróneo de IA (Misión LARI 16)
+* **Fecha**: 2026-09-23
+* **Síntomas**: 
+  1) Los comandos de IA fallaban por detrás porque insertaban `account_id: "default_cash"`, rompiendo Foreign Keys. 
+  2) La interfaz no se refrescaba automáticamente al insertar datos desde otro dispositivo porque los eventos Realtime de Supabase no invalidaban la caché del servidor en el App Router de Next.js.
+  3) "Empezar de cero" no vaciaba correctamente toda la caché local, reteniendo datos fantasmas.
+* **Causa Raíz**: 
+  1) Payload de Gemini hardcodeado (`"default_cash"`) en vez de deferir a la función `ensureDefaultAccount`. 
+  2) Desconocimiento de que `router.refresh()` es obligatorio en Next.js 13+ junto con eventos JS para refrescar Server Components tras escuchar WebSockets.
+* **Solución**: 
+  1) Se vació la variable `account_id` en el `executeTool(create_transaction)` permitiendo al backend inyectar el ID real. 
+  2) Se inyectó `useRouter` en `SyncEngine.tsx` llamando a `router.refresh()` en cada `postgres_changes`.
+  3) Se limpió agresivamente el `localStorage` en `ResetDataModal` con una recarga de ventana (`window.location.href = '/'`).
+* **Regla Preventiva**: Al usar Supabase Realtime con Next.js App Router, un evento local JS (`finance-refresh`) no basta; DEBE emparejarse con `router.refresh()` para invalidar la caché del server (SSR). Además, los payloads de IA jamás deben inyectar UUIDs falsos o hardcodeados (como "default_cash") en campos Foreign Key; siempre deben dejar el campo vacío para que la capa ORM asigne la entidad por defecto.

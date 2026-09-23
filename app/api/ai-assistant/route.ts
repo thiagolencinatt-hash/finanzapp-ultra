@@ -310,7 +310,7 @@ async function executeTool(
           type,
           description,
           date,
-          account_id: "default_cash",
+          account_id: "", // Se resolverá en addTransaction con ensureDefaultAccount()
           account_name: args.account_name || "Efectivo",
           created_at: new Date().toISOString(),
           synced: false

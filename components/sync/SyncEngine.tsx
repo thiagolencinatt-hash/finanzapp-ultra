@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import { CloudOff, Info, CheckCircle2 } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
 
 export function SyncEngine() {
   const [status, setStatus] = useState<"checking" | "degraded" | "synced" | "idle">("checking");
   const [errorDetails, setErrorDetails] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [showSyncedToast, setShowSyncedToast] = useState(false);
+  const router = useRouter();
 
   const handleExport = () => {
     try {
@@ -65,6 +67,7 @@ export function SyncEngine() {
       
       if (syncedCount > 0) {
         window.dispatchEvent(new Event("finance-refresh"));
+        router.refresh();
         return true;
       }
       return false;
@@ -87,6 +90,7 @@ export function SyncEngine() {
           console.log("Realtime event received:", payload);
           // Refrescar el dashboard
           window.dispatchEvent(new Event("finance-refresh"));
+          router.refresh();
         }
       )
       .on(
@@ -95,6 +99,7 @@ export function SyncEngine() {
         (payload) => {
           console.log("Realtime account event received:", payload);
           window.dispatchEvent(new Event("finance-refresh"));
+          router.refresh();
         }
       )
       .subscribe();
@@ -145,7 +150,7 @@ export function SyncEngine() {
     return () => {
       if (unsubscribeRealtime) unsubscribeRealtime();
     };
-  }, []);
+  }, [router]);
 
   if (status === "checking" || status === "idle") return null;
 
