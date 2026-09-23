@@ -5,6 +5,7 @@ import {
   getTransactions,
   addTransaction,
   deleteTransaction,
+  getAccounts,
 } from "@/lib/db/supabase-store";
 import type { Transaction } from "@/lib/types";
 
@@ -74,6 +75,14 @@ export async function POST(req: NextRequest) {
     const validationError = validateTransactionInput(body);
     if (validationError) {
       return NextResponse.json({ error: validationError }, { status: 400 });
+    }
+
+    if (!body.account_id || body.account_id === "default_cash" || body.account_id === "") {
+      const accounts = await getAccounts(user.id);
+      const cashAcc = accounts.find(a => a.name === "Efectivo") || accounts[0];
+      if (cashAcc) {
+        body.account_id = cashAcc.id;
+      }
     }
 
     const newTx = await addTransaction(user.id, body as unknown as Omit<Transaction, "id" | "created_at">);

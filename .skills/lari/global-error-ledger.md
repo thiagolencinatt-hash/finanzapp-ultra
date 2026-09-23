@@ -1,43 +1,59 @@
-# LARI Global Error Ledger (Bitácora Universal)
+# LARI Global Error Ledger (BitÃ¡cora Universal)
 
-Aquí Lari documenta cada incidente crítico y la lección definitiva para la posteridad.
+AquÃ­ Lari documenta cada incidente crÃ­tico y la lecciÃ³n definitiva para la posteridad.
 
 ---
-### ID: GEL-001 | Error de Sincronización en Next.js (App Router)
+### ID: GEL-001 | Error de SincronizaciÃ³n en Next.js (App Router)
 * **Fecha**: 2026-09-22
-* **Síntomas**: Cambios hechos en la base de datos (Supabase) no se reflejaban al instante en otros dispositivos ni tras mutaciones.
-* **Causa Raíz**: Caché agresivo de peticiones GET en Next.js App Router, agravado por persistencia desfasada en `localStorage` (fallback erróneo).
-* **Solución**: Añadir `export const dynamic = "force-dynamic";` a todos los endpoints de API que leen datos vivos (GET). Eliminar la dependencia de UI sobre el almacenamiento en caché local temporal.
-* **Regla Preventiva**: Todo endpoint de Next.js (`route.ts`) que sirva estado dinámico desde la nube DEBE declarar la directiva `force-dynamic` (sub-skill: `skill-supabase-resilience.md`).
+* **SÃ­ntomas**: Cambios hechos en la base de datos (Supabase) no se reflejaban al instante en otros dispositivos ni tras mutaciones.
+* **Causa RaÃ­z**: CachÃ© agresivo de peticiones GET en Next.js App Router, agravado por persistencia desfasada en `localStorage` (fallback errÃ³neo).
+* **SoluciÃ³n**: AÃ±adir `export const dynamic = "force-dynamic";` a todos los endpoints de API que leen datos vivos (GET). Eliminar la dependencia de UI sobre el almacenamiento en cachÃ© local temporal.
+* **Regla Preventiva**: Todo endpoint de Next.js (`route.ts`) que sirva estado dinÃ¡mico desde la nube DEBE declarar la directiva `force-dynamic` (sub-skill: `skill-supabase-resilience.md`).
 
 ---
 ### ID: GEL-002 | Safari Auto-Zoom en Inputs iOS
 * **Fecha**: 2026-09-22
-* **Síntomas**: La UI se rompía o hacía zoom forzado incontrolable en el iPhone al tocar un campo de texto o select.
-* **Causa Raíz**: iOS Safari aplica auto-zoom incondicional si el tamaño de fuente (`font-size`) de un input es menor a 16px.
-* **Solución**: Forzar `font-size: 16px !important;` en `@media (max-width: 639px)` para `input`, `select`, y `textarea` globales, o usar `text-base`.
-* **Regla Preventiva**: Regla de fuego en desarrollo Frontend Móvil: NUNCA usar fuentes menores a 16px en elementos de formulario en Mobile (sub-skill: `skill-mobile-first.md`).
+* **SÃ­ntomas**: La UI se rompÃ­a o hacÃ­a zoom forzado incontrolable en el iPhone al tocar un campo de texto o select.
+* **Causa RaÃ­z**: iOS Safari aplica auto-zoom incondicional si el tamaÃ±o de fuente (`font-size`) de un input es menor a 16px.
+* **SoluciÃ³n**: Forzar `font-size: 16px !important;` en `@media (max-width: 639px)` para `input`, `select`, y `textarea` globales, o usar `text-base`.
+* **Regla Preventiva**: Regla de fuego en desarrollo Frontend MÃ³vil: NUNCA usar fuentes menores a 16px en elementos de formulario en Mobile (sub-skill: `skill-mobile-first.md`).
 
 ---
 ### ID: GEL-003 | Silent Failures en Resend / OTP
 * **Fecha**: 2026-09-22
-* **Síntomas**: El usuario no recibe el email OTP, pero la API responde HTTP 200 Success.
-* **Causa Raíz**: `resend.emails.send` capturaba el error pero el sistema local lo tragaba (swallowed error) y continuaba el flujo.
-* **Solución**: Añadir `throw new Error(...)` tras recibir error de la API de Resend y devolver HTTP 500 para que el Frontend detenga el flujo y alerte con un toast.
-* **Regla Preventiva**: En servicios críticos de terceros (Auth, Mail, Pagos), NO usar silent fallbacks en caso de excepción, SIEMPRE lanzar el error para feedback visual temprano del cliente.
+* **SÃ­ntomas**: El usuario no recibe el email OTP, pero la API responde HTTP 200 Success.
+* **Causa RaÃ­z**: `resend.emails.send` capturaba el error pero el sistema local lo tragaba (swallowed error) y continuaba el flujo.
+* **SoluciÃ³n**: AÃ±adir `throw new Error(...)` tras recibir error de la API de Resend y devolver HTTP 500 para que el Frontend detenga el flujo y alerte con un toast.
+* **Regla Preventiva**: En servicios crÃ­ticos de terceros (Auth, Mail, Pagos), NO usar silent fallbacks en caso de excepciÃ³n, SIEMPRE lanzar el error para feedback visual temprano del cliente.
 
 ---
-### ID: GEL-004 | Bug de Agregaci�n de Saldos y UI Mobile
+### ID: GEL-004 | Bug de Agregación de Saldos y UI Mobile
 * **Fecha**: 2026-09-22
-* **S�ntomas**: Transacciones sobreescrib�an el saldo en vez de sumar (ej. 300+500 != 800), y la UI m�vil bloqueaba �reas t�ctiles con el bottom nav.
-* **Causa Ra�z**: Cach� agresivo de peticiones GET de Next.js (browser side cache) imped�a la rehidrataci�n en las llamadas API (/api/summary) post-evento. En UI, no hab�a pb-28 al final de p�gina y botones < 44px.
-* **Soluci�n**: Se inyect� { cache: 'no-store' } expl�cito a los fetches del dashboard, se agreg� pb-28 md:pb-12 y min-h-[44px] a elementos de form.
+* **Síntomas**: Transacciones sobreescribían el saldo en vez de sumar (ej. 300+500 != 800), y la UI móvil bloqueaba áreas táctiles con el bottom nav.
+* **Causa Raíz**: Caché agresivo de peticiones GET de Next.js (browser side cache) impedía la rehidratación en las llamadas API (/api/summary) post-evento. En UI, no había pb-28 al final de página y botones < 44px.
+* **Solución**: Se inyectó { cache: 'no-store' } explícito a los fetches del dashboard, se agregó pb-28 md:pb-12 y min-h-[44px] a elementos de form.
 * **Regla Preventiva**: Todo fetch en Client Components en Next 13+ a una API que deba reflejar un saldo tras un cambio requiere strict cache-busting o 'no-store'.
 
 ---
 ### ID: GEL-005 | Borrado Accidental de Datos y Transparencia UI (Modal IA)
 * **Fecha**: 2026-09-22
-* **S�ntomas**: Usuarios hac�an click en 'Empezar de cero' por error al intentar exportar, el modal del IA Assistant permit�a interactuar con el fondo por mala gesti�n del backdrop, y los saldos parpadeaban.
-* **Causa Ra�z**: Colocaci�n riesgosa de botones de destrucci�n masiva junto a opciones comunes; falta de backdrop opaco bloqueante; coexistencia h�brida de localStore (fallback) para usuarios autenticados que enmascaraba datos de Supabase tras timeouts.
-* **Soluci�n**: Removido bot�n de reset de �reas comunes de navegaci�n; modal IA 100% opaco y sin scroll document.body; eliminados los fallbacks a localStore si el usuario no es DEMO, forzando la consistencia transaccional (SSoT) en Supabase.
-* **Regla Preventiva**: (1) JAM�S ubicar acciones destructivas junto a acciones de lectura/exportaci�n. (2) Si el usuario est� autenticado en la nube, NO hacer fallback de lectura en localStore a menos que haya un modo offline expl�cito.
+* **Síntomas**: Usuarios hacían click en 'Empezar de cero' por error al intentar exportar, el modal del IA Assistant permitía interactuar con el fondo por mala gestión del backdrop, y los saldos parpadeaban.
+* **Causa Raíz**: Colocación riesgosa de botones de destrucción masiva junto a opciones comunes; falta de backdrop opaco bloqueante; coexistencia híbrida de localStore (fallback) para usuarios autenticados que enmascaraba datos de Supabase tras timeouts.
+* **Solución**: Removido botón de reset de áreas comunes de navegación; modal IA 100% opaco y sin scroll document.body; eliminados los fallbacks a localStore si el usuario no es DEMO, forzando la consistencia transaccional (SSoT) en Supabase.
+* **Regla Preventiva**: (1) JAMÁS ubicar acciones destructivas junto a acciones de lectura/exportación. (2) Si el usuario está autenticado en la nube, NO hacer fallback de lectura en localStore a menos que haya un modo offline explícito.
+
+---
+### ID: GEL-006 | Selectores de Cuenta Vacíos y Fallbacks Inseguros
+* **Fecha**: 2026-09-22
+* **Síntomas**: El formulario de nueva transacción permitía cuentas en blanco, bloqueando al usuario en una UI sin opciones si la DB no devolvía cuentas a tiempo.
+* **Causa Raíz**: Falta de inicialización (auto-seed) en el backend y falta de option de fallback seguro en el `<select>` del frontend.
+* **Solución**: Backend modificado para auto-inyectar Efectivo, Mercado Pago y Banco en el primer login. Frontend modificado con `<option>` de fallback condicional.
+* **Regla Preventiva**: Todo sistema transaccional debe tener auto-seed garantizado para usuarios nuevos y fallback de recolección en el backend.
+
+---
+### ID: GEL-007 | Desfase Multi-Dispositivo (Sincronización Muerta)
+* **Fecha**: 2026-09-22
+* **Síntomas**: Al agregar un movimiento en PC, el iPhone abierto no lo mostraba hasta recargar manualmente toda la página.
+* **Causa Raíz**: El cliente dependía exclusivamente de refetches atados a acciones locales, ignorando cambios externos en la base de datos.
+* **Solución**: Se inyectó `<RealtimeSync />` global escuchando eventos `visibilitychange`, `focus` y `supabase.channel("schema-db-changes")`.
+* **Regla Preventiva**: Las PWA financieras modernas no pueden ser reactivas pasivas. Deben estar conectadas por sockets/canales o invalidar caché al re-enfocar la pestaña.

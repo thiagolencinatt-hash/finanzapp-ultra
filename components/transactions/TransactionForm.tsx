@@ -227,7 +227,7 @@ export function TransactionForm({
               onChange={(e) => set("amount", e.target.value)}
               placeholder="0.00"
               required
-              className="w-full px-4 py-3 rounded-xl outline-none text-xl font-bold bg-black/10 border focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+              className="w-full px-4 py-3 rounded-xl outline-none text-base sm:text-xl font-bold bg-black/10 border focus:border-primary focus:ring-1 focus:ring-primary transition-all"
               style={{ borderColor: "hsl(var(--border) / 0.5)", color: "hsl(var(--foreground))" }}
             />
           </div>
@@ -236,7 +236,7 @@ export function TransactionForm({
             <select
               value={form.currency}
               onChange={(e) => set("currency", e.target.value)}
-              className="w-full px-3 py-3 rounded-xl text-sm font-semibold outline-none bg-black/10 border focus:border-primary focus:ring-1 focus:ring-primary transition-all cursor-pointer"
+              className="w-full px-3 py-3 rounded-xl text-base sm:text-sm font-semibold outline-none bg-black/10 border focus:border-primary focus:ring-1 focus:ring-primary transition-all cursor-pointer"
               style={{ borderColor: "hsl(var(--border) / 0.5)", color: "hsl(var(--foreground))" }}
             >
               {CURRENCIES.map((c) => (
@@ -257,12 +257,15 @@ export function TransactionForm({
             value={form.account_id}
             onChange={(e) => set("account_id", e.target.value)}
             required
-            className="w-full px-4 py-3 rounded-xl text-sm font-medium outline-none bg-black/10 border focus:border-primary focus:ring-1 focus:ring-primary transition-all cursor-pointer"
+            className="w-full px-4 py-3 rounded-xl text-base sm:text-sm font-medium outline-none bg-black/10 border focus:border-primary focus:ring-1 focus:ring-primary transition-all cursor-pointer"
             style={{ borderColor: "hsl(var(--border) / 0.5)", color: "hsl(var(--foreground))" }}
           >
             <option value="" className="bg-neutral-900">
               Seleccionar cuenta...
             </option>
+            {accounts.length === 0 && (
+              <option value="default_cash" className="bg-neutral-900">Efectivo (General)</option>
+            )}
             {accounts.map((a) => (
               <option key={a.id} value={a.id} className="bg-neutral-900">
                 {a.name} — {a.currency}

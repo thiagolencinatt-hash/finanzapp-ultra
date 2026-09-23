@@ -30,6 +30,31 @@ export async function getAccounts(userId: string): Promise<Account[]> {
       .order("created_at", { ascending: true });
 
     if (!error && Array.isArray(data)) {
+      if (data.length === 0 && userId !== "demo-user") {
+        // Fase 1: Auto-Seed de Cuentas Predeterminadas
+        const defaultAccounts = [
+          { user_id: userId, name: "Efectivo", type: "cash", balance: 0, currency: "ARS", color: "#10B981", icon: "Banknote", is_active: true },
+          { user_id: userId, name: "Mercado Pago", type: "digital_wallet", balance: 0, currency: "ARS", color: "#3B82F6", icon: "Smartphone", is_active: true },
+          { user_id: userId, name: "Banco / Débito", type: "bank_account", balance: 0, currency: "ARS", color: "#8B5CF6", icon: "CreditCard", is_active: true }
+        ];
+        const { data: insertedData, error: insertError } = await supabase.from("accounts").insert(defaultAccounts).select();
+        if (!insertError && insertedData) {
+          return insertedData.map((a) => ({
+            id: a.id,
+            user_id: a.user_id,
+            name: a.name,
+            type: a.type || "digital_wallet",
+            balance: Number(a.balance) || 0,
+            currency: a.currency || "ARS",
+            color: a.color || "#10B981",
+            icon: a.icon || "Wallet",
+            is_active: a.is_active !== false,
+            created_at: a.created_at,
+            updated_at: a.updated_at || a.created_at,
+          }));
+        }
+      }
+
       return data.map((a) => ({
         id: a.id,
         user_id: a.user_id,

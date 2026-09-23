@@ -47,6 +47,7 @@ export const viewport: Viewport = {
 import { Toaster } from "@/components/ui/Toaster";
 import { ViewModeProvider } from "@/components/providers/ViewModeProvider";
 import { PWARegister } from "@/components/providers/PWARegister";
+import { RealtimeSync } from "@/components/providers/RealtimeSync";
 
 export default function RootLayout({
   children,
@@ -64,6 +65,7 @@ export default function RootLayout({
         >
           <ViewModeProvider>
             <PWARegister />
+            <RealtimeSync />
             {children}
             <Toaster position="top-center" />
           </ViewModeProvider>
