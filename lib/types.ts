@@ -57,6 +57,7 @@ export interface Transaction {
   account?: Account;
   category?: Category;
   transfer_to_account?: Account;
+  synced?: boolean;
 }
 
 export interface Installment {

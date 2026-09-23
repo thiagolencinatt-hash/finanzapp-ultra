@@ -121,53 +121,62 @@ export function TransactionForm({
       return;
     }
 
-    setLoading(true);
-    setError("");
+    const body: Record<string, unknown> = {
+      type: form.type,
+      amount: parseFloat(form.amount),
+      currency: form.currency,
+      account_id: form.account_id,
+      category_id: form.category_id || null,
+      description: form.description || null,
+      date: form.date,
+    };
 
-    try {
-      const body: Record<string, unknown> = {
-        type: form.type,
-        amount: parseFloat(form.amount),
-        currency: form.currency,
-        account_id: form.account_id,
-        category_id: form.category_id || null,
-        description: form.description || null,
-        date: form.date,
-      };
-
-      if (form.type === "transfer") {
-        body.transfer_to_account_id = form.transfer_to_account_id;
-      }
-
-      const method = isEditing ? "PATCH" : "POST";
-      const payload = isEditing ? { id: transaction?.id, ...body } : body;
-
-      const res = await fetch("/api/transactions", {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) throw new Error((await res.json()).error || "Error al guardar");
-
-      // Limpiar borrador si fue exitoso
-      if (!isEditing) {
-        localStorage.removeItem(draftKey);
-        if (isDemoUser()) {
-          incrementDemoTxCount();
-        }
-      }
-      toast.success(isEditing ? "Movimiento actualizado con éxito" : "Movimiento registrado con éxito");
-      window.dispatchEvent(new Event("finance-refresh"));
-      router.refresh();
-      onSuccess();
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Error";
-      setError(msg);
-      toast.error(msg);
-    } finally {
-      setLoading(false);
+    if (form.type === "transfer") {
+      body.transfer_to_account_id = form.transfer_to_account_id;
     }
+
+    const payload = isEditing ? { id: transaction?.id, ...body } : body;
+
+    // 1. Local-First: Guardado optimista
+    const localTx = { ...payload, id: transaction?.id || crypto.randomUUID(), synced: false, created_at: new Date().toISOString() };
+    const localTxs = JSON.parse(localStorage.getItem("local_transactions") || "[]");
+    localStorage.setItem("local_transactions", JSON.stringify([localTx, ...localTxs]));
+
+    // 2. Disparar evento optimista para la UI (BalanceCard)
+    window.dispatchEvent(
+      new CustomEvent("optimistic-tx", { detail: { type: form.type, amount: form.amount } })
+    );
+
+    // 3. Limpiar borrador y cerrar modal inmediatamente (Zero latency)
+    if (!isEditing) {
+      localStorage.removeItem(draftKey);
+      if (isDemoUser()) incrementDemoTxCount();
+    }
+    toast.success("Guardado localmente. Sincronizando con la nube...");
+    onSuccess(); // Cierra el modal
+
+    // 4. Background Sync a Supabase
+    const method = isEditing ? "PATCH" : "POST";
+    fetch("/api/transactions", {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error((await res.json()).error || "Error de servidor");
+        // Sincronización exitosa
+        toast.success(isEditing ? "Movimiento actualizado en la nube" : "Sincronizado con la nube");
+        const updatedTxs = JSON.parse(localStorage.getItem("local_transactions") || "[]").map((t: any) =>
+          t.id === localTx.id ? { ...t, synced: true } : t
+        );
+        localStorage.setItem("local_transactions", JSON.stringify(updatedTxs));
+        window.dispatchEvent(new Event("finance-refresh"));
+        router.refresh();
+      })
+      .catch((err) => {
+        console.error("Background sync failed:", err);
+        toast.error("Error al sincronizar. Se guardó de forma local y se reintentará.");
+      });
   }
 
   return (

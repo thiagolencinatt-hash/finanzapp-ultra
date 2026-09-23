@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { TrendingUp, TrendingDown, CreditCard, DollarSign, PlusCircle, MinusCircle, RotateCcw, Trash2 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
@@ -24,7 +24,56 @@ export function BalanceCard({
 }: BalanceCardProps) {
   const [formType, setFormType] = useState<"income" | "expense" | null>(null);
   const [showResetModal, setShowResetModal] = useState(false);
-  const netFlow = income30d - expense30d;
+  
+  // Optimistic State
+  const [optTotalBalance, setOptTotalBalance] = useState(totalBalance);
+  const [optIncome30d, setOptIncome30d] = useState(income30d);
+  const [optExpense30d, setOptExpense30d] = useState(expense30d);
+
+  useEffect(() => {
+    let localOptBalance = totalBalance;
+    let localOptIncome = income30d;
+    let localOptExpense = expense30d;
+
+    // Agregar transacciones locales no sincronizadas
+    try {
+      const localTxs = JSON.parse(localStorage.getItem("local_transactions") || "[]");
+      const unsynced = localTxs.filter((t: any) => !t.synced);
+      for (const t of unsynced) {
+        const val = Number(t.amount) || 0;
+        if (t.type === "income") {
+          localOptBalance += val;
+          localOptIncome += val;
+        } else if (t.type === "expense") {
+          localOptBalance -= val;
+          localOptExpense += val;
+        }
+      }
+    } catch (e) {}
+
+    setOptTotalBalance(localOptBalance);
+    setOptIncome30d(localOptIncome);
+    setOptExpense30d(localOptExpense);
+  }, [totalBalance, income30d, expense30d]);
+
+  useEffect(() => {
+    const handleOptimisticTx = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const { type, amount } = customEvent.detail;
+      const val = Number(amount) || 0;
+      if (type === "income") {
+        setOptTotalBalance((prev) => prev + val);
+        setOptIncome30d((prev) => prev + val);
+      } else if (type === "expense") {
+        setOptTotalBalance((prev) => prev - val);
+        setOptExpense30d((prev) => prev + val);
+      }
+    };
+    window.addEventListener("optimistic-tx", handleOptimisticTx);
+    return () => window.removeEventListener("optimistic-tx", handleOptimisticTx);
+  }, []);
+
+  const netFlow = optIncome30d - optExpense30d;
 
   return (
     <>
@@ -59,7 +108,7 @@ export function BalanceCard({
             transition={{ duration: 0.4 }}
           >
             <p className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-zinc-100 mb-1 tracking-tighter truncate drop-shadow-md">
-              {formatCurrency(totalBalance)}
+              {formatCurrency(optTotalBalance)}
             </p>
           </motion.div>
 
@@ -100,7 +149,7 @@ export function BalanceCard({
                   <span className="text-[11px] sm:text-xs font-semibold text-emerald-400">Ingresos</span>
                 </div>
               </div>
-              <p className="text-base sm:text-lg font-bold text-zinc-100 truncate">{formatCurrency(income30d, "ARS", true)}</p>
+              <p className="text-base sm:text-lg font-bold text-zinc-100 truncate">{formatCurrency(optIncome30d, "ARS", true)}</p>
               <p className="text-[10px] text-zinc-500 font-medium">últimos 30 días</p>
             </div>
 
@@ -115,7 +164,7 @@ export function BalanceCard({
                   <span className="text-[11px] sm:text-xs font-semibold text-rose-400">Gastos</span>
                 </div>
               </div>
-              <p className="text-base sm:text-lg font-bold text-zinc-100 truncate">{formatCurrency(expense30d, "ARS", true)}</p>
+              <p className="text-base sm:text-lg font-bold text-zinc-100 truncate">{formatCurrency(optExpense30d, "ARS", true)}</p>
               <p className="text-[10px] text-zinc-500 font-medium">últimos 30 días</p>
             </div>
 
@@ -135,7 +184,7 @@ export function BalanceCard({
           </div>
 
           {/* Net flow indicator */}
-          {(income30d > 0 || expense30d > 0) && (
+          {(optIncome30d > 0 || optExpense30d > 0) && (
             <div className="mt-4 flex items-center gap-2 rounded-xl px-4 py-3 bg-white/[0.02] border border-white/[0.05]">
               <div
                 className="w-2.5 h-2.5 rounded-full"

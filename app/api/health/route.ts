@@ -1,54 +1,37 @@
+export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/lib/supabase/server";
 
 export async function GET() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+  const envCheck = {
+    NEXT_PUBLIC_SUPABASE_URL: !!process.env.NEXT_PUBLIC_SUPABASE_URL && !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder"),
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY && !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.includes("placeholder"),
+    SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+  };
 
-  let supabaseStatus = "disconnected";
-  let supabaseMessage = "Variables de Supabase no configuradas";
+  let dbPing = false;
+  let errorMsg = undefined;
 
-  if (supabaseUrl && supabaseKey && !supabaseUrl.includes("placeholder")) {
+  if (envCheck.NEXT_PUBLIC_SUPABASE_URL) {
     try {
-      const supabase = createClient(supabaseUrl, supabaseKey);
-      const { error } = await supabase.auth.getSession();
-      if (!error) {
-        supabaseStatus = "connected";
-        supabaseMessage = "Conexión activa con Supabase Cloud Auth";
+      const supabase = await createAdminClient();
+      const { error } = await supabase.from("accounts").select("id").limit(1);
+      if (error) {
+        errorMsg = error.message;
       } else {
-        supabaseStatus = "error";
-        supabaseMessage = error.message;
+        dbPing = true;
       }
-    } catch (err: unknown) {
-      supabaseStatus = "error";
-      supabaseMessage = err instanceof Error ? err.message : "Fallo de conexión";
+    } catch (err: any) {
+      errorMsg = err.message;
     }
   }
 
-  const geminiKey = process.env.GEMINI_API_KEY || "";
-  const hasGemini = geminiKey.length > 10;
-  const hasResend = Boolean(process.env.RESEND_API_KEY);
+  const isHealthy = envCheck.NEXT_PUBLIC_SUPABASE_URL && (envCheck.NEXT_PUBLIC_SUPABASE_ANON_KEY || envCheck.SUPABASE_SERVICE_ROLE_KEY) && dbPing;
 
   return NextResponse.json({
-    status: "ok",
-    timestamp: new Date().toISOString(),
-    environment: process.env.VERCEL ? "vercel_production" : "development_server",
-    services: {
-      supabase: {
-        connected: supabaseStatus === "connected",
-        status: supabaseStatus,
-        message: supabaseMessage,
-        project: supabaseUrl ? supabaseUrl.replace(/https?:\/\//, "").split(".")[0] : null,
-      },
-      gemini_ai: {
-        connected: hasGemini,
-        status: hasGemini ? "ready" : "missing_key",
-        model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
-      },
-      resend_email: {
-        connected: hasResend,
-        status: hasResend ? "ready" : "missing_key",
-      },
-    },
+    status: isHealthy ? "ok" : "degraded",
+    envCheck,
+    dbPing,
+    error: errorMsg,
   });
 }

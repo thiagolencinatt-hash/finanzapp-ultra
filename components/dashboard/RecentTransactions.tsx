@@ -17,7 +17,19 @@ export function RecentTransactions() {
   const fetchTransactions = () => {
     fetch("/api/transactions?limit=8", { cache: "no-store" })
       .then((r) => r.json())
-      .then((d) => setTransactions(d.data || []))
+      .then((d) => {
+        let serverTxs = d.data || [];
+        try {
+          const localTxs = JSON.parse(localStorage.getItem("local_transactions") || "[]");
+          const unsynced = localTxs.filter((t: any) => !t.synced);
+          // Insertar unsynced al principio y eliminar de serverTxs si por alguna razón vinieran repetidos
+          const unsyncedIds = new Set(unsynced.map((t: any) => t.id));
+          serverTxs = serverTxs.filter((t: any) => !unsyncedIds.has(t.id));
+          setTransactions([...unsynced, ...serverTxs].slice(0, 8));
+        } catch (e) {
+          setTransactions(serverTxs);
+        }
+      })
       .finally(() => setLoading(false));
   };
 
@@ -97,6 +109,11 @@ export function RecentTransactions() {
                       <p className="text-sm font-semibold truncate text-zinc-200">
                         {t.description || t.category?.name || "Sin descripción"}
                       </p>
+                      {t.synced === false && (
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-500">
+                          Local
+                        </span>
+                      )}
                       <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] text-emerald-400 flex items-center gap-0.5">
                         <Edit3 className="w-3 h-3" /> Editar
                       </span>

@@ -73,3 +73,11 @@ AquÃ­ Lari documenta cada incidente crÃ­tico y la lecciÃ³n definitiva para
 * **Causa Raíz**: 1. `POST /api/transactions` asignaba strings como "default_cash" que violaban Foreign Keys en Supabase. 2. La API de Supabase devolvía un error de constraint o RLS, pero el backend lo capturaba (`catch`) silenciosamente y guardaba en `localStorage` (como fallback). 3. Luego `GET /api/transactions` *no leía* el fallback local si el usuario era uno real (solo lo hacía para "demo-user"), resultando en un abismo de datos.
 * **Solución**: 1. Se creó `createAdminClient` para inyectar `SUPABASE_SERVICE_ROLE_KEY` o cookies validadas para bypass de permisos críticos. 2. Auto-creación forzosa de la cuenta "Efectivo" antes del insert si el usuario no tiene ninguna para prevenir violaciones de FK en `account_id`.
 * **Regla Preventiva**: Nunca ocultar errores de base de datos con fallbacks a `localStorage` que luego son ignorados por el lector. Toda relación FK debe pre-garantizarse (creación perezosa) antes de la inserción principal.
+
+---
+### ID: GEL-010 | Zero-Data-Loss: Arquitectura Local-First y Diagnóstico
+* **Fecha**: 2026-09-22
+* **Síntomas**: Dependencia exclusiva de la nube. Si Supabase fallaba o faltaba una key de entorno, los datos de los usuarios se perdían en el aire, mostrando falsos mensajes de "Guardado exitoso" (engañando al usuario).
+* **Causa Raíz**: Acoplamiento duro entre la base de datos central y la IU. Si la request HTTP a Supabase tardaba o fallaba, el estado de la UI o quedaba bloqueado, o continuaba asumiendo un éxito.
+* **Solución**: Se integró patrón `Local-First / Optimistic UI`. Ahora al enviar una transacción, se guarda inmediatamente en `localStorage` (`synced: false`), se emite evento local y se re-hidrata `BalanceCard` en *cero milisegundos*. Luego se sincroniza en segundo plano sin bloquear. Si Supabase falla, la data persiste localmente y la UI informa el estado "Local". Se incorporó `/api/health` para diagnóstico de Vercel.
+* **Regla Preventiva**: Nunca bloquear la UI en mutaciones simples esperando un backend remoto que puede fallar. Asumir Local-First siempre y sincronizar en background como "Enhancement".
