@@ -65,3 +65,11 @@ AquÃ­ Lari documenta cada incidente crÃ­tico y la lecciÃ³n definitiva para
 * **Causa Raíz**: Ausencia de invalidación del App Router (`router.refresh()`) post-mutación. El prompt del IA era laxo (temperature 0.6) y a veces respondía texto simulando ejecución sin llamar la tool.
 * **Solución**: Inyección de `router.refresh()` y evento `finance-refresh` en todos los form-handlers. Ajuste de Gemini a `temperature: 0.2` con `REGLA ESTRICTA` de forzar `create_transaction`.
 * **Regla Preventiva**: Toda acción mutativa del cliente debe ir sucedida de `router.refresh()` en App Router, y los agentes IA deben tener strict prompt constraints para ejecutar tools en lugar de alucinar acciones.
+
+---
+### ID: GEL-009 | Transacciones Fantasma y Caída Silenciosa (Supabase RLS & FK Constraints)
+* **Fecha**: 2026-09-22
+* **Síntomas**: Transacciones confirmadas como "exitosas" pero que nunca aparecían en el dashboard ni alteraban el balance.
+* **Causa Raíz**: 1. `POST /api/transactions` asignaba strings como "default_cash" que violaban Foreign Keys en Supabase. 2. La API de Supabase devolvía un error de constraint o RLS, pero el backend lo capturaba (`catch`) silenciosamente y guardaba en `localStorage` (como fallback). 3. Luego `GET /api/transactions` *no leía* el fallback local si el usuario era uno real (solo lo hacía para "demo-user"), resultando en un abismo de datos.
+* **Solución**: 1. Se creó `createAdminClient` para inyectar `SUPABASE_SERVICE_ROLE_KEY` o cookies validadas para bypass de permisos críticos. 2. Auto-creación forzosa de la cuenta "Efectivo" antes del insert si el usuario no tiene ninguna para prevenir violaciones de FK en `account_id`.
+* **Regla Preventiva**: Nunca ocultar errores de base de datos con fallbacks a `localStorage` que luego son ignorados por el lector. Toda relación FK debe pre-garantizarse (creación perezosa) antes de la inserción principal.

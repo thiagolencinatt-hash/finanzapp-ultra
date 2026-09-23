@@ -32,3 +32,20 @@ export async function createClient() {
     },
   });
 }
+
+export async function createAdminClient() {
+  const cookieStore = await cookies();
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || fallbackUrl;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || fallbackKey;
+
+  return createServerClient(url, key, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll();
+      },
+      setAll() {
+        // Ignored for admin client
+      },
+    },
+  });
+}

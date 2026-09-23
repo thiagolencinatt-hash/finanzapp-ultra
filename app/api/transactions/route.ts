@@ -6,6 +6,7 @@ import {
   addTransaction,
   deleteTransaction,
   getAccounts,
+  addAccount,
 } from "@/lib/db/supabase-store";
 import type { Transaction } from "@/lib/types";
 
@@ -49,6 +50,8 @@ export async function GET(req: NextRequest) {
     const totalCount = allTxs.length;
     const paginated = allTxs.slice(offset, offset + limit);
 
+    console.log(`[GET /api/transactions] User ${user.id} (${user.email}): returning ${paginated.length} of ${totalCount} transactions.`);
+
     return NextResponse.json({
       data: paginated,
       count: totalCount,
@@ -77,13 +80,35 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: validationError }, { status: 400 });
     }
 
-    if (!body.account_id || body.account_id === "default_cash" || body.account_id === "") {
+    if (!body.account_id || body.account_id === "default_cash" || body.account_id === "cash" || body.account_id === "") {
       const accounts = await getAccounts(user.id);
-      const cashAcc = accounts.find(a => a.name === "Efectivo") || accounts[0];
+      let cashAcc = accounts.find(a => a.name === "Mercado Pago" || a.name === "Efectivo") || accounts[0];
+      
+      if (!cashAcc) {
+        console.log(`[POST /api/transactions] User ${user.id} has no accounts. Creating 'Efectivo' account.`);
+        // User has no accounts. Create one.
+        const newAcc = await addAccount(user.id, {
+          name: "Efectivo",
+          type: "cash",
+          balance: 0,
+          currency: user.currency || "ARS",
+          color: "#10b981", // default color
+        });
+        cashAcc = newAcc;
+      }
       if (cashAcc) {
         body.account_id = cashAcc.id;
       }
     }
+
+    console.log(`[POST /api/transactions] Payload received:`, {
+      user_id: user.id,
+      email: user.email,
+      amount: body.amount,
+      type: body.type,
+      account_id: body.account_id,
+      category_id: body.category_id,
+    });
 
     const newTx = await addTransaction(user.id, body as unknown as Omit<Transaction, "id" | "created_at">);
     return NextResponse.json(newTx, { status: 201 });

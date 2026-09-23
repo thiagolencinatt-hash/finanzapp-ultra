@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient as createClient } from "@/lib/supabase/server";
 import type {
   Account,
   Category,
@@ -271,9 +271,11 @@ export async function addTransaction(
         created_at: data.created_at,
         updated_at: data.created_at,
       };
+    } else {
+      console.error("[supabase-store] addTransaction Supabase error:", error);
     }
   } catch (err) {
-    console.warn("[supabase-store] addTransaction fallback:", err);
+    console.error("[supabase-store] addTransaction fallback:", err);
   }
   return localStore.addUserTransaction(userId, tx);
 }
