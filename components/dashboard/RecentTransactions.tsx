@@ -31,15 +31,14 @@ export function RecentTransactions() {
   return (
     <>
       <div
-        className="rounded-2xl glass"
-        style={{ border: "1px solid hsl(var(--border) / 0.5)" }}
+        className="rounded-[2rem] glass-strong p-4 sm:p-5"
       >
-        <div className="flex items-center justify-between p-4 pb-2">
+        <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-base font-bold" style={{ color: "hsl(var(--foreground))" }}>
+            <h2 className="text-base font-bold text-zinc-100">
               Últimas transacciones
             </h2>
-            <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
+            <p className="text-[11px] text-zinc-500 font-medium">
               Tocá cualquier transacción para editar su monto o categoría
             </p>
           </div>
@@ -51,16 +50,16 @@ export function RecentTransactions() {
           </Link>
         </div>
 
-        <div className="divide-y" style={{ borderColor: "hsl(var(--border) / 0.4)" }}>
+        <div className="space-y-2.5">
           {loading ? (
             Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="px-4 py-3 flex items-center gap-3 animate-pulse">
-                <div className="w-9 h-9 rounded-xl" style={{ background: "hsl(var(--muted))" }} />
+              <div key={i} className="px-4 py-3.5 flex items-center gap-3 animate-pulse bg-zinc-900/40 rounded-xl border border-white/[0.02]">
+                <div className="w-10 h-10 rounded-xl bg-zinc-800" />
                 <div className="flex-1 space-y-2">
-                  <div className="h-3 rounded-lg w-2/3" style={{ background: "hsl(var(--muted))" }} />
-                  <div className="h-2 rounded-lg w-1/3" style={{ background: "hsl(var(--muted))" }} />
+                  <div className="h-3 rounded-lg w-2/3 bg-zinc-800" />
+                  <div className="h-2 rounded-lg w-1/3 bg-zinc-800" />
                 </div>
-                <div className="h-4 w-20 rounded-lg" style={{ background: "hsl(var(--muted))" }} />
+                <div className="h-4 w-20 rounded-lg bg-zinc-800" />
               </div>
             ))
           ) : transactions.length === 0 ? (
@@ -88,30 +87,30 @@ export function RecentTransactions() {
                 <div
                   key={t.id}
                   onClick={() => setSelectedTx(t)}
-                  className="px-4 py-3 min-h-[44px] flex items-center gap-3 hover:bg-white/5 transition-all cursor-pointer group"
+                  className="px-4 py-3.5 min-h-[44px] flex items-center gap-3 bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.03] rounded-2xl transition-all cursor-pointer group active:scale-[0.98] card-hover"
                 >
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: bgColor }}>
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: bgColor }}>
                     <Icon className="w-4 h-4" style={{ color }} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium truncate" style={{ color: "hsl(var(--foreground))" }}>
+                      <p className="text-sm font-semibold truncate text-zinc-200">
                         {t.description || t.category?.name || "Sin descripción"}
                       </p>
-                      <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] text-primary flex items-center gap-0.5">
+                      <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] text-emerald-400 flex items-center gap-0.5">
                         <Edit3 className="w-3 h-3" /> Editar
                       </span>
                     </div>
-                    <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
+                    <p className="text-xs text-zinc-500 font-medium">
                       {t.account?.name} • {format(new Date(t.date + "T12:00:00"), "d MMM", { locale: es })}
                     </p>
                   </div>
                   <div className="text-right shrink-0 pl-2">
-                    <p className="text-xs sm:text-sm font-extrabold" style={{ color }}>
+                    <p className="text-sm font-extrabold drop-shadow-sm" style={{ color }}>
                       {isIncome ? "+" : isTransfer ? "" : "-"}{formatCurrency(t.amount, t.currency, true)}
                     </p>
                     {t.currency !== "ARS" && (
-                      <span className="text-[10px] font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>
+                      <span className="text-[10px] font-medium text-zinc-500">
                         {t.currency}
                       </span>
                     )}

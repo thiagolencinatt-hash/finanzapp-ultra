@@ -87,20 +87,14 @@ export function Header({ title, subtitle, actionButton }: HeaderProps) {
   return (
     <>
       <header
-        className="sticky top-0 z-30 flex items-center justify-between px-3 sm:px-4 lg:px-6 h-14 sm:h-16"
-        style={{
-          background: "hsl(var(--background) / 0.88)",
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
-          borderBottom: "1px solid hsl(var(--border) / 0.5)",
-        }}
+        className="sticky top-0 z-30 flex items-center justify-between px-3 sm:px-5 h-14 sm:h-16 bg-zinc-950/80 backdrop-blur-xl border-b border-white/[0.08]"
       >
-        <div className="min-w-0 pr-2">
-          <h1 className="text-sm sm:text-base lg:text-lg font-black truncate max-w-[150px] xs:max-w-[200px] sm:max-w-none text-foreground">
+        <div className="min-w-0 pr-2 flex flex-col justify-center">
+          <h1 className="text-sm sm:text-base lg:text-lg font-bold tracking-tight truncate max-w-[150px] xs:max-w-[200px] sm:max-w-none text-zinc-100">
             {displayTitle}
           </h1>
           {subtitle && (
-            <p className="text-[10px] sm:text-xs text-muted-foreground truncate max-w-[160px] sm:max-w-none">
+            <p className="text-[10px] sm:text-xs text-zinc-400 font-medium truncate max-w-[160px] sm:max-w-none">
               {subtitle}
             </p>
           )}
@@ -115,7 +109,7 @@ export function Header({ title, subtitle, actionButton }: HeaderProps) {
           {/* Botón Conectar Móvil (QR) */}
           <button
             onClick={() => setShowQRModal(true)}
-            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 transition-all cursor-pointer"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all cursor-pointer"
             title="Conectar celular escaneando código QR"
           >
             <QrCode className="w-3.5 h-3.5" />
@@ -126,13 +120,12 @@ export function Header({ title, subtitle, actionButton }: HeaderProps) {
           <ExportExcelButton
             variant="outline"
             label="Excel"
-            className="hidden sm:inline-flex py-1.5 px-3"
+            className="hidden sm:inline-flex py-1.5 px-3 rounded-full border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.06] text-zinc-300"
           />
 
           {/* Notificaciones */}
           <button
-            className="hidden xs:flex w-8 h-8 sm:w-9 sm:h-9 rounded-xl items-center justify-center transition-colors hover:bg-muted cursor-pointer"
-            style={{ color: "hsl(var(--muted-foreground))" }}
+            className="hidden xs:flex w-8 h-8 sm:w-9 sm:h-9 rounded-full items-center justify-center transition-colors bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.05] cursor-pointer text-zinc-400 hover:text-zinc-200"
             title="Notificaciones y Recordatorios"
             onClick={() => toast.success("¡Todo al día! No tienes alertas financieras críticas en este momento.")}
           >
@@ -143,11 +136,10 @@ export function Header({ title, subtitle, actionButton }: HeaderProps) {
           {mounted ? (
             <button
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center transition-colors hover:bg-muted cursor-pointer"
-              style={{ color: "hsl(var(--muted-foreground))" }}
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-colors bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.05] cursor-pointer text-zinc-400 hover:text-zinc-200"
               title="Cambiar tema (Claro / Oscuro)"
             >
-              {theme === "dark" ? <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" /> : <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+              {theme === "dark" ? <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" /> : <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
             </button>
           ) : (
             <div className="w-8 h-8 sm:w-9 sm:h-9" />
@@ -157,28 +149,20 @@ export function Header({ title, subtitle, actionButton }: HeaderProps) {
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center gap-1.5 sm:gap-2 p-1.5 sm:pl-2 sm:pr-2.5 sm:py-1.5 rounded-xl border transition-all hover:bg-muted/70 cursor-pointer"
-              style={{
-                background: "hsl(var(--card))",
-                borderColor: "hsl(var(--border))",
-              }}
+              className="flex items-center gap-1.5 sm:gap-2 p-1.5 sm:pl-1.5 sm:pr-3 sm:py-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.08] transition-all cursor-pointer shadow-[0_2px_10px_rgba(0,0,0,0.2)]"
             >
-              <div className="w-6 h-6 rounded-lg gradient-primary flex items-center justify-center text-black font-extrabold text-xs shadow-sm">
+              <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">
                 {userName.charAt(0).toUpperCase()}
               </div>
-              <span className="hidden md:inline text-xs font-bold max-w-[80px] truncate text-foreground">
+              <span className="hidden md:inline text-xs font-semibold max-w-[80px] truncate text-zinc-200">
                 {userName}
               </span>
-              <ChevronDown className="w-3 h-3 text-muted-foreground" />
+              <ChevronDown className="w-3 h-3 text-zinc-500" />
             </button>
 
             {showUserMenu && (
               <div
-                className="absolute right-0 mt-2 w-64 rounded-2xl p-2 shadow-2xl border backdrop-blur-2xl z-50 animate-slide-up"
-                style={{
-                  background: "hsl(var(--card) / 0.95)",
-                  borderColor: "hsl(var(--border))",
-                }}
+                className="absolute right-0 mt-2 w-64 rounded-2xl p-2 shadow-[0_12px_40px_rgba(0,0,0,0.6)] border border-white/[0.1] bg-zinc-900/90 backdrop-blur-2xl z-50 animate-slide-up"
               >
                 {/* User Info Header */}
                 <div className="px-3 py-2.5 border-b mb-1" style={{ borderColor: "hsl(var(--border))" }}>

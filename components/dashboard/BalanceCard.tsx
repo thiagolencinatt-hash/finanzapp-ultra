@@ -29,10 +29,7 @@ export function BalanceCard({
   return (
     <>
       <div
-        className="relative rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 lg:p-7 overflow-hidden glass-strong shadow-2xl"
-        style={{
-          border: "1px solid hsl(var(--border) / 0.6)",
-        }}
+        className="relative rounded-2xl sm:rounded-[2rem] p-4 sm:p-6 lg:p-8 overflow-hidden glass-strong"
       >
         {/* Luces de acento de fondo */}
         <div
@@ -47,10 +44,10 @@ export function BalanceCard({
         <div className="relative z-10">
           <div className="flex items-center justify-between gap-2 mb-2">
             <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center bg-primary/20 text-primary shrink-0">
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-white/[0.05] text-zinc-300 shrink-0 border border-white/[0.08]">
                 <DollarSign className="w-4 h-4 font-bold" />
               </div>
-              <p className="text-[11px] sm:text-sm font-bold uppercase tracking-wider text-muted-foreground truncate">
+              <p className="text-[11px] sm:text-sm font-semibold uppercase tracking-widest text-zinc-400 truncate">
                 Balance General
               </p>
             </div>
@@ -61,32 +58,32 @@ export function BalanceCard({
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.4 }}
           >
-            <p className="text-2xl xs:text-3xl sm:text-4xl lg:text-5xl font-black text-foreground mb-1 tracking-tight truncate">
+            <p className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-zinc-100 mb-1 tracking-tighter truncate drop-shadow-md">
               {formatCurrency(totalBalance)}
             </p>
           </motion.div>
 
-          <p className="text-[10px] sm:text-xs text-muted-foreground mb-3 sm:mb-4">
+          <p className="text-[11px] sm:text-xs text-zinc-500 mb-5 font-medium">
             Saldo total acumulado en todas tus cuentas
           </p>
 
           {/* Botones de acción principales grandes para pulgar móvil */}
-          <div className="grid grid-cols-2 gap-2 sm:gap-2.5 mb-3.5 sm:mb-4">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-4 sm:mb-5">
             <button
               onClick={() => setFormType("income")}
-              className="flex items-center justify-center gap-2 py-2.5 sm:py-3 px-3 rounded-xl text-xs sm:text-sm font-black text-emerald-400 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 shadow-lg shadow-emerald-500/10 transition-all cursor-pointer active:scale-[0.98]"
+              className="flex items-center justify-center gap-2 py-3 px-3 rounded-2xl text-xs sm:text-sm font-bold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 shadow-[0_8px_20px_rgba(16,185,129,0.1)] transition-all cursor-pointer active:scale-[0.97]"
               title="Registrar nuevo ingreso (sueldo, extra, etc)"
             >
               <PlusCircle className="w-4 h-4 text-emerald-400 stroke-[2.5]" />
-              <span>+ Ingreso</span>
+              <span>Ingreso</span>
             </button>
             <button
               onClick={() => setFormType("expense")}
-              className="flex items-center justify-center gap-2 py-2.5 sm:py-3 px-3 rounded-xl text-xs sm:text-sm font-black text-rose-400 bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 shadow-lg shadow-rose-500/10 transition-all cursor-pointer active:scale-[0.98]"
+              className="flex items-center justify-center gap-2 py-3 px-3 rounded-2xl text-xs sm:text-sm font-bold text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 shadow-[0_8px_20px_rgba(244,63,94,0.1)] transition-all cursor-pointer active:scale-[0.97]"
               title="Registrar nuevo gasto"
             >
               <MinusCircle className="w-4 h-4 text-rose-400 stroke-[2.5]" />
-              <span>- Gasto</span>
+              <span>Gasto</span>
             </button>
           </div>
 
@@ -95,59 +92,59 @@ export function BalanceCard({
             {/* Ingresos card */}
             <div
               onClick={() => setFormType("income")}
-              className="rounded-2xl p-3 sm:p-3.5 gradient-income cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform"
+              className="rounded-2xl p-3 sm:p-4 bg-zinc-900/50 border border-white/[0.06] hover:bg-zinc-900/80 cursor-pointer card-hover"
             >
-              <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-1.5">
-                  <TrendingUp className="w-3.5 h-3.5 text-income" />
-                  <span className="text-[11px] sm:text-xs font-bold text-income">Ingresos</span>
+                  <TrendingUp className="w-4 h-4 text-emerald-400" />
+                  <span className="text-[11px] sm:text-xs font-semibold text-emerald-400">Ingresos</span>
                 </div>
               </div>
-              <p className="text-sm sm:text-base font-extrabold text-foreground truncate">{formatCurrency(income30d, "ARS", true)}</p>
-              <p className="text-[10px] text-muted-foreground">últimos 30 días</p>
+              <p className="text-base sm:text-lg font-bold text-zinc-100 truncate">{formatCurrency(income30d, "ARS", true)}</p>
+              <p className="text-[10px] text-zinc-500 font-medium">últimos 30 días</p>
             </div>
 
             {/* Gastos card */}
             <div
               onClick={() => setFormType("expense")}
-              className="rounded-2xl p-3 sm:p-3.5 gradient-expense cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform"
+              className="rounded-2xl p-3 sm:p-4 bg-zinc-900/50 border border-white/[0.06] hover:bg-zinc-900/80 cursor-pointer card-hover"
             >
-              <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-1.5">
-                  <TrendingDown className="w-3.5 h-3.5 text-expense" />
-                  <span className="text-[11px] sm:text-xs font-bold text-expense">Gastos</span>
+                  <TrendingDown className="w-4 h-4 text-rose-400" />
+                  <span className="text-[11px] sm:text-xs font-semibold text-rose-400">Gastos</span>
                 </div>
               </div>
-              <p className="text-sm sm:text-base font-extrabold text-foreground truncate">{formatCurrency(expense30d, "ARS", true)}</p>
-              <p className="text-[10px] text-muted-foreground">últimos 30 días</p>
+              <p className="text-base sm:text-lg font-bold text-zinc-100 truncate">{formatCurrency(expense30d, "ARS", true)}</p>
+              <p className="text-[10px] text-zinc-500 font-medium">últimos 30 días</p>
             </div>
 
             {/* Cuotas card */}
-            <div className="col-span-2 sm:col-span-1 rounded-2xl p-3 sm:p-3.5 glass">
-              <div className="flex items-center justify-between mb-1">
+            <div className="col-span-2 sm:col-span-1 rounded-2xl p-3 sm:p-4 bg-zinc-900/50 border border-white/[0.06] card-hover">
+              <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-1.5">
-                  <CreditCard className="w-3.5 h-3.5 text-warning" />
-                  <span className="text-[11px] sm:text-xs font-bold text-warning">Cuotas Comprometidas</span>
+                  <CreditCard className="w-4 h-4 text-indigo-400" />
+                  <span className="text-[11px] sm:text-xs font-semibold text-indigo-400">Cuotas Mensuales</span>
                 </div>
               </div>
-              <p className="text-sm sm:text-base font-extrabold text-foreground truncate">
+              <p className="text-base sm:text-lg font-bold text-zinc-100 truncate">
                 {formatCurrency(monthlyInstallments, "ARS", true)}
               </p>
-              <p className="text-[10px] text-muted-foreground">por mes</p>
+              <p className="text-[10px] text-zinc-500 font-medium">por mes</p>
             </div>
           </div>
 
           {/* Net flow indicator */}
           {(income30d > 0 || expense30d > 0) && (
-            <div className="mt-4 flex items-center gap-2 rounded-xl px-3.5 py-2.5 bg-black/20 border border-white/5">
+            <div className="mt-4 flex items-center gap-2 rounded-xl px-4 py-3 bg-white/[0.02] border border-white/[0.05]">
               <div
                 className="w-2.5 h-2.5 rounded-full"
-                style={{ background: netFlow >= 0 ? "hsl(var(--income))" : "hsl(var(--expense))" }}
+                style={{ background: netFlow >= 0 ? "#34d399" : "#fb7185", boxShadow: `0 0 10px ${netFlow >= 0 ? '#34d399' : '#fb7185'}` }}
               />
-              <p className="text-xs text-foreground font-medium">
+              <p className="text-xs text-zinc-300 font-medium">
                 Flujo neto:{" "}
-                <span className="font-bold text-primary">{formatCurrency(Math.abs(netFlow), "ARS", true)}</span>{" "}
-                <span className="text-muted-foreground">
+                <span className={`font-bold ${netFlow >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{formatCurrency(Math.abs(netFlow), "ARS", true)}</span>{" "}
+                <span className="text-zinc-500">
                   {netFlow >= 0 ? "a favor este mes 🎉" : "en déficit este mes ⚠️"}
                 </span>
               </p>

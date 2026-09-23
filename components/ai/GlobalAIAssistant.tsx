@@ -44,14 +44,14 @@ export function GlobalAIAssistant() {
             setInitialPrompt(undefined);
             setIsOpen((prev) => !prev);
           }}
-          className="group relative flex items-center gap-2.5 px-4 py-3 rounded-2xl gradient-primary text-black font-extrabold shadow-2xl shadow-primary/40 hover:shadow-primary/60 hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer border border-white/20"
+          className="group relative flex items-center gap-2.5 px-4 py-3 rounded-full bg-zinc-950 border border-emerald-500/30 text-emerald-400 shadow-[0_8px_30px_rgba(16,185,129,0.2)] hover:shadow-[0_12px_40px_rgba(16,185,129,0.3)] hover:-translate-y-1 active:scale-95 transition-all duration-300 cursor-pointer ring-1 ring-emerald-500/30"
           title="Abrir Asistente Financiero con Inteligencia Artificial"
         >
           {/* Anillo de pulso sutil */}
-          <span className="absolute -inset-0.5 rounded-2xl bg-primary/40 blur-sm opacity-75 group-hover:opacity-100 animate-pulse pointer-events-none" />
+          <span className="absolute -inset-1 rounded-full bg-emerald-500/20 blur-md opacity-50 group-hover:opacity-100 animate-pulse pointer-events-none" />
 
           <div className="relative flex items-center gap-2.5">
-            <div className="relative w-8 h-8 rounded-xl overflow-hidden shadow-md border border-emerald-400/50 flex-shrink-0">
+            <div className="relative w-8 h-8 rounded-full overflow-hidden shadow-md border border-emerald-500/30 flex-shrink-0">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/ai-dollar-icon.jpg"
@@ -59,10 +59,10 @@ export function GlobalAIAssistant() {
                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
               />
             </div>
-            <span className="text-xs font-black tracking-wide hidden sm:inline">
+            <span className="text-xs font-bold tracking-wide hidden sm:inline text-emerald-400">
               Asistente IA
             </span>
-            <Sparkles className="w-3.5 h-3.5 text-black" />
+            <Sparkles className="w-4 h-4 text-emerald-400" />
           </div>
         </button>
       </div>
