@@ -16,6 +16,7 @@ import {
   ChevronRight,
   History,
   PieChart,
+  Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { createClient } from "@/lib/supabase/client";
@@ -24,6 +25,7 @@ import { openAIAssistant } from "../ai/GlobalAIAssistant";
 
 const navItems = [
   { href: "/", icon: LayoutDashboard, label: "Dashboard" },
+  { href: "/accounts", icon: Wallet, label: "Cuentas" },
   { href: "/transactions", icon: ArrowUpDown, label: "Transacciones" },
   { href: "/history", icon: History, label: "Historial" },
   { href: "/installments", icon: CreditCard, label: "Cuotas" },

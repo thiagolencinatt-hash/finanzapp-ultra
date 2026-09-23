@@ -294,6 +294,22 @@ export async function addTransaction(
         }
       }
 
+      if (type === "transfer" && tx.transfer_to_account_id) {
+        const { data: destAcc } = await supabase
+          .from("accounts")
+          .select("balance")
+          .eq("id", tx.transfer_to_account_id)
+          .single();
+
+        if (destAcc) {
+          const destCurrentBal = Number(destAcc.balance) || 0;
+          await supabase
+            .from("accounts")
+            .update({ balance: destCurrentBal + amount })
+            .eq("id", tx.transfer_to_account_id);
+        }
+      }
+
       await localStore.addUserTransaction(userId, tx);
       return {
         id: data.id,

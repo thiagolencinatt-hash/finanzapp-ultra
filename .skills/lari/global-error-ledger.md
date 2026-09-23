@@ -1,4 +1,4 @@
-﻿# LARI Global Error Ledger (BitÃ¡cora Universal)
+# LARI Global Error Ledger (BitÃ¡cora Universal)
 
 AquÃ­ Lari documenta cada incidente crÃ­tico y la lecciÃ³n definitiva para la posteridad.
 
@@ -105,10 +105,21 @@ AquÃ­ Lari documenta cada incidente crÃ­tico y la lecciÃ³n definitiva para
 * **Causa Raíz**: 1. Supabase permite `accounts` vacío para nuevos usuarios. 2. `addTransaction` intentaba insertar sin una Foreign Key válida. 3. `getSummary` sumaba solo `accounts.balance` ignorando `transactions` cuando `accounts` estaba vacío.
 * **Solución**: 1. Se implementó `ensureDefaultAccount(userId)` en `supabase-store.ts` que inyecta automáticamente una cuenta "Efectivo" si el usuario no tiene ninguna. 2. `addTransaction` ahora usa `ensureDefaultAccount` y actualiza atómicamente `accounts.balance` (+ o - amount) en PostgreSQL. 3. `getSummary` recalculando el `total_balance` leyendo y sumando directo desde `transactions` si detecta que `accounts.balance` es 0 pero existen movimientos, eliminando por completo el "Flicker de Balance en Cero".
 * **Regla Preventiva**: Nunca confiar ciegamente en tablas padre (como `accounts`) para calcular resúmenes si pueden estar desfasadas o no sembradas. Siempre proveer fallbacks matemáticos basados en tablas hijo inmutables (`transactions`) y garantizar Auto-Seed en flujos críticos.
-## GEL-014: Historial de transacciones vac�o y reset al exportar (Resuelto)
-**S�ntomas:** Al exportar a Excel, la UI se reiniciaba. El historial no mostraba transacciones creadas por la IA.
-**Causa:** Los botones de exportaci�n no ten�an \	ype=\
-button\\, causando submit de formularios o refresh de p�gina. \/api/ai-assistant\ no inclu�a \user_id\ ni \created_at\ en el payload optimista. \	ransactions/page.tsx\ no escuchaba \inance-refresh\ ni mergeaba \local_transactions\.
-**Soluci�n:** Se agreg� \	ype=\
-button\\ a los botones. Se actualiz� el payload de la IA. Se a�adi� un listener de \inance-refresh\ y se unific� la lectura de \local_transactions\ en la vista del historial.
+## GEL-014: Historial de transacciones vaco y reset al exportar (Resuelto)
+**Sntomas:** Al exportar a Excel, la UI se reiniciaba. El historial no mostraba transacciones creadas por la IA.
+**Causa:** Los botones de exportacin no tenan \	ype=\
+button\\, causando submit de formularios o refresh de pgina. \/api/ai-assistant\ no inclua \user_id\ ni \created_at\ en el payload optimista. \	ransactions/page.tsx\ no escuchaba \inance-refresh\ ni mergeaba \local_transactions\.
+**Solucin:** Se agreg \	ype=\
+button\\ a los botones. Se actualiz el payload de la IA. Se aadi un listener de \inance-refresh\ y se unific la lectura de \local_transactions\ en la vista del historial.
 
+---
+### ID: GEL-015 | Implementación Completa de Cuentas (CRUD) y Transferencias (Misión LARI 11)
+* **Fecha**: 2026-09-23
+* **Síntomas**: La aplicación permitía registrar transferencias pero solo descontaba el saldo origen, perdiendo dinero en el limbo (fuga de fondos). Faltaba interfaz dedicada para administrar cuentas.
+* **Causa Raíz**: Lógica de `addTransaction` incompleta (no detectaba ni impactaba `destination_account_id`).
+* **Solución**: 
+  1. Se actualizó `supabase-store.ts` para que ante un `type === 'transfer'`, sume el dinero en la `destination_account_id`.
+  2. Se creó `/accounts` con arquitectura Local-First (Grid UI ultra-dark).
+  3. Todos los botones de acciones usan explícitamente `type="button"` previniendo reseteos.
+  4. Sincronización transparente con `window.dispatchEvent(new Event('finance-refresh'))`.
+* **Regla Preventiva**: Toda transferencia entre cuentas (`transfer`) debe considerarse atómica y bifurcada. Nunca restar de la cuenta origen sin asegurar la suma paralela en la cuenta destino.
