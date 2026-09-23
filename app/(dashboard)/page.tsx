@@ -34,8 +34,25 @@ export default function DashboardPage() {
         fetch("/api/summary", { cache: "no-store" }),
         fetch("/api/categories", { cache: "no-store" }),
       ]);
-      if (resSummary.ok) setSummary(await resSummary.json());
-      if (resCats.ok) setCategories(await resCats.json());
+      if (resSummary.ok) {
+        const data = await resSummary.json();
+        // Evitar que un backend en estado inválido (ej. sin tablas) devuelva un falso éxito con 0
+        if (data && typeof data.total_balance === 'number') {
+          setSummary(data);
+          localStorage.setItem("finanzapp_last_summary", JSON.stringify(data));
+        }
+      } else {
+        // Anti-reset: Si el servidor falla, leemos del último estado conocido
+        const cached = localStorage.getItem("finanzapp_last_summary");
+        if (cached) setSummary(JSON.parse(cached));
+      }
+      
+      if (resCats.ok) {
+        setCategories(await resCats.json());
+      }
+    } catch (err) {
+      const cached = localStorage.getItem("finanzapp_last_summary");
+      if (cached) setSummary(JSON.parse(cached));
     } finally {
       setLoading(false);
     }

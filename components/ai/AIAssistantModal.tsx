@@ -114,6 +114,26 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt }: AIAssistant
       const data = await res.json();
 
       if (data.actions && data.actions.length > 0) {
+        for (const action of data.actions) {
+          if (action.tool === "create_transaction" && action.data?.action === "create_transaction") {
+            const tx = action.data.transaction;
+            if (tx) {
+              try {
+                const currentTxs = JSON.parse(localStorage.getItem("local_transactions") || "[]");
+                currentTxs.push(tx);
+                localStorage.setItem("local_transactions", JSON.stringify(currentTxs));
+                
+                const optEvent = new CustomEvent("optimistic-tx", {
+                  detail: { type: tx.type, amount: tx.amount }
+                });
+                window.dispatchEvent(optEvent);
+              } catch (e) {
+                console.warn("Failed to save AI transaction to local storage", e);
+              }
+            }
+          }
+        }
+        
         window.dispatchEvent(new Event("finance-refresh"));
         router.refresh();
       }

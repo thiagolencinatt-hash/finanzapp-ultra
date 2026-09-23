@@ -8,6 +8,24 @@ export function HealthBadge() {
   const [errorDetails, setErrorDetails] = useState("");
   const [showModal, setShowModal] = useState(false);
 
+  const handleExport = () => {
+    try {
+      const data = {
+        local_transactions: JSON.parse(localStorage.getItem("local_transactions") || "[]"),
+        finanzapp_last_summary: JSON.parse(localStorage.getItem("finanzapp_last_summary") || "null"),
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `finanzapp_local_backup_${new Date().toISOString().split("T")[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert("Error al exportar los datos locales.");
+    }
+  };
+
   useEffect(() => {
     fetch("/api/health")
       .then((res) => res.json())
@@ -48,18 +66,25 @@ export function HealthBadge() {
               <h3 className="font-bold">Información de Nube</h3>
             </div>
             <p className="text-sm text-zinc-300 mb-4 leading-relaxed">
-              La aplicación está funcionando en <strong>Modo Local-First</strong> porque hay un problema de conexión con Supabase en Vercel. 
-              Tus transacciones se guardarán en tu dispositivo y no perderás ningún dato.
+              <strong>Modo Local Seguro:</strong> Tus datos están a salvo en este dispositivo. Para activar el respaldo en la nube, ejecuta el <a href="/api/setup-db" target="_blank" className="text-emerald-400 underline hover:text-emerald-300">script SQL en Supabase</a> o agrega las claves faltantes.
             </p>
-            <pre className="text-xs bg-black p-3 rounded-lg text-red-400 whitespace-pre-wrap font-mono mb-6 border border-zinc-800">
+            <pre className="text-xs bg-black p-3 rounded-lg text-red-400 whitespace-pre-wrap font-mono mb-6 border border-zinc-800 max-h-32 overflow-y-auto">
               {errorDetails}
             </pre>
-            <button
-              onClick={() => setShowModal(false)}
-              className="w-full bg-white/10 hover:bg-white/20 text-white font-bold py-3 rounded-xl transition-colors"
-            >
-              Entendido
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={handleExport}
+                className="flex-1 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 font-bold py-3 rounded-xl transition-colors text-sm"
+              >
+                Exportar Respaldo
+              </button>
+              <button
+                onClick={() => setShowModal(false)}
+                className="flex-1 bg-white/10 hover:bg-white/20 text-white font-bold py-3 rounded-xl transition-colors text-sm"
+              >
+                Entendido
+              </button>
+            </div>
           </div>
         </div>
       )}

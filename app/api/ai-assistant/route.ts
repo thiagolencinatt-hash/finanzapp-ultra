@@ -303,17 +303,34 @@ async function executeTool(
         const description = (args.description as string) || (args.category_name as string) || "Operación IA";
         const date = (args.date as string) || new Date().toISOString();
 
-        const newTx = await addTransaction(userId, {
-          user_id: userId,
-          type,
+        const payload = {
+          id: crypto.randomUUID(),
           amount,
+          type,
           description,
           date,
-        });
+          account_id: "default_cash",
+          account_name: args.account_name || "Efectivo",
+          synced: false
+        };
+
+        try {
+          const newTx = await addTransaction(userId, {
+            user_id: userId,
+            type,
+            amount,
+            description,
+            date,
+          });
+          payload.id = newTx.id;
+          payload.synced = true;
+        } catch (e) {
+          console.warn("AI DB write failed, deferring to local-first client storage", e);
+        }
 
         return {
-          data: newTx,
-          summary: `✅ ${type === "income" ? "Ingreso" : "Gasto"} de $${amount.toLocaleString("es-AR")} registrado en tu cuenta.`,
+          data: { action: "create_transaction", transaction: payload },
+          summary: `✅ ${type === "income" ? "Ingreso" : "Gasto"} de $${amount.toLocaleString("es-AR")} registrado.`,
         };
       }
 

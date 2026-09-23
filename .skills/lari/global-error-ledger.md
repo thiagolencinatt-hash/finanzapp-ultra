@@ -81,3 +81,11 @@ AquÃ­ Lari documenta cada incidente crÃ­tico y la lecciÃ³n definitiva para
 * **Causa Raíz**: Acoplamiento duro entre la base de datos central y la IU. Si la request HTTP a Supabase tardaba o fallaba, el estado de la UI o quedaba bloqueado, o continuaba asumiendo un éxito.
 * **Solución**: Se integró patrón `Local-First / Optimistic UI`. Ahora al enviar una transacción, se guarda inmediatamente en `localStorage` (`synced: false`), se emite evento local y se re-hidrata `BalanceCard` en *cero milisegundos*. Luego se sincroniza en segundo plano sin bloquear. Si Supabase falla, la data persiste localmente y la UI informa el estado "Local". Se incorporó `/api/health` para diagnóstico de Vercel.
 * **Regla Preventiva**: Nunca bloquear la UI en mutaciones simples esperando un backend remoto que puede fallar. Asumir Local-First siempre y sincronizar en background como "Enhancement".
+
+---
+### ID: GEL-011 | Inmunidad AI Local-First y Esquema Auto-Hosteado
+* **Fecha**: 2026-09-22
+* **Síntomas**: AI Assistant sobrescribía los saldos locales con 0 al fallar el guardado porque no existían las tablas de Supabase en el nuevo proyecto. Se producía pérdida total de datos.
+* **Causa Raíz**: 1. `/api/summary` devolvía un estado inicial (0) al fallar y el cliente reemplazaba su caché válido. 2. `addTransaction` de la IA devolvía un string de error y bloqueaba el pipeline, perdiendo la transacción.
+* **Solución**: 1. `page.tsx` ahora bloquea sobrescrituras de `setSummary(0)` si `resSummary.ok` es false o los datos son inválidos, leyendo del caché `finanzapp_last_summary`. 2. El asistente IA intercepta errores de Base de Datos y devuelve la transacción creada al frontend para que este la guarde localmente en `local_transactions` de forma optimista. 3. Se proveyó un script `scripts/init-schema.sql` y `/api/setup-db` para resolver el Missing Table Error en un click.
+* **Regla Preventiva**: El cliente siempre debe ganar (Client Wins) cuando los servicios en la nube devuelven errores 500, timeouts o estructuras vacías no deseadas. La inteligencia artificial debe integrarse a la canalización Optimistic-UI y no depender de DB callbacks.
