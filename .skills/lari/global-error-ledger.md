@@ -89,3 +89,11 @@ AquÃ­ Lari documenta cada incidente crÃ­tico y la lecciÃ³n definitiva para
 * **Causa Raíz**: 1. `/api/summary` devolvía un estado inicial (0) al fallar y el cliente reemplazaba su caché válido. 2. `addTransaction` de la IA devolvía un string de error y bloqueaba el pipeline, perdiendo la transacción.
 * **Solución**: 1. `page.tsx` ahora bloquea sobrescrituras de `setSummary(0)` si `resSummary.ok` es false o los datos son inválidos, leyendo del caché `finanzapp_last_summary`. 2. El asistente IA intercepta errores de Base de Datos y devuelve la transacción creada al frontend para que este la guarde localmente en `local_transactions` de forma optimista. 3. Se proveyó un script `scripts/init-schema.sql` y `/api/setup-db` para resolver el Missing Table Error en un click.
 * **Regla Preventiva**: El cliente siempre debe ganar (Client Wins) cuando los servicios en la nube devuelven errores 500, timeouts o estructuras vacías no deseadas. La inteligencia artificial debe integrarse a la canalización Optimistic-UI y no depender de DB callbacks.
+
+---
+### ID: GEL-012 | SyncEngine: Reconciliación y Sincronización Realtime Multi-Dispositivo
+* **Fecha**: 2026-09-22
+* **Síntomas**: Las transacciones hechas offline quedaban atrapadas en el dispositivo si se cerraba la ventana, y la sesión en la PC no reflejaba los gastos agregados desde el celular al instante.
+* **Causa Raíz**: Falta de un motor de sincronización background (Offline-to-Online) y ausencia de suscripciones WebSocket activas para invalidar el caché visual en eventos externos.
+* **Solución**: 1. Se creó `SyncEngine.tsx` (reemplazando `HealthBadge`). Al detectar conectividad exitosa, escanea silenciosamente el `localStorage`, empuja las transacciones con `synced: false` y las marca como true. 2. Inicializa `supabase.channel` suscribiéndose a eventos `INSERT/UPDATE/DELETE` de PostgreSQL en tiempo real; al detectar cambios remotos, despacha el evento global `finance-refresh` forzando a la UI a hidratarse. Muestra toast verde "Nube Sincronizada" si hubo reconciliación.
+* **Regla Preventiva**: La persistencia local no sirve sin un Reconciliador activo. Siempre que se adopte Local-First, debe emparejarse con un SyncEngine global que corra en Layout para vaciar la cola offline al recuperar conexión.

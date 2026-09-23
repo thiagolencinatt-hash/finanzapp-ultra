@@ -4,7 +4,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { GlobalAIAssistant } from "@/components/ai/GlobalAIAssistant";
 import { useViewMode } from "@/components/providers/ViewModeProvider";
-import { HealthBadge } from "@/components/ui/HealthBadge";
+import { SyncEngine } from "@/components/sync/SyncEngine";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { viewMode } = useViewMode();
@@ -36,7 +36,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Asistente IA Global (Ventana Flotante + Botón) */}
       <GlobalAIAssistant />
-      <HealthBadge />
+      <SyncEngine />
     </div>
   );
 }
