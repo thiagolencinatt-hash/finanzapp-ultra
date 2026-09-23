@@ -15,7 +15,7 @@ export function RecentTransactions() {
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
 
   const fetchTransactions = () => {
-    fetch("/api/transactions?limit=8")
+    fetch("/api/transactions?limit=8", { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => setTransactions(d.data || []))
       .finally(() => setLoading(false));
@@ -88,7 +88,7 @@ export function RecentTransactions() {
                 <div
                   key={t.id}
                   onClick={() => setSelectedTx(t)}
-                  className="px-4 py-3 flex items-center gap-3 hover:bg-white/5 transition-all cursor-pointer group"
+                  className="px-4 py-3 min-h-[44px] flex items-center gap-3 hover:bg-white/5 transition-all cursor-pointer group"
                 >
                   <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: bgColor }}>
                     <Icon className="w-4 h-4" style={{ color }} />

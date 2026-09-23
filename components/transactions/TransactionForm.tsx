@@ -195,7 +195,7 @@ export function TransactionForm({
               key={t.value}
               type="button"
               onClick={() => set("type", t.value)}
-              className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all duration-300 cursor-pointer ${
+              className={`flex-1 min-h-[44px] py-2.5 text-xs font-bold rounded-lg transition-all duration-300 cursor-pointer ${
                 form.type === t.value ? "shadow-lg scale-[1.02]" : "opacity-60 hover:opacity-100"
               }`}
               style={{

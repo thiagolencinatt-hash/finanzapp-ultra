@@ -31,8 +31,8 @@ export default function DashboardPage() {
   const loadSummary = useCallback(async () => {
     try {
       const [resSummary, resCats] = await Promise.all([
-        fetch("/api/summary"),
-        fetch("/api/categories"),
+        fetch("/api/summary", { cache: "no-store" }),
+        fetch("/api/categories", { cache: "no-store" }),
       ]);
       if (resSummary.ok) setSummary(await resSummary.json());
       if (resCats.ok) setCategories(await resCats.json());
@@ -90,7 +90,7 @@ export default function DashboardPage() {
       {loading ? (
         <DashboardSkeleton />
       ) : (
-        <div className="flex-1 p-3 sm:p-5 lg:p-6 space-y-3.5 sm:space-y-5 max-w-7xl mx-auto w-full">
+        <div className="flex-1 p-4 sm:p-5 lg:p-6 space-y-5 md:space-y-6 max-w-7xl mx-auto w-full pb-28 md:pb-12">
 
           {/* 1. 💡 Smart Tip — Coach IA */}
           <div className="animate-slide-up">

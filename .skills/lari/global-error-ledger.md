@@ -25,3 +25,11 @@ AquÃ­ Lari documenta cada incidente crÃ­tico y la lecciÃ³n definitiva para la po
 * **Causa RaÃ­z**: `resend.emails.send` capturaba el error pero el sistema local lo tragaba (swallowed error) y continuaba el flujo.
 * **SoluciÃ³n**: AÃ±adir `throw new Error(...)` tras recibir error de la API de Resend y devolver HTTP 500 para que el Frontend detenga el flujo y alerte con un toast.
 * **Regla Preventiva**: En servicios crÃ­ticos de terceros (Auth, Mail, Pagos), NO usar silent fallbacks en caso de excepciÃ³n, SIEMPRE lanzar el error para feedback visual temprano del cliente.
+
+---
+### ID: GEL-004 | Bug de Agregación de Saldos y UI Mobile
+* **Fecha**: 2026-09-22
+* **Síntomas**: Transacciones sobreescribían el saldo en vez de sumar (ej. 300+500 != 800), y la UI móvil bloqueaba áreas táctiles con el bottom nav.
+* **Causa Raíz**: Caché agresivo de peticiones GET de Next.js (browser side cache) impedía la rehidratación en las llamadas API (/api/summary) post-evento. En UI, no había pb-28 al final de página y botones < 44px.
+* **Solución**: Se inyectó { cache: 'no-store' } explícito a los fetches del dashboard, se agregó pb-28 md:pb-12 y min-h-[44px] a elementos de form.
+* **Regla Preventiva**: Todo fetch en Client Components en Next 13+ a una API que deba reflejar un saldo tras un cambio requiere strict cache-busting o 'no-store'.
