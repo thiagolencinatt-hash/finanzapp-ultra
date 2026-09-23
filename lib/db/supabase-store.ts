@@ -12,6 +12,46 @@ import type {
 } from "@/lib/types";
 import * as localStore from "./cloud-store";
 
+export async function ensureDefaultAccount(userId: string): Promise<string> {
+  if (userId === "demo-user") return "default-cash";
+  try {
+    const supabase = await createClient();
+    const { data: accounts, error } = await supabase
+      .from("accounts")
+      .select("id")
+      .eq("user_id", userId)
+      .limit(1);
+
+    if (!error && accounts && accounts.length > 0) {
+      return accounts[0].id;
+    }
+
+    // Si no hay cuentas, crear la cuenta Efectivo por defecto
+    const defaultAccount = {
+      user_id: userId,
+      name: "Efectivo",
+      type: "cash",
+      balance: 0,
+      currency: "ARS",
+      color: "#10B981",
+      icon: "Wallet",
+      is_active: true,
+    };
+    const { data: newAcc, error: insertErr } = await supabase
+      .from("accounts")
+      .insert([defaultAccount])
+      .select("id")
+      .single();
+
+    if (!insertErr && newAcc) {
+      return newAcc.id;
+    }
+  } catch (err) {
+    console.error("[supabase-store] ensureDefaultAccount fallback:", err);
+  }
+  return "default-cash";
+}
+
 /**
  * Motor de persistencia Supabase Cloud-First con tipos TypeScript estrictos.
  * Si Supabase responde, opera sobre las tablas PostgreSQL relacionales.
@@ -225,9 +265,11 @@ export async function addTransaction(
 
   try {
     const supabase = await createClient();
+    const finalAccountId = accountId || (await ensureDefaultAccount(userId));
+    
     const newRow = {
       user_id: userId,
-      account_id: accountId || null,
+      account_id: finalAccountId,
       category_id: categoryId,
       destination_account_id: tx.transfer_to_account_id || null,
       type,
@@ -238,17 +280,17 @@ export async function addTransaction(
 
     const { data, error } = await supabase.from("transactions").insert(newRow).select().single();
     if (!error && data) {
-      if (accountId) {
+      if (finalAccountId) {
         const { data: acc } = await supabase
           .from("accounts")
           .select("balance")
-          .eq("id", accountId)
+          .eq("id", finalAccountId)
           .single();
 
         if (acc) {
           const currentBal = Number(acc.balance) || 0;
           const newBal = type === "income" ? currentBal + amount : currentBal - amount;
-          await supabase.from("accounts").update({ balance: newBal }).eq("id", accountId);
+          await supabase.from("accounts").update({ balance: newBal }).eq("id", finalAccountId);
         }
       }
 
@@ -256,7 +298,7 @@ export async function addTransaction(
       return {
         id: data.id,
         user_id: userId,
-        account_id: accountId,
+        account_id: finalAccountId,
         category_id: categoryId,
         type,
         amount,
@@ -808,9 +850,17 @@ export async function getSummary(
         getSubscriptions(userId),
       ]);
 
-    const totalBalance = accounts
+    let totalBalance = accounts
       .filter((a) => a.is_active)
       .reduce((sum, a) => sum + (Number(a.balance) || 0), 0);
+      
+    // Anti-zero protection: si el balance es 0 pero hay transacciones, 
+    // recalcular el balance desde las transacciones (en caso de que accounts esté desfasado o vacío).
+    if (totalBalance === 0 && transactions.length > 0) {
+      totalBalance = transactions.reduce((sum, t) => {
+        return t.type === "income" ? sum + Number(t.amount) : sum - Number(t.amount);
+      }, 0);
+    }
 
     const now = new Date();
     const currentYear = now.getFullYear();
