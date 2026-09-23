@@ -179,6 +179,34 @@ export function TransactionForm({
       });
   }
 
+  async function handleDelete() {
+    if (!transaction?.id) return;
+    if (!confirm("¿Estás seguro de que deseas eliminar este movimiento? Se actualizará tu saldo automáticamente.")) return;
+
+    setLoading(true);
+    try {
+      // 1. Optimistic delete local
+      const localTxs = JSON.parse(localStorage.getItem("local_transactions") || "[]");
+      const updatedLocalTxs = localTxs.filter((t: any) => t.id !== transaction.id);
+      localStorage.setItem("local_transactions", JSON.stringify(updatedLocalTxs));
+
+      // 2. Call API DELETE
+      const res = await fetch(`/api/transactions?id=${transaction.id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Error al eliminar en la nube");
+
+      toast.success("Movimiento eliminado correctamente");
+      window.dispatchEvent(new Event("finance-refresh"));
+      onSuccess();
+    } catch (err) {
+      console.error(err);
+      toast.error("Hubo un error al intentar eliminar el movimiento.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <DraggableWindow
       isOpen={isOpen}
@@ -188,6 +216,16 @@ export function TransactionForm({
       defaultPosition={{ x: 0, y: 0 }}
       footer={
         <div className="flex w-full gap-3">
+          {isEditing && (
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={loading}
+              className="py-3 px-4 rounded-xl text-sm font-bold text-rose-500 bg-rose-500/10 hover:bg-rose-500/20 transition-colors disabled:opacity-50"
+            >
+              Eliminar
+            </button>
+          )}
           <button type="button" onClick={onClose} className="flex-1 py-3 rounded-xl text-sm font-bold btn-3d-secondary">
             Cancelar
           </button>

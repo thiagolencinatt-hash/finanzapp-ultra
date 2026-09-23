@@ -33,11 +33,16 @@ export function ResetDataModal({ isOpen, onClose, onSuccess }: ResetDataModalPro
     try {
       const balanceNum = parseFloat(initialBalance) || 0;
       const salaryNum = parseFloat(salary) || 0;
+      
+      const form = e.target as HTMLFormElement;
+      const confirmWord = (form.elements.namedItem("confirmWord") as HTMLInputElement)?.value;
 
       const res = await fetch("/api/finances/reset", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          type: "full",
+          confirmWord,
           initialBalanceARS: balanceNum,
           configuredSalary: salaryNum,
           primaryAccountName: primaryAccountName.trim() || "Cuenta Principal",
@@ -48,22 +53,24 @@ export function ResetDataModal({ isOpen, onClose, onSuccess }: ResetDataModalPro
         throw new Error("No se pudo resetear la información");
       }
 
-      // Limpiar también todo rastro en el almacenamiento local del navegador
+      // 1. Limpiar todo rastro en el almacenamiento local del navegador
       clearAllStoredFinances();
-
-      // Notificar a todos los componentes de la aplicación
-      window.dispatchEvent(new Event("finance-refresh"));
+      // Eliminar también llaves cacheadas como local_transactions (usadas para optimistic updates)
+      for (const key of Object.keys(localStorage)) {
+        if (key.startsWith("local_") || key.startsWith("finanzapp_")) {
+          localStorage.removeItem(key);
+        }
+      }
 
       setDone(true);
+      
+      // 2. Esperar 1.5s y forzar recarga dura a la página principal para matar estado de React
       setTimeout(() => {
-        setDone(false);
-        onSuccess?.();
-        onClose();
+        window.location.href = "/";
       }, 1500);
     } catch (err) {
       console.error(err);
       toast.error("Ocurrió un error al reiniciar los datos. Intente nuevamente.");
-    } finally {
       setLoading(false);
     }
   }
@@ -117,8 +124,25 @@ export function ResetDataModal({ isOpen, onClose, onSuccess }: ResetDataModalPro
             <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-3 text-xs text-amber-300">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
               <div>
-                <span className="font-bold">¿Qué hace este botón?</span> Se eliminarán todas las transacciones, deudas, metas y presupuestos de prueba. Podés definir con cuánto saldo arrancás hoy.
+                <span className="font-bold">¡Peligro! Acción destructiva.</span> Se eliminarán todas las transacciones, deudas, metas y presupuestos actuales. Podés definir con cuánto saldo arrancás hoy.
               </div>
+            </div>
+
+            {/* Confirmación */}
+            <div>
+              <label className="block text-xs font-bold text-rose-400 mb-1.5 flex items-center gap-1.5">
+                Escribe "RESET" para confirmar
+              </label>
+              <input
+                type="text"
+                name="confirmWord"
+                id="confirmWord"
+                placeholder="RESET"
+                required
+                pattern="RESET"
+                className="w-full px-3.5 py-2.5 rounded-xl border text-sm font-semibold bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-rose-500/50"
+                style={{ borderColor: "hsl(var(--border))" }}
+              />
             </div>
 
             {/* Saldo inicial */}

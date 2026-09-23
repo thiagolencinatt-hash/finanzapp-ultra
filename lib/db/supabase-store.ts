@@ -341,6 +341,51 @@ export async function addTransaction(
 export async function deleteTransaction(userId: string, transactionId: string): Promise<boolean> {
   try {
     const supabase = await createClient();
+    
+    // 1. Obtener la transacción para revertir saldos
+    const { data: tx, error: fetchErr } = await supabase
+      .from("transactions")
+      .select("*")
+      .eq("id", transactionId)
+      .eq("user_id", userId)
+      .single();
+
+    if (!fetchErr && tx) {
+      const amount = Number(tx.amount) || 0;
+      
+      // Revertir en cuenta de origen
+      if (tx.account_id) {
+        const { data: acc } = await supabase
+          .from("accounts")
+          .select("balance")
+          .eq("id", tx.account_id)
+          .single();
+          
+        if (acc) {
+          const currentBal = Number(acc.balance) || 0;
+          // Si era gasto, sumar. Si era ingreso/transferencia, restar.
+          const newBal = (tx.type === "expense") ? currentBal + amount : currentBal - amount;
+          await supabase.from("accounts").update({ balance: newBal }).eq("id", tx.account_id);
+        }
+      }
+
+      // Revertir en cuenta destino si era transferencia
+      if (tx.type === "transfer" && tx.destination_account_id) {
+        const { data: destAcc } = await supabase
+          .from("accounts")
+          .select("balance")
+          .eq("id", tx.destination_account_id)
+          .single();
+          
+        if (destAcc) {
+          const destCurrentBal = Number(destAcc.balance) || 0;
+          const newDestBal = destCurrentBal - amount; // restamos lo que habíamos sumado
+          await supabase.from("accounts").update({ balance: newDestBal }).eq("id", tx.destination_account_id);
+        }
+      }
+    }
+
+    // 2. Eliminar la transacción
     const { error } = await supabase
       .from("transactions")
       .delete()

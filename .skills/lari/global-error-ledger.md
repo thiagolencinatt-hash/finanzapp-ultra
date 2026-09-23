@@ -158,3 +158,16 @@ button\\ a los botones. Se actualiz el payload de la IA. Se aadi un listener de 
   3. Se aseguraron botones con `type="button"` (GEL-014) y se integró el evento `finance-refresh` para rehidratar automáticamente ante cualquier cambio.
   4. Se integró la navegación en el `Sidebar.tsx` y se ajustó `BottomNav.tsx`.
 * **Regla Preventiva**: Para vistas complejas de BI y analíticas, la arquitectura de procesamiento debe suceder del lado del cliente (React) previa bajada única de datos en crudo desde la DB o LocalStorage, a fin de maximizar la interactividad de los filtros.
+
+---
+### ID: GEL-019 | Auditoría Cero Errores y Gestión de Reseteo (Misión LARI 15)
+* **Fecha**: 2026-09-23
+* **Síntomas**: Imposibilidad de eliminar transacciones individualmente revirtiendo saldos y falta de limpieza selectiva, derivando en cuentas desincronizadas si el usuario borraba algo. El modal de reseteo total carecía de confirmación severa.
+* **Causa Raíz**: El método `deleteTransaction` en el Backend solo borraba el registro, sin hacer la operación matemática inversa en la cuenta afectada.
+* **Solución**: 
+  1. Se actualizó `deleteTransaction` (`supabase-store.ts`) para interceptar la transacción previa al borrado y sumar/restar el balance afectado.
+  2. Se expuso un botón "Eliminar" al editar transacciones en `TransactionForm.tsx`.
+  3. En `settings/page.tsx`, se agregaron controles granulares para borrar Solo Transacciones o Solo Presupuestos.
+  4. Se endureció el modal `ResetDataModal.tsx` requiriendo escribir "RESET" para confirmar.
+  5. Las rutas API de `reset` y `transactions` fueron ajustadas para aceptar Query Params (`DELETE`) y ejecutar lógicas limpias sobre `supabase`.
+* **Regla Preventiva**: Toda acción de borrado sobre un asiento contable/financiero debe venir precedida por una reversión matemática obligatoria en los saldos involucrados (Inversión Contable Automática).

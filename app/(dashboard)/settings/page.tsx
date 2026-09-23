@@ -651,22 +651,73 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <p className="text-sm font-bold text-foreground">
-                Reiniciar todas las finanzas a Cero ($0)
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5 max-w-md">
-                Elimina transacciones, deudas y metas de ejemplo. Podés definir tu saldo bancario real inicial y tu sueldo estimado para arrancar tu control de gastos personal.
-              </p>
+          <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 flex flex-col gap-4">
+            {/* Partial Resets */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                type="button"
+                onClick={async () => {
+                  if (confirm("¿Estás seguro de que quieres borrar el historial de transacciones y dejar las cuentas en 0? Las metas y cuotas se mantendrán.")) {
+                    const res = await fetch("/api/finances/reset", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ type: "transactions" })
+                    });
+                    if (res.ok) {
+                      toast.success("Historial limpiado correctamente.");
+                      window.dispatchEvent(new Event("finance-refresh"));
+                    }
+                  }
+                }}
+                className="flex-1 px-4 py-2.5 rounded-xl text-xs font-bold text-amber-500 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Borrar Transacciones y Saldos</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  if (confirm("¿Estás seguro de que quieres borrar todos tus presupuestos mensuales?")) {
+                    const res = await fetch("/api/finances/reset", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ type: "budgets" })
+                    });
+                    if (res.ok) {
+                      toast.success("Presupuestos limpiados correctamente.");
+                      window.dispatchEvent(new Event("finance-refresh"));
+                    }
+                  }
+                }}
+                className="flex-1 px-4 py-2.5 rounded-xl text-xs font-bold text-amber-500 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Borrar Presupuestos</span>
+              </button>
             </div>
-            <button
-              onClick={() => setShowResetModal(true)}
-              className="px-4 py-2.5 rounded-xl text-xs font-extrabold text-black bg-amber-400 hover:bg-amber-300 transition-all flex items-center gap-2 shadow-md cursor-pointer shrink-0"
-            >
-              <RotateCcw className="w-4 h-4" />
-              <span>Empezar de Cero ($0)</span>
-            </button>
+
+            <div className="w-full h-px bg-amber-500/20 my-2" />
+
+            {/* Full Reset */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-bold text-foreground">
+                  Reiniciar TODAS las finanzas a Cero ($0)
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5 max-w-md">
+                  Peligro: Elimina todo tu historial, cuentas, deudas, metas y presupuestos actuales de forma permanente.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowResetModal(true)}
+                className="px-4 py-2.5 rounded-xl text-xs font-extrabold text-black bg-amber-400 hover:bg-amber-300 transition-all flex items-center gap-2 shadow-md cursor-pointer shrink-0"
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span>Empezar de Cero ($0)</span>
+              </button>
+            </div>
           </div>
         </section>
       </div>
