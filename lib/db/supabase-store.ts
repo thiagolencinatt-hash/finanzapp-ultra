@@ -689,31 +689,77 @@ export async function updateGoal(
 
 // 6. PRESUPUESTOS (BUDGETS)
 export async function getBudgets(userId: string): Promise<CategoryBudget[]> {
+  const store = await localStore.getUserStore(userId);
+  const localCategories = store.categories || [];
+  
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
+
   try {
     const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("budgets")
-      .select("*")
-      .eq("user_id", userId);
+    const [budgetsRes, txRes] = await Promise.all([
+      supabase.from("budgets").select("*, category:categories(*)").eq("user_id", userId),
+      supabase.from("transactions")
+        .select("amount, category_id")
+        .eq("user_id", userId)
+        .eq("type", "expense")
+        .gte("date", startOfMonth)
+    ]);
 
-    if (!error && Array.isArray(data) && data.length > 0) {
-      return data.map((b) => ({
-        id: b.id,
-        user_id: b.user_id,
-        category_id: b.category_id,
-        monthly_limit: Number(b.monthly_limit) || 0,
-        currency: "ARS",
-        created_at: b.created_at,
-      }));
+    if (!budgetsRes.error && Array.isArray(budgetsRes.data) && budgetsRes.data.length > 0) {
+      const expenses = txRes.data || [];
+      const expenseMap = expenses.reduce((acc, tx) => {
+        const cat = tx.category_id;
+        if(cat) acc[cat] = (acc[cat] || 0) + Number(tx.amount);
+        return acc;
+      }, {} as Record<string, number>);
+
+      return budgetsRes.data.map((b: any) => {
+        const spent = expenseMap[b.category_id] || 0;
+        const limit = Number(b.monthly_limit) || 0;
+        const pct = limit > 0 ? Math.round((spent / limit) * 100) : 0;
+        return {
+          id: b.id,
+          user_id: b.user_id,
+          category_id: b.category_id,
+          monthly_limit: limit,
+          currency: "ARS",
+          created_at: b.created_at,
+          spent_this_month: spent,
+          percentage: pct,
+          is_over_budget: pct > 100,
+          category: b.category || localCategories.find((c) => c.id === b.category_id)
+        };
+      });
     }
   } catch (err) {
     console.warn("[supabase-store] getBudgets error:", err);
   }
-  if (userId === "demo-user") {
-    const store = await localStore.getUserStore(userId);
-    return store.budgets || [];
-  }
-  return [];
+  
+  // Fallback to localStore
+  const localBudgets = store.budgets || [];
+  const localTxs = store.transactions || [];
+  
+  const expenseMap = localTxs
+    .filter(t => t.type === "expense" && t.date >= startOfMonth)
+    .reduce((acc, tx) => {
+      const cat = tx.category_id;
+      if(cat) acc[cat] = (acc[cat] || 0) + Number(tx.amount);
+      return acc;
+    }, {} as Record<string, number>);
+
+  return localBudgets.map(b => {
+    const spent = expenseMap[b.category_id] || 0;
+    const limit = Number(b.monthly_limit) || 0;
+    const pct = limit > 0 ? Math.round((spent / limit) * 100) : 0;
+    return {
+      ...b,
+      spent_this_month: spent,
+      percentage: pct,
+      is_over_budget: pct > 100,
+      category: localCategories.find(c => c.id === b.category_id)
+    };
+  });
 }
 
 export async function saveBudgets(
@@ -735,22 +781,55 @@ export async function saveBudgets(
         );
       }
     }
-    const { data } = await supabase.from("budgets").select("*").eq("user_id", userId);
-    if (data && data.length > 0) {
-      return data.map((b) => ({
-        id: b.id,
-        user_id: b.user_id,
-        category_id: b.category_id,
-        monthly_limit: Number(b.monthly_limit) || 0,
-        currency: "ARS",
-        created_at: b.created_at,
-      }));
-    }
   } catch (err) {
-    console.warn("[supabase-store] saveBudgets fallback:", err);
+    console.warn("[supabase-store] saveBudgets error:", err);
+  }
+  
+  const store = await localStore.getUserStore(userId);
+  if (!store.budgets) store.budgets = [];
+  
+  budgets.forEach(b => {
+    const index = store.budgets.findIndex(existing => existing.category_id === b.category_id);
+    if (index >= 0) {
+      store.budgets[index].monthly_limit = b.monthly_limit || 0;
+    } else {
+      store.budgets.push({
+        id: b.id || crypto.randomUUID(),
+        user_id: userId,
+        category_id: b.category_id as string,
+        monthly_limit: b.monthly_limit || 0,
+        currency: b.currency || "ARS",
+        created_at: new Date().toISOString()
+      });
+    }
+  });
+  
+  await localStore.saveUserStore(userId);
+  return getBudgets(userId); // Return calculated results
+}
+
+export async function deleteBudget(userId: string, budgetId: string) {
+  try {
+    const supabase = await createClient();
+    await supabase.from("budgets").delete().eq("id", budgetId).eq("user_id", userId);
+  } catch(err) {
+    console.warn("[supabase-store] deleteBudget error", err);
   }
   const store = await localStore.getUserStore(userId);
-  return store.budgets || [];
+  store.budgets = (store.budgets || []).filter(b => b.id !== budgetId);
+  await localStore.saveUserStore(userId);
+}
+
+export async function clearAllBudgets(userId: string) {
+  try {
+    const supabase = await createClient();
+    await supabase.from("budgets").delete().eq("user_id", userId);
+  } catch(err) {
+    console.warn("[supabase-store] clearAllBudgets error", err);
+  }
+  const store = await localStore.getUserStore(userId);
+  store.budgets = [];
+  await localStore.saveUserStore(userId);
 }
 
 // 7. SUSCRIPCIONES

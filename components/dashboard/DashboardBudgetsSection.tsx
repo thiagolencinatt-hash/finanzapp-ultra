@@ -44,6 +44,7 @@ export function DashboardBudgetsSection({
       setShowModal(false);
       setSelectedCatId("");
       setMonthlyLimit("");
+      window.dispatchEvent(new Event("finance-refresh"));
       if (onRefresh) onRefresh();
     } catch {
       toast.error("Error al guardar presupuesto");
@@ -59,6 +60,7 @@ export function DashboardBudgetsSection({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id }),
     });
+    window.dispatchEvent(new Event("finance-refresh"));
     if (onRefresh) onRefresh();
   }
 
@@ -69,6 +71,7 @@ export function DashboardBudgetsSection({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "clear_all" }),
     });
+    window.dispatchEvent(new Event("finance-refresh"));
     if (onRefresh) onRefresh();
   }
 
@@ -93,6 +96,7 @@ export function DashboardBudgetsSection({
         <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
           {budgets.length > 0 && (
             <button
+              type="button"
               onClick={handleClearAllBudgets}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold text-red-400 bg-red-950/30 hover:bg-red-900/40 border border-red-800/30 cursor-pointer transition-all"
               title="Borrar todos los presupuestos"
@@ -102,6 +106,7 @@ export function DashboardBudgetsSection({
             </button>
           )}
           <button
+            type="button"
             onClick={() => setShowModal(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white gradient-primary cursor-pointer hover:opacity-90"
           >
@@ -191,6 +196,7 @@ export function DashboardBudgetsSection({
                       {pct}%
                     </span>
                     <button
+                      type="button"
                       onClick={() => handleDeleteBudget(b.id)}
                       className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-muted-foreground hover:text-red-400 cursor-pointer"
                       title="Eliminar límite"
@@ -243,6 +249,7 @@ export function DashboardBudgetsSection({
                 Fijar Presupuesto Mensual
               </h4>
               <button
+                type="button"
                 onClick={() => setShowModal(false)}
                 className="p-1 rounded-xl text-muted-foreground hover:text-foreground hover:bg-white/10"
               >

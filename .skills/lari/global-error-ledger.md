@@ -123,3 +123,14 @@ button\\ a los botones. Se actualiz el payload de la IA. Se aadi un listener de 
   3. Todos los botones de acciones usan explícitamente `type="button"` previniendo reseteos.
   4. Sincronización transparente con `window.dispatchEvent(new Event('finance-refresh'))`.
 * **Regla Preventiva**: Toda transferencia entre cuentas (`transfer`) debe considerarse atómica y bifurcada. Nunca restar de la cuenta origen sin asegurar la suma paralela en la cuenta destino.
+
+---
+### ID: GEL-016 | Presupuestos Mensuales y Consumo Dinámico (Misión LARI 12)
+* **Fecha**: 2026-09-23
+* **Síntomas**: Los presupuestos eran entidades estáticas y no se cruzaban con los gastos reales, la UI no reflejaba el consumo en tiempo real ni tenía validaciones.
+* **Causa Raíz**: Falta de integración cruzada (JOIN) en `supabase-store.ts` entre presupuestos mensuales y transacciones del tipo `expense`.
+* **Solución**: 
+  1. Se reescribió `getBudgets` en backend y `cloud-store` para cruzar dinámicamente presupuestos con la sumatoria de gastos del mes en curso.
+  2. Implementación de botones con `type="button"` y disparo del evento `finance-refresh` tras cualquier mutación.
+  3. API reestructurada con métodos GET, POST, DELETE.
+* **Regla Preventiva**: Nunca guardar un número "gastado" en la tabla de presupuestos; el gasto siempre debe calcularse dinámicamente sumando la tabla inmutable de transacciones.
