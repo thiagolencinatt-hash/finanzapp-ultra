@@ -65,6 +65,7 @@ export function DashboardInstallmentsSection({
           <div className="flex items-center gap-2 flex-wrap">
             {installments.length > 0 && (
               <button
+                type="button"
                 onClick={handleClearAll}
                 className="flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-xs font-bold text-red-400 bg-red-950/30 hover:bg-red-900/40 border border-red-800/30 cursor-pointer transition-all"
                 title="Borrar todas las cuotas"
@@ -75,6 +76,7 @@ export function DashboardInstallmentsSection({
             )}
 
             <button
+              type="button"
               onClick={() => setShowForm(true)}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-warning bg-warning/10 hover:bg-warning/20 border border-warning/30 transition-all cursor-pointer"
             >
@@ -93,6 +95,7 @@ export function DashboardInstallmentsSection({
               ¡Excelente! No tenés pagos mensuales pendientes que resten de tu sueldo.
             </p>
             <button
+              type="button"
               onClick={() => setShowForm(true)}
               className="px-4 py-2 rounded-xl text-xs font-bold text-black gradient-primary btn-3d cursor-pointer"
             >
@@ -153,6 +156,7 @@ export function DashboardInstallmentsSection({
                     </span>
 
                     <button
+                      type="button"
                       onClick={() => handlePay(inst.id)}
                       className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-white/5 hover:bg-income/20 hover:text-income border border-white/10 transition-colors cursor-pointer flex items-center gap-1"
                       title="Registrar pago de 1 cuota"

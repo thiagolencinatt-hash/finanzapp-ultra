@@ -6,10 +6,22 @@ import { TransactionForm } from "@/components/transactions/TransactionForm";
 import { TransactionFilters } from "@/components/transactions/TransactionFilters";
 import { Plus, TrendingUp, TrendingDown, ArrowLeftRight, Filter, Download, Edit3, Trash2 } from "lucide-react";
 import type { Transaction } from "@/lib/types";
+import { normalizeTransactions } from "@/lib/utils/normalize-transaction";
 import { formatCurrency } from "@/lib/utils/currency";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
 import { ExportExcelButton } from "@/components/dashboard/ExportExcelButton";
+
+/** GEL-021: Safe date formatting that never crashes on malformed dates */
+function safeFormatDate(dateStr: string | undefined | null, fmt: string = "d MMM yyyy"): string {
+  if (!dateStr) return "Sin fecha";
+  try {
+    const cleanDate = dateStr.split("T")[0];
+    const parsed = new Date(cleanDate + "T12:00:00");
+    if (isNaN(parsed.getTime())) return "Sin fecha";
+    return parsed.toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric" });
+  } catch {
+    return "Sin fecha";
+  }
+}
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -33,14 +45,14 @@ export default function TransactionsPage() {
     try {
       const res = await fetch(`/api/transactions?${params}`);
       const data = await res.json();
-      let serverTxs = data.data || [];
+      let serverTxs = normalizeTransactions(data.data || []);
       
       try {
         const localTxs = JSON.parse(localStorage.getItem("local_transactions") || "[]");
-        const unsynced = localTxs.filter((t: any) => !t.synced);
+        const unsynced = normalizeTransactions(localTxs.filter((t: Record<string, unknown>) => !t.synced));
         // Evitar duplicados por id
-        const unsyncedIds = new Set(unsynced.map((t: any) => t.id));
-        serverTxs = serverTxs.filter((t: any) => !unsyncedIds.has(t.id));
+        const unsyncedIds = new Set(unsynced.map((t) => t.id));
+        serverTxs = serverTxs.filter((t) => !unsyncedIds.has(t.id));
         
         // Combinar locales no sincronizadas con las del servidor
         serverTxs = [...unsynced, ...serverTxs];
@@ -145,6 +157,7 @@ export default function TransactionsPage() {
         {/* Toolbar */}
         <div className="flex items-center gap-2 mb-4 flex-wrap">
           <button
+            type="button"
             onClick={() => setShowFilters(!showFilters)}
             className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-sm font-bold transition-all btn-3d-secondary cursor-pointer"
             style={{
@@ -159,6 +172,7 @@ export default function TransactionsPage() {
 
           {transactions.length > 0 && (
             <button
+              type="button"
               onClick={handleExportCSV}
               className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-sm font-bold transition-all btn-3d-secondary cursor-pointer"
               title="Descargar lista en CSV"
@@ -169,6 +183,7 @@ export default function TransactionsPage() {
 
           <div className="flex-1" />
           <button
+            type="button"
             onClick={handleNew}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-black gradient-primary btn-3d cursor-pointer"
           >
@@ -232,7 +247,7 @@ export default function TransactionsPage() {
                           </span>
                         )}
                         <span className="text-xs opacity-70" style={{ color: "hsl(var(--muted-foreground))" }}>
-                          {t.account?.name} • {format(new Date(t.date + "T12:00:00"), "d MMM yyyy", { locale: es })}
+                          {t.account?.name || ""}{t.account?.name ? " • " : ""}{safeFormatDate(t.date)}
                         </span>
                       </div>
                     </div>
@@ -247,6 +262,7 @@ export default function TransactionsPage() {
                       {/* Action buttons (visibles en desktop hover) */}
                       <div className="hidden sm:flex items-center gap-1">
                         <button
+                          type="button"
                           onClick={(e) => { e.stopPropagation(); handleEdit(t); }}
                           className="p-1.5 rounded-lg transition-all opacity-80 hover:opacity-100 hover:bg-primary/20 text-primary"
                           title="Editar movimiento"
@@ -254,6 +270,7 @@ export default function TransactionsPage() {
                           <Edit3 className="w-4 h-4" />
                         </button>
                         <button
+                          type="button"
                           onClick={(e) => handleDelete(e, t.id)}
                           className="p-1.5 rounded-lg transition-all opacity-80 hover:opacity-100 hover:bg-red-500/20 text-red-400"
                           title="Eliminar movimiento"
@@ -272,6 +289,7 @@ export default function TransactionsPage() {
           {transactions.length < total && (
             <div className="p-4 text-center border-t border-white/10">
               <button
+                type="button"
                 onClick={() => loadTransactions(false)}
                 className="text-sm font-bold text-primary hover:underline cursor-pointer"
               >

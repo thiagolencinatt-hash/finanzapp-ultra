@@ -4,10 +4,29 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, TrendingUp, TrendingDown, ArrowLeftRight, Edit3 } from "lucide-react";
 import type { Transaction } from "@/lib/types";
+import { normalizeTransactions } from "@/lib/utils/normalize-transaction";
 import { formatCurrency } from "@/lib/utils/currency";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { TransactionForm } from "@/components/transactions/TransactionForm";
+
+/**
+ * Safely format a date string for display. Falls back gracefully
+ * if the date is invalid to prevent unmounting the dashboard.
+ * GEL-021: Prevents crash from malformed date in AI-generated or local transactions.
+ */
+function safeFormatDate(dateStr: string | undefined | null): string {
+  if (!dateStr) return "Sin fecha";
+  try {
+    // Ensure we always have a YYYY-MM-DD format by stripping time parts
+    const cleanDate = dateStr.split("T")[0];
+    const parsed = new Date(cleanDate + "T12:00:00");
+    if (isNaN(parsed.getTime())) return "Sin fecha";
+    return format(parsed, "d MMM", { locale: es });
+  } catch {
+    return "Sin fecha";
+  }
+}
 
 export function RecentTransactions() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -18,16 +37,27 @@ export function RecentTransactions() {
     fetch("/api/transactions?limit=8", { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => {
-        let serverTxs = d.data || [];
+        // GEL-021: Normalize all server transactions before setting state
+        let serverTxs = normalizeTransactions(d.data || []);
         try {
           const localTxs = JSON.parse(localStorage.getItem("local_transactions") || "[]");
-          const unsynced = localTxs.filter((t: any) => !t.synced);
+          const unsynced = normalizeTransactions(localTxs.filter((t: Record<string, unknown>) => !t.synced));
           // Insertar unsynced al principio y eliminar de serverTxs si por alguna razón vinieran repetidos
-          const unsyncedIds = new Set(unsynced.map((t: any) => t.id));
-          serverTxs = serverTxs.filter((t: any) => !unsyncedIds.has(t.id));
+          const unsyncedIds = new Set(unsynced.map((t) => t.id));
+          serverTxs = serverTxs.filter((t) => !unsyncedIds.has(t.id));
           setTransactions([...unsynced, ...serverTxs].slice(0, 8));
         } catch (e) {
           setTransactions(serverTxs);
+        }
+      })
+      .catch((err) => {
+        console.error("[RecentTransactions] fetch error:", err);
+        // GEL-021: On network error, show local transactions only rather than empty
+        try {
+          const localTxs = JSON.parse(localStorage.getItem("local_transactions") || "[]");
+          setTransactions(normalizeTransactions(localTxs).slice(0, 8));
+        } catch {
+          // Keep existing state, don't clear
         }
       })
       .finally(() => setLoading(false));
@@ -95,6 +125,12 @@ export function RecentTransactions() {
                 ? "hsl(var(--income-muted))"
                 : "hsl(var(--expense-muted))";
 
+              // GEL-021: Safe access to nested objects and formatting
+              const displayDescription = t.description || t.category?.name || "Sin descripción";
+              const displayAccountName = t.account?.name || "";
+              const displayDate = safeFormatDate(t.date);
+              const displayAmount = isFinite(t.amount) ? t.amount : 0;
+
               return (
                 <div
                   key={t.id}
@@ -107,7 +143,7 @@ export function RecentTransactions() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-semibold truncate text-zinc-200">
-                        {t.description || t.category?.name || "Sin descripción"}
+                        {displayDescription}
                       </p>
                       {t.synced === false && (
                         <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-500">
@@ -119,12 +155,12 @@ export function RecentTransactions() {
                       </span>
                     </div>
                     <p className="text-xs text-zinc-500 font-medium">
-                      {t.account?.name} • {format(new Date(t.date + "T12:00:00"), "d MMM", { locale: es })}
+                      {displayAccountName}{displayAccountName ? " • " : ""}{displayDate}
                     </p>
                   </div>
                   <div className="text-right shrink-0 pl-2">
                     <p className="text-sm font-extrabold drop-shadow-sm" style={{ color }}>
-                      {isIncome ? "+" : isTransfer ? "" : "-"}{formatCurrency(t.amount, t.currency, true)}
+                      {isIncome ? "+" : isTransfer ? "" : "-"}{formatCurrency(displayAmount, t.currency, true)}
                     </p>
                     {t.currency !== "ARS" && (
                       <span className="text-[10px] font-medium text-zinc-500">

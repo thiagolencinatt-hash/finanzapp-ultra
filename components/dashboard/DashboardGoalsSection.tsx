@@ -73,6 +73,7 @@ export function DashboardGoalsSection({
             {activeGoals.length > 0 && (
               <>
                 <button
+                  type="button"
                   onClick={() => setShowAllocModal(true)}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-black gradient-primary btn-3d cursor-pointer"
                   title="Configurar qué porcentaje de tu sueldo va a cada meta"
@@ -82,6 +83,7 @@ export function DashboardGoalsSection({
                 </button>
 
                 <button
+                  type="button"
                   onClick={handleClearAll}
                   className="flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-xs font-bold text-red-400 bg-red-950/30 hover:bg-red-900/40 border border-red-800/30 cursor-pointer transition-all"
                   title="Borrar todas las metas"
@@ -193,6 +195,7 @@ export function DashboardGoalsSection({
                     <span className="text-[10px] text-muted-foreground font-semibold mr-1">Sumar ahorro:</span>
                     {[20000, 50000, 100000].map((amt) => (
                       <button
+                        type="button"
                         key={amt}
                         onClick={() => handleAddFunds(goal.id, amt)}
                         className="px-2 py-1 rounded-lg text-[10px] font-bold bg-white/5 hover:bg-income/20 hover:text-income border border-white/10 transition-colors cursor-pointer"
@@ -203,6 +206,7 @@ export function DashboardGoalsSection({
                     ))}
 
                     <button
+                      type="button"
                       onClick={() => {
                         setSelectedGoal(goal);
                         setShowForm(true);

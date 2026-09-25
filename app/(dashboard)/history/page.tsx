@@ -151,6 +151,7 @@ export default function HistoryPage() {
             <ExportExcelButton variant="outline" label="Excel (.xlsx)" className="py-1.5 px-3" />
             {transactions.length > 0 && (
               <button
+                type="button"
                 onClick={handleExportCSV}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all btn-3d-secondary cursor-pointer"
                 title="Exportar CSV de este mes"
@@ -166,6 +167,7 @@ export default function HistoryPage() {
         {/* Month Navigator */}
         <div className="flex items-center justify-between gap-4 animate-slide-up">
           <button
+            type="button"
             onClick={() => goMonth(-1)}
             className="p-2 rounded-xl transition-all hover:bg-white/10 cursor-pointer"
             style={{ color: "hsl(var(--muted-foreground))" }}
@@ -179,6 +181,7 @@ export default function HistoryPage() {
             </span>
           </div>
           <button
+            type="button"
             onClick={() => goMonth(1)}
             className="p-2 rounded-xl transition-all hover:bg-white/10 cursor-pointer"
             style={{ color: "hsl(var(--muted-foreground))" }}
@@ -318,7 +321,9 @@ export default function HistoryPage() {
               const dayTxs = grouped[day];
               const dayTotal = dayTxs.reduce((sum, t) => t.type === "expense" ? sum - t.amount : sum + t.amount, 0);
               const dayDate = new Date(day + "T12:00:00");
-              const dayLabel = dayDate.toLocaleDateString("es-AR", { weekday: "short", day: "numeric", month: "short" });
+              const dayLabel = !isNaN(dayDate.getTime())
+                ? dayDate.toLocaleDateString("es-AR", { weekday: "short", day: "numeric", month: "short" })
+                : day;
 
               return (
                 <div key={day}>

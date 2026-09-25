@@ -1,30 +1,30 @@
-# LARI Global Error Ledger (BitÃ¡cora Universal)
+# LARI Global Error Ledger (Bitácora Universal)
 
-AquÃ­ Lari documenta cada incidente crÃ­tico y la lecciÃ³n definitiva para la posteridad.
+Aquí Lari documenta cada incidente crítico y la lección definitiva para la posteridad.
 
 ---
-### ID: GEL-001 | Error de SincronizaciÃ³n en Next.js (App Router)
+### ID: GEL-001 | Error de Sincronización en Next.js (App Router)
 * **Fecha**: 2026-09-22
-* **SÃ­ntomas**: Cambios hechos en la base de datos (Supabase) no se reflejaban al instante en otros dispositivos ni tras mutaciones.
-* **Causa RaÃ­z**: CachÃ© agresivo de peticiones GET en Next.js App Router, agravado por persistencia desfasada en `localStorage` (fallback errÃ³neo).
-* **SoluciÃ³n**: AÃ±adir `export const dynamic = "force-dynamic";` a todos los endpoints de API que leen datos vivos (GET). Eliminar la dependencia de UI sobre el almacenamiento en cachÃ© local temporal.
-* **Regla Preventiva**: Todo endpoint de Next.js (`route.ts`) que sirva estado dinÃ¡mico desde la nube DEBE declarar la directiva `force-dynamic` (sub-skill: `skill-supabase-resilience.md`).
+* **Síntomas**: Cambios hechos en la base de datos (Supabase) no se reflejaban al instante en otros dispositivos ni tras mutaciones.
+* **Causa Raíz**: Caché agresivo de peticiones GET en Next.js App Router, agravado por persistencia desfasada en `localStorage` (fallback erróneo).
+* **Solución**: Añadir `export const dynamic = "force-dynamic";` a todos los endpoints de API que leen datos vivos (GET). Eliminar la dependencia de UI sobre el almacenamiento en caché local temporal.
+* **Regla Preventiva**: Todo endpoint de Next.js (`route.ts`) que sirva estado dinámico desde la nube DEBE declarar la directiva `force-dynamic` (sub-skill: `skill-supabase-resilience.md`).
 
 ---
 ### ID: GEL-002 | Safari Auto-Zoom en Inputs iOS
 * **Fecha**: 2026-09-22
-* **SÃ­ntomas**: La UI se rompÃ­a o hacÃ­a zoom forzado incontrolable en el iPhone al tocar un campo de texto o select.
-* **Causa RaÃ­z**: iOS Safari aplica auto-zoom incondicional si el tamaÃ±o de fuente (`font-size`) de un input es menor a 16px.
-* **SoluciÃ³n**: Forzar `font-size: 16px !important;` en `@media (max-width: 639px)` para `input`, `select`, y `textarea` globales, o usar `text-base`.
-* **Regla Preventiva**: Regla de fuego en desarrollo Frontend MÃ³vil: NUNCA usar fuentes menores a 16px en elementos de formulario en Mobile (sub-skill: `skill-mobile-first.md`).
+* **Síntomas**: La UI se rompía o hacía zoom forzado incontrolable en el iPhone al tocar un campo de texto o select.
+* **Causa Raíz**: iOS Safari aplica auto-zoom incondicional si el tamaño de fuente (`font-size`) de un input es menor a 16px.
+* **Solución**: Forzar `font-size: 16px !important;` en `@media (max-width: 639px)` para `input`, `select`, y `textarea` globales, o usar `text-base`.
+* **Regla Preventiva**: Regla de fuego en desarrollo Frontend Móvil: NUNCA usar fuentes menores a 16px en elementos de formulario en Mobile (sub-skill: `skill-mobile-first.md`).
 
 ---
 ### ID: GEL-003 | Silent Failures en Resend / OTP
 * **Fecha**: 2026-09-22
-* **SÃ­ntomas**: El usuario no recibe el email OTP, pero la API responde HTTP 200 Success.
-* **Causa RaÃ­z**: `resend.emails.send` capturaba el error pero el sistema local lo tragaba (swallowed error) y continuaba el flujo.
-* **SoluciÃ³n**: AÃ±adir `throw new Error(...)` tras recibir error de la API de Resend y devolver HTTP 500 para que el Frontend detenga el flujo y alerte con un toast.
-* **Regla Preventiva**: En servicios crÃ­ticos de terceros (Auth, Mail, Pagos), NO usar silent fallbacks en caso de excepciÃ³n, SIEMPRE lanzar el error para feedback visual temprano del cliente.
+* **Síntomas**: El usuario no recibe el email OTP, pero la API responde HTTP 200 Success.
+* **Causa Raíz**: `resend.emails.send` capturaba el error pero el sistema local lo tragaba (swallowed error) y continuaba el flujo.
+* **Solución**: Añadir `throw new Error(...)` tras recibir error de la API de Resend y devolver HTTP 500 para que el Frontend detenga el flujo y alerte con un toast.
+* **Regla Preventiva**: En servicios críticos de terceros (Auth, Mail, Pagos), NO usar silent fallbacks en caso de excepción, SIEMPRE lanzar el error para feedback visual temprano del cliente.
 
 ---
 ### ID: GEL-004 | Bug de Agregación de Saldos y UI Mobile
@@ -105,12 +105,11 @@ AquÃ­ Lari documenta cada incidente crÃ­tico y la lecciÃ³n definitiva para
 * **Causa Raíz**: 1. Supabase permite `accounts` vacío para nuevos usuarios. 2. `addTransaction` intentaba insertar sin una Foreign Key válida. 3. `getSummary` sumaba solo `accounts.balance` ignorando `transactions` cuando `accounts` estaba vacío.
 * **Solución**: 1. Se implementó `ensureDefaultAccount(userId)` en `supabase-store.ts` que inyecta automáticamente una cuenta "Efectivo" si el usuario no tiene ninguna. 2. `addTransaction` ahora usa `ensureDefaultAccount` y actualiza atómicamente `accounts.balance` (+ o - amount) en PostgreSQL. 3. `getSummary` recalculando el `total_balance` leyendo y sumando directo desde `transactions` si detecta que `accounts.balance` es 0 pero existen movimientos, eliminando por completo el "Flicker de Balance en Cero".
 * **Regla Preventiva**: Nunca confiar ciegamente en tablas padre (como `accounts`) para calcular resúmenes si pueden estar desfasadas o no sembradas. Siempre proveer fallbacks matemáticos basados en tablas hijo inmutables (`transactions`) y garantizar Auto-Seed en flujos críticos.
-## GEL-014: Historial de transacciones vaco y reset al exportar (Resuelto)
-**Sntomas:** Al exportar a Excel, la UI se reiniciaba. El historial no mostraba transacciones creadas por la IA.
-**Causa:** Los botones de exportacin no tenan \	ype=\
-button\\, causando submit de formularios o refresh de pgina. \/api/ai-assistant\ no inclua \user_id\ ni \created_at\ en el payload optimista. \	ransactions/page.tsx\ no escuchaba \inance-refresh\ ni mergeaba \local_transactions\.
-**Solucin:** Se agreg \	ype=\
-button\\ a los botones. Se actualiz el payload de la IA. Se aadi un listener de \inance-refresh\ y se unific la lectura de \local_transactions\ en la vista del historial.
+
+## GEL-014: Historial de transacciones vacío y reset al exportar (Resuelto)
+**Síntomas:** Al exportar a Excel, la UI se reiniciaba. El historial no mostraba transacciones creadas por la IA.
+**Causa:** Los botones de exportación no tenían `type="button"`, causando submit de formularios o refresh de página. `/api/ai-assistant` no incluía `user_id` ni `created_at` en el payload optimista. `transactions/page.tsx` no escuchaba `finance-refresh` ni mergeaba `local_transactions`.
+**Solución:** Se agregó `type="button"` a los botones. Se actualizó el payload de la IA. Se añadió un listener de `finance-refresh` y se unificó la lectura de `local_transactions` en la vista del historial.
 
 ---
 ### ID: GEL-015 | Implementación Completa de Cuentas (CRUD) y Transferencias (Misión LARI 11)
@@ -187,3 +186,36 @@ button\\ a los botones. Se actualiz el payload de la IA. Se aadi un listener de 
   2) Se inyectó `useRouter` en `SyncEngine.tsx` llamando a `router.refresh()` en cada `postgres_changes`.
   3) Se limpió agresivamente el `localStorage` en `ResetDataModal` con una recarga de ventana (`window.location.href = '/'`).
 * **Regla Preventiva**: Al usar Supabase Realtime con Next.js App Router, un evento local JS (`finance-refresh`) no basta; DEBE emparejarse con `router.refresh()` para invalidar la caché del server (SSR). Además, los payloads de IA jamás deben inyectar UUIDs falsos o hardcodeados (como "default_cash") en campos Foreign Key; siempre deben dejar el campo vacío para que la capa ORM asigne la entidad por defecto.
+
+---
+### ID: GEL-021 | Colapso del Dashboard al Registrar Movimientos (Misión LARI 17)
+* **Fecha**: 2026-09-25
+* **Síntomas**: 
+  1) Al registrar un gasto o ingreso (formulario manual, modal rápido o asistente IA), la pantalla del Dashboard se vaciaba por completo, perdiendo todos los datos visuales y quedando en blanco.
+  2) El fenómeno era intermitente: a veces funcionaba correctamente, otras veces la UI colapsaba.
+* **Causa Raíz**: **Tres causas concurrentes:**
+  1) **Crash de date-fns en RecentTransactions.tsx** (línea 122): `format(new Date(t.date + "T12:00:00"), ...)` explotaba con una excepción no capturada cuando las transacciones locales o generadas por IA tenían el campo `date` en formato ISO completo (con "T" ya incluida) o directamente `undefined`. Al concatenar "T12:00:00" sobre un string que ya contenía la hora, se creaba un Date inválido → `RangeError: Invalid time value`. Sin un Error Boundary, React desmontaba todo el árbol de componentes del Dashboard.
+  2) **Race condition en SyncEngine.tsx**: Los eventos Realtime de Supabase disparaban `finance-refresh` de forma inmediata y sin debounce. Cuando la inserción aún no había sido asentada en PostgreSQL, el refetch del dashboard devolvía datos desactualizados o vacíos desde el servidor, y `setSummary()` sobreescribía el estado válido de la UI con un resumen en cero.
+  3) **Acceso inseguro a propiedades anidadas**: `t.category?.name`, `t.account?.name` y `t.amount.toFixed()` podían fallar con datos parciales de transacciones locales que no incluían los objetos `account` ni `category` (joins de Supabase).
+* **Solución**: 
+  1) **Error Boundaries de React**: Se creó `components/ui/ErrorBoundary.tsx` (clase React con `getDerivedStateFromError`) y se envolvió cada sección del Dashboard (`BalanceCard`, `RecentTransactions`, `SpendingChart`, `DashboardGoalsSection`, `DashboardInstallmentsSection`) en un Error Boundary independiente. Si un componente hijo crashea, solo se desmonta ese módulo mostrando una UI de recuperación con botón "Reintentar", sin afectar al resto del Dashboard.
+  2) **Normalización de transacciones**: Se creó `lib/utils/normalize-transaction.ts` con la función `normalizeTransaction()` que garantiza que `amount` sea un número finito, `date` sea YYYY-MM-DD válido, y todos los campos obligatorios tengan valores por defecto seguros. Se aplica a toda data entrante en `RecentTransactions`, `TransactionsPage` y `AIAssistantModal`.
+  3) **Safe date formatting**: Se creó `safeFormatDate()` como wrapper de `date-fns/format()` que nunca lanza excepciones: primero limpia el string (split en "T"), parsea, valida con `isNaN()`, y retorna "Sin fecha" como fallback.
+  4) **Debounced SyncEngine**: Los eventos Realtime ahora se procesan con debounce (1500ms mínimo entre refreshes) para evitar que ráfagas de eventos vacíen el estado del Dashboard. Se implementó un patrón `lastRefreshRef` + `refreshTimeoutRef`.
+  5) **Anti-reset en loadSummary**: `setSummary()` ahora compara el estado anterior con el nuevo: si el estado actual tiene datos financieros válidos pero el nuevo resumen devuelve todo en cero (señal de race condition o error de red), se bloquea la sobrescritura y se mantiene el estado anterior.
+  6) **Auditoría type="button"**: Se verificaron y corrigieron todos los botones de acción en `DashboardGoalsSection`, `DashboardInstallmentsSection`, `TransactionsPage`, `HistoryPage` asegurando `type="button"` explícito para prevenir envíos de formulario involuntarios.
+* **Archivos modificados**:
+  - `components/ui/ErrorBoundary.tsx` (NUEVO)
+  - `lib/utils/normalize-transaction.ts` (NUEVO)
+  - `app/(dashboard)/page.tsx` (Error Boundaries + anti-reset + validación estricta)
+  - `components/dashboard/RecentTransactions.tsx` (normalización + safeFormatDate + fallback red)
+  - `components/sync/SyncEngine.tsx` (debounced refresh + cleanup timers)
+  - `app/(dashboard)/transactions/page.tsx` (normalización + safeFormatDate + type="button")
+  - `app/(dashboard)/history/page.tsx` (safe date parsing + type="button")
+  - `components/dashboard/DashboardGoalsSection.tsx` (type="button" audit)
+  - `components/dashboard/DashboardInstallmentsSection.tsx` (type="button" audit)
+* **Regla Preventiva**: 
+  1) **NUNCA renderizar datos financieros sin normalización previa** — todo objeto que entre al estado de React desde una API, localStorage o IA debe pasar por un normalizador que garantice tipos válidos y defaults seguros.
+  2) **SIEMPRE usar Error Boundaries en secciones independientes del dashboard** — un crash aislado en un gráfico o tarjeta nunca debe tumbar toda la aplicación.
+  3) **SIEMPRE debounce los eventos Realtime** — las ráfagas de WebSockets son el vector más común de race conditions que vacían la UI.
+  4) **NUNCA usar `new Date(str + "T12:00:00")` sin sanitizar `str` primero** — si `str` ya contiene "T", la concatenación produce un Date inválido que explota `date-fns`.

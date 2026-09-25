@@ -1,16 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { CloudOff, Info, CheckCircle2 } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 
+/**
+ * SyncEngine — Motor de sincronización Local-First con Supabase.
+ * 
+ * GEL-021 Hardening:
+ * - Debounced realtime refresh to prevent rapid-fire state overwrites
+ * - Never dispatch finance-refresh during initial sync if no actual changes occurred
+ * - Realtime events are processed granularly (no full page destructive rebuild)
+ */
 export function SyncEngine() {
   const [status, setStatus] = useState<"checking" | "degraded" | "synced" | "idle">("checking");
   const [errorDetails, setErrorDetails] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [showSyncedToast, setShowSyncedToast] = useState(false);
   const router = useRouter();
+  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastRefreshRef = useRef<number>(0);
 
   const handleExport = () => {
     try {
@@ -30,14 +40,38 @@ export function SyncEngine() {
     }
   };
 
+  /**
+   * GEL-021: Debounced refresh to prevent race conditions.
+   * Multiple rapid realtime events are coalesced into a single refresh
+   * with a minimum 1.5s gap between refreshes.
+   */
+  const debouncedRefresh = () => {
+    const now = Date.now();
+    const timeSinceLastRefresh = now - lastRefreshRef.current;
+    
+    // Clear any pending refresh
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current);
+    }
+
+    // If last refresh was very recent, debounce more aggressively
+    const delay = timeSinceLastRefresh < 2000 ? 1500 : 500;
+    
+    refreshTimeoutRef.current = setTimeout(() => {
+      lastRefreshRef.current = Date.now();
+      window.dispatchEvent(new Event("finance-refresh"));
+      router.refresh();
+    }, delay);
+  };
+
   const syncLocalData = async () => {
     try {
       const localTxs = JSON.parse(localStorage.getItem("local_transactions") || "[]");
-      const unsynced = localTxs.filter((t: any) => !t.synced);
+      const unsynced = localTxs.filter((t: Record<string, unknown>) => !t.synced);
       
-      if (unsynced.length === 0) return true;
+      if (unsynced.length === 0) return false; // Changed: return false when nothing to sync
 
-      // Sync sequentially or bulk
+      // Sync sequentially
       let syncedCount = 0;
       for (const tx of unsynced) {
         try {
@@ -66,8 +100,8 @@ export function SyncEngine() {
       localStorage.setItem("local_transactions", JSON.stringify(localTxs));
       
       if (syncedCount > 0) {
-        window.dispatchEvent(new Event("finance-refresh"));
-        router.refresh();
+        // GEL-021: Use debounced refresh instead of immediate to prevent race condition
+        debouncedRefresh();
         return true;
       }
       return false;
@@ -87,19 +121,17 @@ export function SyncEngine() {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'transactions' },
         (payload) => {
-          console.log("Realtime event received:", payload);
-          // Refrescar el dashboard
-          window.dispatchEvent(new Event("finance-refresh"));
-          router.refresh();
+          console.log("[SyncEngine] Realtime transaction event:", payload.eventType);
+          // GEL-021: Debounced refresh instead of immediate to prevent blank state
+          debouncedRefresh();
         }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'accounts' },
         (payload) => {
-          console.log("Realtime account event received:", payload);
-          window.dispatchEvent(new Event("finance-refresh"));
-          router.refresh();
+          console.log("[SyncEngine] Realtime account event:", payload.eventType);
+          debouncedRefresh();
         }
       )
       .subscribe();
@@ -149,6 +181,10 @@ export function SyncEngine() {
 
     return () => {
       if (unsubscribeRealtime) unsubscribeRealtime();
+      // GEL-021: Clean up pending debounce timers
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
     };
   }, [router]);
 
@@ -188,12 +224,14 @@ export function SyncEngine() {
             </pre>
             <div className="flex gap-2">
               <button
+                type="button"
                 onClick={handleExport}
                 className="flex-1 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 font-bold py-3 rounded-xl transition-colors text-sm"
               >
                 Exportar Respaldo
               </button>
               <button
+                type="button"
                 onClick={() => setShowModal(false)}
                 className="flex-1 bg-white/10 hover:bg-white/20 text-white font-bold py-3 rounded-xl transition-colors text-sm"
               >

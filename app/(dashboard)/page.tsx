@@ -11,6 +11,7 @@ import { DashboardGoalsSection } from "@/components/dashboard/DashboardGoalsSect
 import { DashboardInstallmentsSection } from "@/components/dashboard/DashboardInstallmentsSection";
 import { QuickFinanceModal } from "@/components/dashboard/QuickFinanceModal";
 import { FreemiumGate } from "@/components/ui/FreemiumGate";
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { isDemoUser } from "@/lib/freemium";
 import type { FinancialSummary, Category } from "@/lib/types";
 import { Loader2, SlidersHorizontal, ChevronDown, ChevronUp, Lock } from "lucide-react";
@@ -36,23 +37,55 @@ export default function DashboardPage() {
       ]);
       if (resSummary.ok) {
         const data = await resSummary.json();
-        // Evitar que un backend en estado inválido (ej. sin tablas) devuelva un falso éxito con 0
+        // GEL-021: Validación estricta del resumen antes de aceptar la respuesta
         if (data && typeof data.total_balance === 'number') {
-          setSummary(data);
+          setSummary((prev) => {
+            // Anti-reset: Si el nuevo resumen tiene 0 transacciones y 0 balance
+            // pero el anterior tenía datos, mantener el anterior (race condition protection)
+            if (
+              prev &&
+              prev.total_balance !== 0 &&
+              data.total_balance === 0 &&
+              (data.income_30d === 0 && data.expense_30d === 0) &&
+              (prev.income_30d > 0 || prev.expense_30d > 0)
+            ) {
+              console.warn("[Dashboard] Blocked suspicious zero-state summary update. Keeping cached data.");
+              return prev;
+            }
+            return data;
+          });
           localStorage.setItem("finanzapp_last_summary", JSON.stringify(data));
         }
       } else {
         // Anti-reset: Si el servidor falla, leemos del último estado conocido
         const cached = localStorage.getItem("finanzapp_last_summary");
-        if (cached) setSummary(JSON.parse(cached));
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached);
+            if (parsed && typeof parsed.total_balance === 'number') {
+              setSummary(parsed);
+            }
+          } catch { /* ignore corrupt cache */ }
+        }
       }
       
       if (resCats.ok) {
-        setCategories(await resCats.json());
+        const catsData = await resCats.json();
+        if (Array.isArray(catsData)) {
+          setCategories(catsData);
+        }
       }
     } catch (err) {
+      console.error("[Dashboard] loadSummary error:", err);
       const cached = localStorage.getItem("finanzapp_last_summary");
-      if (cached) setSummary(JSON.parse(cached));
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (parsed && typeof parsed.total_balance === 'number') {
+            setSummary(parsed);
+          }
+        } catch { /* ignore corrupt cache */ }
+      }
     } finally {
       setLoading(false);
     }
@@ -110,50 +143,61 @@ export default function DashboardPage() {
         <div className="flex-1 p-4 sm:p-5 lg:p-6 space-y-5 md:space-y-6 max-w-7xl mx-auto w-full pb-28 md:pb-12">
 
           {/* 1. 💡 Smart Tip — Coach IA */}
-          <div className="animate-slide-up">
-            <SmartTipCard
-              income30d={summary?.income_30d || 0}
-              expense30d={summary?.expense_30d || 0}
-              installmentsMonthly={summary?.total_installments_monthly || 0}
-              topCategory={summary?.top_categories?.[0]?.category_name}
-              goalsCount={summary?.savings_goals?.length || 0}
-            />
-          </div>
+          <ErrorBoundary fallbackTitle="Error en sugerencias" fallbackMessage="Las sugerencias no pudieron cargarse. Tu dashboard sigue funcionando.">
+            <div className="animate-slide-up">
+              <SmartTipCard
+                income30d={summary?.income_30d || 0}
+                expense30d={summary?.expense_30d || 0}
+                installmentsMonthly={summary?.total_installments_monthly || 0}
+                topCategory={summary?.top_categories?.[0]?.category_name}
+                goalsCount={summary?.savings_goals?.length || 0}
+              />
+            </div>
+          </ErrorBoundary>
 
           {/* 2. 💰 Balance Total + Ingresos vs Gastos */}
-          <div className="animate-slide-up">
-            <BalanceCard
-              totalBalance={summary?.total_balance || 0}
-              income30d={summary?.income_30d || 0}
-              expense30d={summary?.expense_30d || 0}
-              monthlyInstallments={summary?.total_installments_monthly || 0}
-              onRefresh={loadSummary}
-            />
-          </div>
+          <ErrorBoundary fallbackTitle="Error en el balance" fallbackMessage="El balance no pudo renderizarse. Tus datos están seguros.">
+            <div className="animate-slide-up">
+              <BalanceCard
+                totalBalance={summary?.total_balance || 0}
+                income30d={summary?.income_30d || 0}
+                expense30d={summary?.expense_30d || 0}
+                monthlyInstallments={summary?.total_installments_monthly || 0}
+                onRefresh={loadSummary}
+              />
+            </div>
+          </ErrorBoundary>
 
           {/* 3. 📊 Gráfico de Gastos + Transacciones Recientes */}
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 animate-slide-up">
             <div className="lg:col-span-2">
-              <SpendingChart categories={summary?.top_categories || []} />
+              <ErrorBoundary fallbackTitle="Error en gráfico" fallbackMessage="El gráfico no pudo renderizarse.">
+                <SpendingChart categories={summary?.top_categories || []} />
+              </ErrorBoundary>
             </div>
             <div className="lg:col-span-3">
-              <RecentTransactions />
+              <ErrorBoundary fallbackTitle="Error en transacciones" fallbackMessage="Las transacciones no pudieron cargarse.">
+                <RecentTransactions />
+              </ErrorBoundary>
             </div>
           </div>
 
           {/* 4. 🎯 Metas de Ahorro */}
           <FreemiumGate action="manage_goals" className="animate-slide-up">
-            <DashboardGoalsSection
-              goals={summary?.savings_goals || []}
-              salary={summary?.configured_salary || summary?.income_30d || 980000}
-              onRefresh={loadSummary}
-            />
+            <ErrorBoundary fallbackTitle="Error en metas" fallbackMessage="Las metas no pudieron renderizarse.">
+              <DashboardGoalsSection
+                goals={summary?.savings_goals || []}
+                salary={summary?.configured_salary || summary?.income_30d || 980000}
+                onRefresh={loadSummary}
+              />
+            </ErrorBoundary>
           </FreemiumGate>
 
           {/* ▼ Sección Avanzada (expandible) */}
           <FreemiumGate action="manage_installments" className="animate-slide-up">
             <div>
               <button
+                type="button"
                 onClick={() => setShowAdvanced(!showAdvanced)}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all cursor-pointer"
                 style={{
@@ -177,11 +221,13 @@ export default function DashboardPage() {
 
               {showAdvanced && (
                 <div className="space-y-5 mt-5 animate-slide-up">
-                  <DashboardInstallmentsSection
-                    installments={summary?.active_installments || []}
-                    monthlyTotal={summary?.total_installments_monthly || 0}
-                    onRefresh={loadSummary}
-                  />
+                  <ErrorBoundary fallbackTitle="Error en cuotas" fallbackMessage="Las cuotas no pudieron renderizarse.">
+                    <DashboardInstallmentsSection
+                      installments={summary?.active_installments || []}
+                      monthlyTotal={summary?.total_installments_monthly || 0}
+                      onRefresh={loadSummary}
+                    />
+                  </ErrorBoundary>
                 </div>
               )}
             </div>
