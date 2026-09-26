@@ -219,3 +219,32 @@ Aquí Lari documenta cada incidente crítico y la lección definitiva para la po
   2) **SIEMPRE usar Error Boundaries en secciones independientes del dashboard** — un crash aislado en un gráfico o tarjeta nunca debe tumbar toda la aplicación.
   3) **SIEMPRE debounce los eventos Realtime** — las ráfagas de WebSockets son el vector más común de race conditions que vacían la UI.
   4) **NUNCA usar `new Date(str + "T12:00:00")` sin sanitizar `str` primero** — si `str` ya contiene "T", la concatenación produce un Date inválido que explota `date-fns`.
+
+---
+### ID: GEL-022 | Sincronización Multi-Dispositivo en Tiempo Real (Misión LARI 18)
+* **Fecha**: 2026-09-26
+* **Síntomas**:
+  1) Al registrar un gasto en la PC, el teléfono móvil no mostraba el cambio hasta recargar manualmente la página completa, y viceversa.
+  2) Cada dispositivo se comportaba como una isla aislada.
+  3) Al bloquear la pantalla del teléfono y volver, el WebSocket quedaba en estado zombie y no se reconectaba.
+* **Causas Raíz (5 fallos concurrentes)**:
+  1) **Puente roto de localStorage**: El SyncEngine recibía eventos Realtime pero solo llamaba a `debouncedRefresh()` que hacía re-fetch desde la API. Los componentes (BalanceCard, RecentTransactions) también leían de `localStorage` que seguía desactualizado en el dispositivo receptor, creando un estado inconsistente.
+  2) **Tablas NO publicadas en Realtime**: Las tablas (`transactions`, `accounts`, `category_budgets`, `savings_goals`) no estaban agregadas a la publicación `supabase_realtime` en PostgreSQL. Sin esto, Supabase simplemente no emite eventos WebSocket.
+  3) **REPLICA IDENTITY DEFAULT**: PostgreSQL solo enviaba la PK en eventos DELETE, haciendo imposible saber qué transacción se borró para actualizarla localmente.
+  4) **Cliente WebSocket anónimo**: Se usaba `createClient` crudo de `@supabase/supabase-js` en lugar del cliente autenticado de `@supabase/ssr` (`createBrowserClient`), potencialmente descartando eventos en tablas con RLS.
+  5) **Sin manejo de ciclo de vida móvil**: No existían listeners para `visibilitychange` ni `focus`, dejando conexiones WebSocket zombie cuando el navegador móvil se suspendía.
+* **Solución (SyncEngine v2)**:
+  1) **Inyección directa a localStorage**: Al recibir INSERT, UPDATE o DELETE por Realtime, el SyncEngine ahora parsea el payload, lo normaliza y lo inyecta/actualiza/elimina directamente del `localStorage` del dispositivo receptor ANTES de despachar `finance-refresh`. Esto cierra el "puente roto".
+  2) **Script SQL `enable_realtime.sql`**: Creado en `scripts/` con sentencias idempotentes para agregar todas las tablas a `supabase_realtime` y configurar `REPLICA IDENTITY FULL`.
+  3) **Cliente autenticado**: Se usa `createBrowserSupabase()` (SSR-aware) que hereda la sesión JWT activa.
+  4) **Reconexión móvil**: Listeners `visibilitychange` + `focus` con re-sincronización diferencial (cooldown de 3s) que sube pendientes locales, invalida el cache de summary y fuerza re-render completo.
+  5) **Invalidación de summary cache**: Al recibir cualquier evento de transacciones o cuentas, se elimina `finanzapp_last_summary` de localStorage para que el dashboard cargue datos frescos en lugar de cachéados.
+  6) **Logs de diagnóstico**: Consola del navegador muestra `[SyncEngine]` con emojis descriptivos para cada evento, facilitando el debugging en producción.
+* **Archivos modificados**:
+  - `components/sync/SyncEngine.tsx` (REESCRITO — SyncEngine v2)
+  - `scripts/enable_realtime.sql` (NUEVO)
+* **Regla Preventiva**:
+  1) **NUNCA confiar solo en re-fetch para sincronización Realtime** — el dispositivo receptor DEBE actualizar su almacenamiento local (localStorage, IndexedDB, etc.) directamente desde el payload del WebSocket antes de notificar a la UI.
+  2) **SIEMPRE verificar que las tablas estén en `supabase_realtime`** — sin esta publicación, los WebSockets son canales vacíos.
+  3) **SIEMPRE manejar `visibilitychange` y `focus`** en apps financieras móviles para reconectar canales WebSocket zombie.
+  4) **SIEMPRE usar `REPLICA IDENTITY FULL`** en tablas donde se necesite el payload completo en eventos DELETE.
