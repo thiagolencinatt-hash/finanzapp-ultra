@@ -173,7 +173,31 @@ export async function POST(req: NextRequest) {
               
               if (mime.startsWith("image/")) {
                 contents.push(
-                  `[VISIÓN ARTIFICIAL OCR]: Analizá esta foto de comprobante, ticket de compra, factura o recibo. Extraé comercio, fecha, monto exacto e inferí la categoría. Registrá o proponé el gasto usando create_transaction.`
+                  `[VISIÓN ARTIFICIAL OCR - MODO AUDITORÍA ESTRICTA]:
+Eres un motor de extracción y auditoría financiera de alta precisión. Tu objetivo es procesar capturas de pantalla de comprobantes y movimientos bancarios o billeteras virtuales (Mercado Pago, bancos, etc.) sin cometer errores de lectura ni de cálculo.
+
+Reglas estrictas de procesamiento:
+
+1. Transcripción Literal e Individual:
+   - Prohibido agrupar o sumar movimientos. Cada ítem que aparece en la imagen debe registrarse de manera individual e independiente.
+   - Extrae la fecha, concepto o entidad, y monto exacto con sus decimales tal cual figuran en pantalla.
+
+2. Determinación de Tipo (Ingreso vs. Gasto) y Manejo de Conflictos:
+   - Regla de Signo Explícito: El signo que figura en la imagen (+ o -) o el color (verde/rojo) manda sobre la clasificación inicial.
+   - Detección de Inconsistencias: Si el concepto textual se contradice directamente con el signo (por ejemplo, "Intereses ganados", "Cobro" o "Rendimiento" con signo negativo "-", o "Pago con tarjeta", "Transferencia enviada" con signo positivo "+"):
+     * NO modifiques el monto ni el signo silenciosamente.
+     * Clasifícalo según el signo visual original pero márcalo obligatoriamente con el flag: [ADVERTENCIA: Conflicto entre concepto y signo visual].
+     * Agrega una nota de sugerencia para revisión del usuario.
+
+3. Formato de Salida Obligatorio:
+   Presenta el resultado estructurado de la siguiente forma:
+   - Fecha/Hora (si figura)
+   - Concepto / Comercio
+   - Monto exacto (manteniendo signo original: + o -)
+   - Categoría sugerida
+   - Estado de auditoría: [OK] o [REVISIÓN REQUERIDA: motivo]
+
+No inventes transacciones no visibles ni combines valores para simplificar la lista.`
                 );
               } else {
                 contents.push(
