@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { createClient } from "@/lib/supabase/client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { openAIAssistant } from "../ai/GlobalAIAssistant";
 
 const navItems = [
@@ -40,6 +40,24 @@ export function Sidebar({ forceVisible = false }: { forceVisible?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("finanzapp_user_profile");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.email) setUserEmail(parsed.email);
+      } else {
+        const match = document.cookie.match(/finance_user_email=([^;]+)/);
+        if (match && match[1]) {
+          setUserEmail(decodeURIComponent(match[1]));
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   async function handleLogout() {
     try {
@@ -158,6 +176,13 @@ export function Sidebar({ forceVisible = false }: { forceVisible?: boolean }) {
 
       {/* Bottom actions */}
       <div className="px-2 pb-4 space-y-1 border-t pt-4" style={{ borderColor: "hsl(var(--border))" }}>
+        {userEmail && !collapsed && (
+          <div className="px-3 mb-2 flex items-center justify-center">
+            <span className="text-[10px] font-medium text-muted-foreground truncate w-full text-center bg-white/[0.03] py-1 rounded-md border border-white/[0.05]">
+              {userEmail}
+            </span>
+          </div>
+        )}
         <Link
           href="/settings"
           title={collapsed ? "Configuración" : undefined}

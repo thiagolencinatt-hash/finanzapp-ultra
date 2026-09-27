@@ -139,46 +139,35 @@ export function TransactionForm({
 
     const payload = body;
 
-    // 1. Local-First: Guardado optimista
-    const localTx = { ...payload, synced: false, created_at: new Date().toISOString() };
-    const localTxs = JSON.parse(localStorage.getItem("local_transactions") || "[]");
-    localStorage.setItem("local_transactions", JSON.stringify([localTx, ...localTxs]));
-
-    // 2. Disparar evento optimista para la UI (BalanceCard)
-    window.dispatchEvent(
-      new CustomEvent("optimistic-tx", { detail: { type: form.type, amount: form.amount } })
-    );
-
-    // 3. Limpiar borrador y cerrar modal inmediatamente (Zero latency)
-    if (!isEditing) {
-      localStorage.removeItem(draftKey);
-      if (isDemoUser()) incrementDemoTxCount();
-    }
-    toast.success("Guardado localmente. Sincronizando con la nube...");
-    onSuccess(); // Cierra el modal
-
-    // 4. Background Sync a Supabase
-    const method = isEditing ? "PATCH" : "POST";
-    fetch("/api/transactions", {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    })
-      .then(async (res) => {
-        if (!res.ok) throw new Error((await res.json()).error || "Error de servidor");
-        // Sincronización exitosa
-        toast.success(isEditing ? "Movimiento actualizado en la nube" : "Sincronizado con la nube");
-        const updatedTxs = JSON.parse(localStorage.getItem("local_transactions") || "[]").map((t: any) =>
-          t.id === txId ? { ...t, synced: true } : t
-        );
-        localStorage.setItem("local_transactions", JSON.stringify(updatedTxs));
-        window.dispatchEvent(new Event("finance-refresh"));
-        router.refresh();
-      })
-      .catch((err) => {
-        console.error("Background sync failed:", err);
-        toast.error("Error al sincronizar. Se guardó de forma local y se reintentará.");
+    setLoading(true);
+    try {
+      const method = isEditing ? "PATCH" : "POST";
+      const res = await fetch("/api/transactions", {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
+
+      if (!res.ok) {
+        throw new Error((await res.json()).error || "Error de servidor");
+      }
+
+      // Limpiar borrador local
+      if (!isEditing) {
+        localStorage.removeItem(draftKey);
+        if (isDemoUser()) incrementDemoTxCount();
+      }
+
+      toast.success(isEditing ? "Movimiento actualizado" : "Movimiento registrado");
+      window.dispatchEvent(new Event("finance-refresh"));
+      router.refresh();
+      onSuccess(); // Cierra el modal
+    } catch (err: any) {
+      console.error("Error saving transaction:", err);
+      setError(err.message || "Error al guardar el movimiento");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleDelete() {
@@ -187,12 +176,7 @@ export function TransactionForm({
 
     setLoading(true);
     try {
-      // 1. Optimistic delete local
-      const localTxs = JSON.parse(localStorage.getItem("local_transactions") || "[]");
-      const updatedLocalTxs = localTxs.filter((t: any) => t.id !== transaction.id);
-      localStorage.setItem("local_transactions", JSON.stringify(updatedLocalTxs));
-
-      // 2. Call API DELETE
+      // Call API DELETE
       const res = await fetch(`/api/transactions?id=${transaction.id}`, {
         method: "DELETE",
       });

@@ -342,11 +342,12 @@ export async function addTransaction(
       };
     } else {
       console.error("[supabase-store] addTransaction Supabase error:", error);
+      throw new Error(error?.message || "Error insertando transacción en Supabase");
     }
-  } catch (err) {
-    console.error("[supabase-store] addTransaction fallback:", err);
+  } catch (err: any) {
+    console.error("[supabase-store] addTransaction error:", err);
+    throw err;
   }
-  return localStore.addUserTransaction(userId, tx);
 }
 
 export async function deleteTransaction(userId: string, transactionId: string): Promise<boolean> {
@@ -1124,15 +1125,18 @@ export async function addChatMessage(
 
   try {
     const supabase = await createClient();
-    await supabase.from("chat_messages").insert({
+    const { error } = await supabase.from("chat_messages").insert({
       user_id: userId,
       role,
       content,
     });
-  } catch (err) {
-    console.warn("[supabase-store] addChatMessage fallback:", err);
+    if (error) {
+      throw new Error(error.message || "Error al insertar mensaje de chat");
+    }
+  } catch (err: any) {
+    console.error("[supabase-store] addChatMessage error:", err);
+    throw err;
   }
 
-  await localStore.addUserChatMessage(userId, newMsg);
   return newMsg;
 }

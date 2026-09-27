@@ -5,10 +5,20 @@ import { BottomNav } from "@/components/layout/BottomNav";
 import { GlobalAIAssistant } from "@/components/ai/GlobalAIAssistant";
 import { useViewMode } from "@/components/providers/ViewModeProvider";
 import { SyncEngine } from "@/components/sync/SyncEngine";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { viewMode } = useViewMode();
   const isDesktopMode = viewMode === "desktop";
+  const router = useRouter();
+
+  useEffect(() => {
+    const hasSession = document.cookie.includes("finance_session=") || document.cookie.includes("finance_demo_session=");
+    if (!hasSession) {
+      router.replace("/login");
+    }
+  }, [router]);
 
   return (
     <div

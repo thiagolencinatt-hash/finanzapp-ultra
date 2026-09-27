@@ -41,38 +41,8 @@ export default function DashboardPage() {
         if (data && typeof data.total_balance === 'number') {
           let finalData = data;
 
-          // GEL-024: Coherencia matemática y Anti-Zero Shield
-          if (!data.total_balance || data.total_balance === 0) {
-            let hasRecalculated = false;
-            try {
-              const localTxs = JSON.parse(localStorage.getItem("local_transactions") || "[]");
-              if (Array.isArray(localTxs) && localTxs.length > 0) {
-                console.warn("[Dashboard] GEL-023/024: Servidor devolvió 0 pero hay transacciones locales. Recalculando desde historial...");
-                let recalcBal = 0;
-                let recalcInc = 0;
-                let recalcExp = 0;
-                for (const t of localTxs) {
-                  const val = Number(t.amount) || 0;
-                  if (t.type === "income") { recalcBal += val; recalcInc += val; }
-                  else if (t.type === "expense") { recalcBal -= val; recalcExp += val; }
-                }
-                finalData = {
-                  ...data,
-                  total_balance: recalcBal,
-                  income_30d: recalcInc || data.income_30d,
-                  expense_30d: recalcExp || data.expense_30d
-                };
-                hasRecalculated = true;
-              }
-            } catch (e) {
-              // ignora error de parseo
-            }
-
-            if (!hasRecalculated && (data.income_30d > 0 || data.expense_30d > 0)) {
-              console.warn("[Dashboard] GEL-024: Balance en 0 pero hay income/expense 30d. Forzando recálculo matemático...");
-              finalData.total_balance = data.income_30d - data.expense_30d;
-            }
-          }
+          // Eliminado el cálculo acumulativo en local_transactions (GEL-025).
+          // El servidor es la ÚNICA fuente de verdad.
 
           setSummary((prev) => {
             if (

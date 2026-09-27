@@ -47,18 +47,8 @@ export default function TransactionsPage() {
       const data = await res.json();
       let serverTxs = normalizeTransactions(data.data || []);
       
-      try {
-        const localTxs = JSON.parse(localStorage.getItem("local_transactions") || "[]");
-        const unsynced = normalizeTransactions(localTxs.filter((t: Record<string, unknown>) => !t.synced));
-        // Evitar duplicados por id
-        const unsyncedIds = new Set(unsynced.map((t) => t.id));
-        serverTxs = serverTxs.filter((t) => !unsyncedIds.has(t.id));
-        
-        // Combinar locales no sincronizadas con las del servidor
-        serverTxs = [...unsynced, ...serverTxs];
-      } catch (e) {
-        // Ignorar si falla lectura local
-      }
+      // Eliminado el merge de transacciones locales no sincronizadas (GEL-025)
+      // Ahora se renderiza estrictamente lo que devuelve el backend.
 
       if (reset) {
         setTransactions(serverTxs);
