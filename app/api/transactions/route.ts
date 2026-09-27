@@ -85,8 +85,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "user_id inválido o no es un UUID" }, { status: 400 });
     }
 
-    if (!body.category_id || body.category_id === "" || body.category_id === "Sin categoría") {
-      body.category_id = "General";
+    if (!body.category_id && !body.category) {
+      body.category = "General";
+    } else {
+      body.category = body.category || body.category_id || "General";
+      if (body.category === "Sin categoría" || body.category === "") {
+        body.category = "General";
+      }
+    }
+    // Strict compliance: delete category_id to prevent schema cache errors
+    if ('category_id' in body) {
+      delete body.category_id;
     }
 
     if (!body.account_id || body.account_id === "default_cash" || body.account_id === "cash" || body.account_id === "") {
@@ -116,7 +125,7 @@ export async function POST(req: NextRequest) {
       amount: body.amount,
       type: body.type,
       account_id: body.account_id,
-      category_id: body.category_id,
+      category: body.category,
     });
 
     const newTx = await addTransaction(user.id, body as unknown as Omit<Transaction, "id" | "created_at">);

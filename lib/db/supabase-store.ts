@@ -227,7 +227,7 @@ export async function getTransactions(userId: string): Promise<Transaction[]> {
         id: t.id,
         user_id: t.user_id,
         account_id: t.account_id || "",
-        category_id: t.category_id || null,
+        category_id: t.category || null,
         type: t.type,
         amount: Number(t.amount) || 0,
         currency: t.currency || "ARS",
@@ -261,7 +261,7 @@ export async function addTransaction(
   const description = tx.description || "Movimiento";
   const date = tx.date || new Date().toISOString();
   const accountId = tx.account_id || "";
-  const categoryId = tx.category_id || null;
+  const categoryId = tx.category_id || (tx as any).category || "General";
 
   try {
     const supabase = await createClient();
@@ -286,7 +286,7 @@ export async function addTransaction(
     const newRow: any = {
       user_id: userId,
       account_id: finalAccountId,
-      category_id: categoryId,
+      category: categoryId,
       destination_account_id: tx.transfer_to_account_id || null,
       type,
       amount,
