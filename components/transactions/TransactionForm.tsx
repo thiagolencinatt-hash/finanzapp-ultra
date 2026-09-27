@@ -121,7 +121,9 @@ export function TransactionForm({
       return;
     }
 
+    const txId = isEditing && transaction?.id ? transaction.id : crypto.randomUUID();
     const body: Record<string, unknown> = {
+      id: txId,
       type: form.type,
       amount: parseFloat(form.amount),
       currency: form.currency,
@@ -135,10 +137,10 @@ export function TransactionForm({
       body.transfer_to_account_id = form.transfer_to_account_id;
     }
 
-    const payload = isEditing ? { id: transaction?.id, ...body } : body;
+    const payload = body;
 
     // 1. Local-First: Guardado optimista
-    const localTx = { ...payload, id: transaction?.id || crypto.randomUUID(), synced: false, created_at: new Date().toISOString() };
+    const localTx = { ...payload, synced: false, created_at: new Date().toISOString() };
     const localTxs = JSON.parse(localStorage.getItem("local_transactions") || "[]");
     localStorage.setItem("local_transactions", JSON.stringify([localTx, ...localTxs]));
 
@@ -167,7 +169,7 @@ export function TransactionForm({
         // Sincronización exitosa
         toast.success(isEditing ? "Movimiento actualizado en la nube" : "Sincronizado con la nube");
         const updatedTxs = JSON.parse(localStorage.getItem("local_transactions") || "[]").map((t: any) =>
-          t.id === localTx.id ? { ...t, synced: true } : t
+          t.id === txId ? { ...t, synced: true } : t
         );
         localStorage.setItem("local_transactions", JSON.stringify(updatedTxs));
         window.dispatchEvent(new Event("finance-refresh"));

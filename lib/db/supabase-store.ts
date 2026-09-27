@@ -267,7 +267,7 @@ export async function addTransaction(
     const supabase = await createClient();
     const finalAccountId = accountId || (await ensureDefaultAccount(userId));
     
-    const newRow = {
+    const newRow: any = {
       user_id: userId,
       account_id: finalAccountId,
       category_id: categoryId,
@@ -277,6 +277,7 @@ export async function addTransaction(
       description,
       date,
     };
+    if (tx.id) newRow.id = tx.id;
 
     const { data, error } = await supabase.from("transactions").insert(newRow).select().single();
     if (!error && data) {
@@ -287,10 +288,20 @@ export async function addTransaction(
           .eq("id", finalAccountId)
           .single();
 
+        let newBal = type === "income" ? amount : -amount;
         if (acc) {
           const currentBal = Number(acc.balance) || 0;
-          const newBal = type === "income" ? currentBal + amount : currentBal - amount;
+          newBal = type === "income" ? currentBal + amount : currentBal - amount;
           await supabase.from("accounts").update({ balance: newBal }).eq("id", finalAccountId);
+        } else {
+          // Si por alguna razón la cuenta no existe o fue borrada concurrentemente, 
+          // intentar recrearla o forzar el insert
+          console.warn("[supabase-store] GEL-024: Cuenta destino no encontrada. Se creará una cuenta de respaldo.");
+          await addAccount(userId, { 
+            name: "Cuenta Respaldo", 
+            type: "cash", 
+            balance: newBal 
+          });
         }
       }
 

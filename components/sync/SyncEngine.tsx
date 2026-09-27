@@ -87,7 +87,7 @@ export function SyncEngine() {
           if (!newRecord || !newRecord.id) return;
 
           // Evitar duplicados por ID
-          const existingIdx = localTxs.findIndex((t) => t.id === newRecord.id);
+          const existingIdx = localTxs.findIndex((t: any) => t.id === newRecord.id);
           if (existingIdx >= 0) {
             // Ya existe — actualizar en lugar de duplicar
             localTxs[existingIdx] = { ...newRecord, synced: true };
@@ -101,7 +101,7 @@ export function SyncEngine() {
           const updatedRecord = payload.new as Record<string, unknown>;
           if (!updatedRecord || !updatedRecord.id) return;
 
-          const idx = localTxs.findIndex((t) => t.id === updatedRecord.id);
+          const idx = localTxs.findIndex((t: any) => t.id === updatedRecord.id);
           if (idx >= 0) {
             localTxs[idx] = { ...updatedRecord, synced: true };
           } else {
@@ -154,7 +154,21 @@ export function SyncEngine() {
       if (resTxs.ok) {
         const txs = await resTxs.json();
         if (Array.isArray(txs)) {
-          localStorage.setItem("local_transactions", JSON.stringify(txs.map((t: any) => ({ ...t, synced: true }))));
+          // Obtener actuales para no pisar las locales no sincronizadas que tengan IDs temporales
+          const currentTxsStr = localStorage.getItem("local_transactions");
+          const currentTxs = currentTxsStr ? JSON.parse(currentTxsStr) : [];
+          const remoteTxs = txs.map((t: any) => ({ ...t, synced: true }));
+          
+          // Deduplicar: mantener los locales (optimistic) si ya existen, y sobreescribir con la versión remota
+          const txMap = new Map();
+          currentTxs.forEach((t: any) => txMap.set(t.id, t));
+          remoteTxs.forEach((t: any) => txMap.set(t.id, t));
+          
+          const mergedTxs = Array.from(txMap.values());
+          // Ordenar por fecha descendente
+          mergedTxs.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          
+          localStorage.setItem("local_transactions", JSON.stringify(mergedTxs));
         }
       }
       
