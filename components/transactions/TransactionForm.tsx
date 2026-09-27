@@ -305,12 +305,7 @@ export function TransactionForm({
             <option value="" className="bg-neutral-900">
               Seleccionar cuenta...
             </option>
-            {accounts.length === 0 && (
-              <>
-                <option value="default_cash" className="bg-neutral-900">Mercado Pago (General)</option>
-                <option value="cash" className="bg-neutral-900">Efectivo</option>
-              </>
-            )}
+
             {accounts.map((a) => (
               <option key={a.id} value={a.id} className="bg-neutral-900">
                 {a.name} — {a.currency}

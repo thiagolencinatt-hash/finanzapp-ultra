@@ -13,7 +13,9 @@ import type {
 import * as localStore from "./cloud-store";
 
 export async function ensureDefaultAccount(userId: string): Promise<string> {
-  if (userId === "demo-user") return "default-cash";
+  const DEMO_ACCOUNT_UUID = "11111111-1111-1111-1111-111111111111";
+  if (userId === "demo-user") return DEMO_ACCOUNT_UUID;
+  
   try {
     const supabase = await createClient();
     const { data: accounts, error } = await supabase
@@ -46,10 +48,11 @@ export async function ensureDefaultAccount(userId: string): Promise<string> {
     if (!insertErr && newAcc) {
       return newAcc.id;
     }
+    throw new Error(insertErr?.message || "Error al crear cuenta por defecto");
   } catch (err) {
     console.error("[supabase-store] ensureDefaultAccount fallback:", err);
+    throw new Error("No hay cuentas disponibles y falló la creación automática en la nube.");
   }
-  return "default-cash";
 }
 
 /**
@@ -265,9 +268,12 @@ export async function addTransaction(
 
   try {
     const supabase = await createClient();
+    const isValidUUID = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
     let finalAccountId = accountId;
 
-    if (finalAccountId && finalAccountId !== "default_cash" && finalAccountId !== "cash") {
+    if (!finalAccountId || finalAccountId === "default-cash" || finalAccountId === "default_cash" || finalAccountId === "cash" || !isValidUUID(finalAccountId)) {
+      finalAccountId = await ensureDefaultAccount(userId);
+    } else {
       const { data: accCheck } = await supabase
         .from("accounts")
         .select("id")
@@ -279,8 +285,6 @@ export async function addTransaction(
         console.warn(`[supabase-store] Cuenta ${finalAccountId} no existe. Usando cuenta de respaldo.`);
         finalAccountId = await ensureDefaultAccount(userId);
       }
-    } else {
-      finalAccountId = await ensureDefaultAccount(userId);
     }
     
     const insertData: Record<string, any> = {

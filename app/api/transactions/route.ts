@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
       delete body.category_id;
     }
 
-    if (!body.account_id || body.account_id === "default_cash" || body.account_id === "cash" || body.account_id === "") {
+    if (!body.account_id || body.account_id === "default-cash" || body.account_id === "default_cash" || body.account_id === "cash" || body.account_id === "" || typeof body.account_id !== "string" || !uuidRegex.test(body.account_id)) {
       const accounts = await getAccounts(user.id);
       let cashAcc = accounts.find(a => a.name === "Mercado Pago" || a.name === "Efectivo") || accounts[0];
       
