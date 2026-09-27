@@ -33,7 +33,9 @@ export async function ensureDefaultAccount(userId: string): Promise<string> {
     }
 
     // Si no hay cuentas, crear la cuenta Efectivo por defecto
+    const newAccId = crypto.randomUUID();
     const defaultAccount = {
+      id: newAccId,
       user_id: userId,
       name: "Efectivo",
       type: "cash",
@@ -41,7 +43,6 @@ export async function ensureDefaultAccount(userId: string): Promise<string> {
       currency: "ARS",
       color: "#10B981",
       icon: "Wallet",
-      is_active: true,
     };
     const { data: newAcc, error: insertErr } = await supabase
       .from("accounts")
@@ -52,7 +53,7 @@ export async function ensureDefaultAccount(userId: string): Promise<string> {
     if (!insertErr && newAcc) {
       return newAcc.id;
     }
-    throw new Error(insertErr?.message || "Error al crear cuenta por defecto");
+    return newAccId;
   } catch (err) {
     console.error("[supabase-store] ensureDefaultAccount fallback:", err);
     throw new Error("No hay cuentas disponibles y falló la creación automática en la nube.");
@@ -73,7 +74,6 @@ export async function getAccounts(userId: string): Promise<Account[]> {
       .from("accounts")
       .select("*")
       .eq("user_id", userId)
-      .eq("is_active", true)
       .order("created_at", { ascending: true });
 
     if (!error && Array.isArray(data)) {
@@ -81,9 +81,9 @@ export async function getAccounts(userId: string): Promise<Account[]> {
         // Fase 1: Auto-Seed de Cuentas Predeterminadas
         const { randomUUID } = require("crypto");
         const defaultAccounts = [
-          { id: randomUUID(), user_id: userId, name: "Efectivo", type: "cash", balance: 0, currency: "ARS", color: "#10B981", icon: "Banknote", is_active: true },
-          { id: randomUUID(), user_id: userId, name: "Mercado Pago", type: "digital_wallet", balance: 0, currency: "ARS", color: "#3B82F6", icon: "Smartphone", is_active: true },
-          { id: randomUUID(), user_id: userId, name: "Banco / Débito", type: "bank_account", balance: 0, currency: "ARS", color: "#8B5CF6", icon: "CreditCard", is_active: true }
+          { id: randomUUID(), user_id: userId, name: "Efectivo", type: "cash", balance: 0, currency: "ARS", color: "#10B981", icon: "Banknote" },
+          { id: randomUUID(), user_id: userId, name: "Mercado Pago", type: "digital_wallet", balance: 0, currency: "ARS", color: "#3B82F6", icon: "Smartphone" },
+          { id: randomUUID(), user_id: userId, name: "Banco / Débito", type: "bank", balance: 0, currency: "ARS", color: "#8B5CF6", icon: "CreditCard" }
         ];
         
         const { data: insertedData, error: insertError } = await supabase.from("accounts").insert(defaultAccounts).select();
@@ -99,7 +99,7 @@ export async function getAccounts(userId: string): Promise<Account[]> {
           currency: a.currency || "ARS",
           color: a.color || "#10B981",
           icon: a.icon || "Wallet",
-          is_active: a.is_active !== false,
+          is_active: true,
           created_at: a.created_at || new Date().toISOString(),
           updated_at: a.updated_at || a.created_at || new Date().toISOString(),
         }));
@@ -114,7 +114,7 @@ export async function getAccounts(userId: string): Promise<Account[]> {
         currency: a.currency || "ARS",
         color: a.color || "#10B981",
         icon: a.icon || "Wallet",
-        is_active: a.is_active !== false,
+        is_active: true,
         created_at: a.created_at,
         updated_at: a.updated_at || a.created_at,
       }));
@@ -133,6 +133,7 @@ export async function addAccount(userId: string, account: Partial<Account>): Pro
   try {
     const supabase = await createClient();
     const newRow = {
+      id: account.id || crypto.randomUUID(),
       user_id: userId,
       name: account.name || "Nueva Cuenta",
       type: account.type || "digital_wallet",
@@ -140,7 +141,6 @@ export async function addAccount(userId: string, account: Partial<Account>): Pro
       currency: account.currency || "ARS",
       color: account.color || "#10B981",
       icon: account.icon || "Wallet",
-      is_active: true,
     };
 
     const { data, error } = await supabase.from("accounts").insert(newRow).select().single();
@@ -190,7 +190,7 @@ export async function deleteAccount(userId: string, accountId: string): Promise<
       const supabase = await createClient();
       const { error } = await supabase
         .from("accounts")
-        .update({ is_active: false })
+        .delete()
         .eq("id", accountId)
         .eq("user_id", userId);
 

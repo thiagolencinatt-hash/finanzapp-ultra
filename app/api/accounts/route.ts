@@ -1,18 +1,82 @@
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth/get-user";
+import { createAdminClient } from "@/lib/supabase/server";
 import {
-  getAccounts,
   addAccount,
   updateAccount,
   deleteAccount,
+  getAccounts,
 } from "@/lib/db/supabase-store";
 
 // GET /api/accounts
 export async function GET(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req);
-    const accounts = await getAccounts(user.id);
+    const userId = user?.id;
+
+    if (!userId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
+    const supabase = await createAdminClient();
+    const { data: accounts, error } = await supabase
+      .from("accounts")
+      .select("*")
+      .eq("user_id", userId);
+
+    if (error) {
+      console.error("[/api/accounts GET error from Supabase]:", error);
+    }
+
+    if (!accounts || accounts.length === 0) {
+      const defaultAccounts = [
+        {
+          id: crypto.randomUUID(),
+          user_id: userId,
+          name: "Efectivo",
+          type: "cash",
+          balance: 0,
+          currency: "ARS",
+          color: "#10b981",
+          icon: "Wallet",
+        },
+        {
+          id: crypto.randomUUID(),
+          user_id: userId,
+          name: "Mercado Pago",
+          type: "wallet",
+          balance: 0,
+          currency: "ARS",
+          color: "#009ee3",
+          icon: "Smartphone",
+        },
+        {
+          id: crypto.randomUUID(),
+          user_id: userId,
+          name: "Banco / Débito",
+          type: "bank",
+          balance: 0,
+          currency: "ARS",
+          color: "#6366f1",
+          icon: "BuildingLibrary",
+        },
+      ];
+
+      const { data: inserted, error: insertError } = await supabase
+        .from("accounts")
+        .insert(defaultAccounts)
+        .select();
+
+      if (insertError) {
+        console.error("[/api/accounts] Error inserting default accounts:", insertError);
+      }
+
+      return NextResponse.json(inserted && inserted.length > 0 ? inserted : defaultAccounts);
+    }
+
     return NextResponse.json(accounts);
   } catch (err: unknown) {
     console.error("[/api/accounts GET error]:", err);
