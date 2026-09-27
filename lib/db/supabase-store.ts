@@ -283,19 +283,27 @@ export async function addTransaction(
       finalAccountId = await ensureDefaultAccount(userId);
     }
     
-    const newRow: any = {
+    const insertData: Record<string, any> = {
       user_id: userId,
       account_id: finalAccountId,
       category: categoryId,
-      destination_account_id: tx.transfer_to_account_id || null,
       type,
       amount,
       description,
       date,
     };
-    if (tx.id) newRow.id = tx.id;
+    
+    const destId = tx.transfer_to_account_id || (tx as any).destination_account_id;
+    const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+    if (type === "transfer" && destId && uuidRegex.test(destId)) {
+      insertData.destination_account_id = destId;
+    }
 
-    const { data, error } = await supabase.from("transactions").insert(newRow).select().single();
+    if (tx.id) {
+      insertData.id = tx.id;
+    }
+
+    const { data, error } = await supabase.from("transactions").insert(insertData).select().single();
     if (!error && data) {
       if (finalAccountId) {
         const { data: acc } = await supabase
