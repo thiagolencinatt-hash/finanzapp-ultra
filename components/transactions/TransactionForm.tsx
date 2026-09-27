@@ -149,7 +149,9 @@ export function TransactionForm({
       });
 
       if (!res.ok) {
-        throw new Error((await res.json()).error || "Error de servidor");
+        const errorData = await res.json();
+        console.error('[TX_ERROR]', errorData);
+        throw new Error(errorData.error || errorData.details || "Error de servidor");
       }
 
       // Limpiar borrador local

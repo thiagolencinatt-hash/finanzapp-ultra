@@ -265,7 +265,23 @@ export async function addTransaction(
 
   try {
     const supabase = await createClient();
-    const finalAccountId = accountId || (await ensureDefaultAccount(userId));
+    let finalAccountId = accountId;
+
+    if (finalAccountId && finalAccountId !== "default_cash" && finalAccountId !== "cash") {
+      const { data: accCheck } = await supabase
+        .from("accounts")
+        .select("id")
+        .eq("id", finalAccountId)
+        .eq("user_id", userId)
+        .maybeSingle();
+      
+      if (!accCheck) {
+        console.warn(`[supabase-store] Cuenta ${finalAccountId} no existe. Usando cuenta de respaldo.`);
+        finalAccountId = await ensureDefaultAccount(userId);
+      }
+    } else {
+      finalAccountId = await ensureDefaultAccount(userId);
+    }
     
     const newRow: any = {
       user_id: userId,

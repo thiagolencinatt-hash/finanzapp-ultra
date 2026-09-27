@@ -80,6 +80,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: validationError }, { status: 400 });
     }
 
+    const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+    if (!user.id || !uuidRegex.test(user.id)) {
+      return NextResponse.json({ error: "user_id inválido o no es un UUID" }, { status: 400 });
+    }
+
+    if (!body.category_id || body.category_id === "" || body.category_id === "Sin categoría") {
+      body.category_id = "General";
+    }
+
     if (!body.account_id || body.account_id === "default_cash" || body.account_id === "cash" || body.account_id === "") {
       const accounts = await getAccounts(user.id);
       let cashAcc = accounts.find(a => a.name === "Mercado Pago" || a.name === "Efectivo") || accounts[0];
@@ -112,9 +121,13 @@ export async function POST(req: NextRequest) {
 
     const newTx = await addTransaction(user.id, body as unknown as Omit<Transaction, "id" | "created_at">);
     return NextResponse.json(newTx, { status: 201 });
-  } catch (err: unknown) {
+  } catch (err: any) {
     console.error("[/api/transactions POST error]:", err);
-    return NextResponse.json({ error: "Error al guardar transacción" }, { status: 500 });
+    return NextResponse.json({ 
+      error: err.message || "Error al guardar transacción",
+      code: err.code || "UNKNOWN",
+      details: err.details || null
+    }, { status: 500 });
   }
 }
 
