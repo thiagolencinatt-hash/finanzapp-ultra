@@ -41,6 +41,7 @@ export function Sidebar({ forceVisible = false }: { forceVisible?: boolean }) {
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [userEmail, setUserEmail] = useState("");
+  const [userId, setUserId] = useState("");
 
   useEffect(() => {
     try {
@@ -48,12 +49,26 @@ export function Sidebar({ forceVisible = false }: { forceVisible?: boolean }) {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed.email) setUserEmail(parsed.email);
-      } else {
-        const match = document.cookie.match(/finance_user_email=([^;]+)/);
-        if (match && match[1]) {
-          setUserEmail(decodeURIComponent(match[1]));
-        }
+        if (parsed.id) setUserId(parsed.id);
       }
+      
+      const matchEmail = document.cookie.match(/finance_user_email=([^;]+)/);
+      if (matchEmail && matchEmail[1]) {
+        setUserEmail(decodeURIComponent(matchEmail[1]));
+      }
+
+      const matchId = document.cookie.match(/finance_user_id=([^;]+)/);
+      if (matchId && matchId[1]) {
+        setUserId(decodeURIComponent(matchId[1]));
+      }
+
+      fetch("/api/summary", { cache: "no-store" })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data?.user?.id) setUserId(data.user.id);
+          if (data?.user?.email) setUserEmail((prev) => prev || data.user.email);
+        })
+        .catch(() => {});
     } catch {
       // ignore
     }
@@ -176,11 +191,24 @@ export function Sidebar({ forceVisible = false }: { forceVisible?: boolean }) {
 
       {/* Bottom actions */}
       <div className="px-2 pb-4 space-y-1 border-t pt-4" style={{ borderColor: "hsl(var(--border))" }}>
-        {userEmail && !collapsed && (
-          <div className="px-3 mb-2 flex items-center justify-center">
-            <span className="text-[10px] font-medium text-muted-foreground truncate w-full text-center bg-white/[0.03] py-1 rounded-md border border-white/[0.05]">
-              {userEmail}
-            </span>
+        {(userEmail || userId) && (
+          <div className="px-1 mb-2 flex flex-col items-center justify-center gap-1">
+            {!collapsed && userEmail && (
+              <span className="text-[10px] font-medium text-muted-foreground truncate w-full text-center bg-white/[0.03] py-0.5 px-1.5 rounded-md border border-white/[0.05]">
+                {userEmail}
+              </span>
+            )}
+            {userId && (
+              <span
+                className={cn(
+                  "text-[9px] font-mono text-emerald-400 font-semibold truncate text-center bg-emerald-500/10 py-0.5 px-1.5 rounded-md border border-emerald-500/20",
+                  collapsed ? "w-auto max-w-[48px] overflow-hidden" : "w-full"
+                )}
+                title={`User ID: ${userId}`}
+              >
+                {collapsed ? userId.substring(0, 4) : `ID: ${userId.substring(0, 8)}...`}
+              </span>
+            )}
           </div>
         )}
         <Link

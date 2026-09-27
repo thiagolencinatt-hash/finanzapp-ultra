@@ -74,10 +74,18 @@ export async function GET(req: NextRequest) {
         console.error("[/api/accounts] Error inserting default accounts:", insertError);
       }
 
-      return NextResponse.json(inserted && inserted.length > 0 ? inserted : defaultAccounts);
+      return NextResponse.json(inserted && inserted.length > 0 ? inserted : defaultAccounts, {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        },
+      });
     }
 
-    return NextResponse.json(accounts);
+    return NextResponse.json(accounts, {
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+      },
+    });
   } catch (err: unknown) {
     console.error("[/api/accounts GET error]:", err);
     return NextResponse.json({ error: "Error al obtener cuentas" }, { status: 500 });

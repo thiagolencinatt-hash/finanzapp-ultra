@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { verifyOtp } from "@/lib/auth/otp-store";
-import { registerUser, getUserByEmail } from "@/lib/auth/user-store";
+import { registerUser, getUserByEmail, getDeterministicUserId, isValidUuid } from "@/lib/auth/user-store";
 
 export async function POST(request: Request) {
   try {
@@ -97,10 +97,10 @@ export async function POST(request: Request) {
     // Obtener o derivar ID de usuario
     let userId = "";
     const localUser = getUserByEmail(normalizedEmail);
-    if (localUser) {
+    if (localUser && isValidUuid(localUser.id)) {
       userId = localUser.id;
     } else {
-      userId = `user_${normalizedEmail.replace(/[^a-zA-Z0-9]/g, "_")}`;
+      userId = getDeterministicUserId(normalizedEmail);
       registerUser({
         email: normalizedEmail,
         name: verifiedUser.name,

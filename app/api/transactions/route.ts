@@ -1,4 +1,5 @@
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth/get-user";
 import {
@@ -52,12 +53,19 @@ export async function GET(req: NextRequest) {
 
     console.log(`[GET /api/transactions] User ${user.id} (${user.email}): returning ${paginated.length} of ${totalCount} transactions.`);
 
-    return NextResponse.json({
-      data: paginated,
-      count: totalCount,
-      limit,
-      offset,
-    });
+    return NextResponse.json(
+      {
+        data: paginated,
+        count: totalCount,
+        limit,
+        offset,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        },
+      }
+    );
   } catch (err: unknown) {
     console.error("[/api/transactions GET error]:", err);
     return NextResponse.json({ error: "Error al obtener transacciones" }, { status: 500 });

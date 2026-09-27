@@ -26,6 +26,7 @@ export function Header({ title, subtitle, actionButton }: HeaderProps) {
   const [mounted, setMounted] = useState(false);
   const [userName, setUserName] = useState("Usuario");
   const [userEmail, setUserEmail] = useState("");
+  const [userId, setUserId] = useState("");
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
@@ -40,12 +41,26 @@ export function Header({ title, subtitle, actionButton }: HeaderProps) {
         const parsed = JSON.parse(stored);
         if (parsed.name) setUserName(parsed.name);
         if (parsed.email) setUserEmail(parsed.email);
-      } else {
-        const match = document.cookie.match(/finance_user_name=([^;]+)/);
-        if (match && match[1]) {
-          setUserName(decodeURIComponent(match[1]));
-        }
+        if (parsed.id) setUserId(parsed.id);
       }
+      
+      const match = document.cookie.match(/finance_user_name=([^;]+)/);
+      if (match && match[1]) {
+        setUserName(decodeURIComponent(match[1]));
+      }
+
+      const matchId = document.cookie.match(/finance_user_id=([^;]+)/);
+      if (matchId && matchId[1]) {
+        setUserId(decodeURIComponent(matchId[1]));
+      }
+
+      fetch("/api/summary", { cache: "no-store" })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data?.user?.id) setUserId(data.user.id);
+          if (data?.user?.email) setUserEmail((prev) => prev || data.user.email);
+        })
+        .catch(() => {});
     } catch {
       // ignore
     }
@@ -157,6 +172,11 @@ export function Header({ title, subtitle, actionButton }: HeaderProps) {
               <span className="hidden md:inline text-xs font-semibold max-w-[80px] truncate text-zinc-200">
                 {userName}
               </span>
+              {userId && (
+                <span className="text-[9px] font-mono text-emerald-400 font-semibold bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 shrink-0">
+                  {userId.substring(0, 8)}
+                </span>
+              )}
               <ChevronDown className="w-3 h-3 text-zinc-500" />
             </button>
 
@@ -175,6 +195,11 @@ export function Header({ title, subtitle, actionButton }: HeaderProps) {
                   <div className="text-[11px] text-muted-foreground truncate">
                     {userEmail || "Sesión Activa"}
                   </div>
+                  {userId && (
+                    <div className="text-[10px] font-mono text-emerald-400 font-semibold truncate mt-0.5">
+                      ID: {userId.substring(0, 8)}...
+                    </div>
+                  )}
                 </div>
 
                 {/* Acciones Rápidas */}

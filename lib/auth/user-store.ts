@@ -69,6 +69,22 @@ function hashPassword(password: string, salt: string): string {
   return crypto.pbkdf2Sync(password, salt, 100000, 64, "sha512").toString("hex");
 }
 
+export function isValidUuid(id?: string): boolean {
+  if (!id || typeof id !== "string") return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id.trim());
+}
+
+export function getDeterministicUserId(email: string): string {
+  const normalized = (email || "").toLowerCase().trim();
+  const hash = crypto.createHash("sha256").update("finanzapp-v1:" + normalized).digest("hex");
+  const p1 = hash.substring(0, 8);
+  const p2 = hash.substring(8, 12);
+  const p3 = "4" + hash.substring(13, 16);
+  const p4 = ((parseInt(hash.substring(16, 18), 16) & 0x3f) | 0x80).toString(16).padStart(2, "0") + hash.substring(18, 20);
+  const p5 = hash.substring(20, 32);
+  return `${p1}-${p2}-${p3}-${p4}-${p5}`;
+}
+
 export function getUserByEmail(email: string): UserAccount | null {
   ensureLoaded();
   const normalized = email.toLowerCase().trim();
@@ -102,7 +118,7 @@ export function registerUser({
   const now = new Date().toISOString();
 
   const user: UserAccount = {
-    id: existing?.id || crypto.randomUUID(),
+    id: existing?.id || getDeterministicUserId(normalized),
     email: normalized,
     name: name || existing?.name || normalized.split("@")[0],
     passwordHash: passwordHash || existing?.passwordHash || "",
@@ -165,7 +181,7 @@ export function setPasswordForUser(
 
   if (!user) {
     user = {
-      id: crypto.randomUUID(),
+      id: getDeterministicUserId(normalized),
       email: normalized,
       name: normalized.split("@")[0],
       passwordHash,

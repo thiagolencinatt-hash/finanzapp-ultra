@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { verifyUserPassword, getUserByEmail, registerUser } from "@/lib/auth/user-store";
+import { verifyUserPassword, getUserByEmail, registerUser, isValidUuid, getDeterministicUserId } from "@/lib/auth/user-store";
 
 export async function POST(request: Request) {
   try {
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     const localVerification = verifyUserPassword(normalizedEmail, password);
     if (localVerification.valid && localVerification.user) {
       authenticatedUser = {
-        id: localVerification.user.id,
+        id: isValidUuid(localVerification.user.id) ? localVerification.user.id : getDeterministicUserId(normalizedEmail),
         name: localVerification.user.name,
         email: localVerification.user.email,
         currency: localVerification.user.currency,
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
           setPasswordForUser(normalizedEmail, password);
         }
         authenticatedUser = {
-          id: existingUser.id,
+          id: isValidUuid(existingUser.id) ? existingUser.id : getDeterministicUserId(normalizedEmail),
           name: existingUser.name,
           email: existingUser.email,
           currency: existingUser.currency,

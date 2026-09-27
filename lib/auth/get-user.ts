@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getUserByEmail } from "@/lib/auth/user-store";
+import { getUserByEmail, isValidUuid, getDeterministicUserId } from "@/lib/auth/user-store";
 
 export interface AuthenticatedUser {
   id: string;
@@ -79,7 +79,7 @@ export async function getUserFromRequest(req: NextRequest): Promise<Authenticate
     const storedUser = getUserByEmail(rawEmail);
     if (storedUser) {
       return {
-        id: storedUser.id,
+        id: isValidUuid(storedUser.id) ? storedUser.id : getDeterministicUserId(rawEmail),
         email: storedUser.email,
         name: storedUser.name,
         currency: storedUser.currency,
@@ -89,7 +89,7 @@ export async function getUserFromRequest(req: NextRequest): Promise<Authenticate
     }
 
     const rawUserId = userIdCookie ? safeDecode(userIdCookie).trim() : "";
-    const derivedId = rawUserId || `user_${rawEmail.replace(/[^a-zA-Z0-9]/g, "_")}`;
+    const derivedId = isValidUuid(rawUserId) ? rawUserId : getDeterministicUserId(rawEmail);
     return {
       id: derivedId,
       email: rawEmail,

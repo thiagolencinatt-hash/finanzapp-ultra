@@ -55,6 +55,29 @@ function LoginPageContent() {
     return () => clearTimeout(timer);
   }, [countdown]);
 
+  // Auto-vinculación de sesión móvil mediante QR o URL de sincronización directa
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const syncUid = params.get("sync_uid");
+    const syncEmail = params.get("sync_email");
+    if (syncUid) {
+      document.cookie = "finance_session=active; path=/; max-age=31536000; SameSite=Lax";
+      document.cookie = `finance_user_id=${encodeURIComponent(syncUid)}; path=/; max-age=31536000; SameSite=Lax`;
+      if (syncEmail) {
+        document.cookie = `finance_user_email=${encodeURIComponent(syncEmail)}; path=/; max-age=31536000; SameSite=Lax`;
+        document.cookie = `finance_user_name=${encodeURIComponent(syncEmail.split("@")[0])}; path=/; max-age=31536000; SameSite=Lax`;
+      }
+      localStorage.setItem("finanzapp_user_profile", JSON.stringify({
+        id: syncUid,
+        email: syncEmail || "usuario@finanzapp.com",
+        name: syncEmail ? syncEmail.split("@")[0] : "Usuario",
+      }));
+      toast.success("¡Dispositivo vinculado con éxito!");
+      router.push("/");
+    }
+  }, [router]);
+
   // Si ya tiene sesión activa en Supabase, redirigir automáticamente al dashboard
   useEffect(() => {
     if (!isSupabaseConfigured()) return;

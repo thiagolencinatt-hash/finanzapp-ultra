@@ -152,7 +152,8 @@ export function SyncEngine() {
       ]);
       
       if (resTxs.ok) {
-        const txs = await resTxs.json();
+        const resJson = await resTxs.json();
+        const txs = Array.isArray(resJson) ? resJson : (Array.isArray(resJson?.data) ? resJson.data : []);
         if (Array.isArray(txs)) {
           // Obtener actuales para no pisar las locales no sincronizadas que tengan IDs temporales
           const currentTxsStr = localStorage.getItem("local_transactions");

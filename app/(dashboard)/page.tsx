@@ -31,9 +31,10 @@ export default function DashboardPage() {
 
   const loadSummary = useCallback(async () => {
     try {
-      const [resSummary, resCats] = await Promise.all([
+      const [resSummary, resCats, resTxs] = await Promise.all([
         fetch("/api/summary", { cache: "no-store" }),
         fetch("/api/categories", { cache: "no-store" }),
+        fetch("/api/transactions", { cache: "no-store" }),
       ]);
       if (resSummary.ok) {
         const data = await resSummary.json();

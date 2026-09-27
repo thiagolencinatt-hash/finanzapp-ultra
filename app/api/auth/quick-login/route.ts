@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getUserByEmail } from "@/lib/auth/user-store";
+import { getUserByEmail, getDeterministicUserId, isValidUuid } from "@/lib/auth/user-store";
 
 export async function POST(request: Request) {
   try {
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     }
 
     const authenticatedUser = {
-      id: storedUser.id,
+      id: isValidUuid(storedUser.id) ? storedUser.id : getDeterministicUserId(normalizedEmail),
       name: storedUser.name,
       email: storedUser.email,
       currency: storedUser.currency,
