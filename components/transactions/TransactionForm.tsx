@@ -85,11 +85,14 @@ export function TransactionForm({
     }
   }, [form, transaction]);
 
+  const [accountsLoading, setAccountsLoading] = useState(true);
+
   const isUUID = (str: any): boolean =>
     typeof str === 'string' &&
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
 
   useEffect(() => {
+    setAccountsLoading(true);
     Promise.all([
       fetch("/api/accounts").then((r) => r.json()),
       fetch("/api/categories").then((r) => r.json()),
@@ -97,6 +100,7 @@ export function TransactionForm({
       const validAccs = (accs || []).filter((a: Account) => isUUID(a.id));
       setAccounts(validAccs);
       setCategories(cats || []);
+      setAccountsLoading(false);
       if (!transaction) {
         setForm((f) => {
           if (!isUUID(f.account_id) && validAccs.length > 0) {
@@ -312,15 +316,27 @@ export function TransactionForm({
             className="w-full px-4 py-3 rounded-xl text-base sm:text-sm font-medium outline-none bg-black/10 border focus:border-primary focus:ring-1 focus:ring-primary transition-all cursor-pointer"
             style={{ borderColor: "hsl(var(--border) / 0.5)", color: "hsl(var(--foreground))" }}
           >
-            <option value="" className="bg-neutral-900">
-              Seleccionar cuenta...
-            </option>
-
-            {accounts.map((a) => (
-              <option key={a.id} value={a.id} className="bg-neutral-900">
-                {a.name} — {a.currency}
+            {accountsLoading ? (
+              <option value="" disabled className="bg-neutral-900">
+                Cargando cuentas...
               </option>
-            ))}
+            ) : (
+              <>
+                <option value="" className="bg-neutral-900">
+                  Seleccionar cuenta...
+                </option>
+                {accounts.length === 0 && (
+                  <option value="" disabled className="bg-neutral-900 text-neutral-500">
+                    No hay cuentas disponibles
+                  </option>
+                )}
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id} className="bg-neutral-900">
+                    {a.name} — {a.currency}
+                  </option>
+                ))}
+              </>
+            )}
           </select>
         </div>
 
@@ -335,16 +351,24 @@ export function TransactionForm({
               className="w-full px-4 py-3 rounded-xl text-sm font-medium outline-none bg-black/10 border focus:border-primary focus:ring-1 focus:ring-primary transition-all cursor-pointer"
               style={{ borderColor: "hsl(var(--border) / 0.5)", color: "hsl(var(--foreground))" }}
             >
-              <option value="" className="bg-neutral-900">
-                Seleccionar destino...
-              </option>
-              {accounts
-                .filter((a) => a.id !== form.account_id)
-                .map((a) => (
-                  <option key={a.id} value={a.id} className="bg-neutral-900">
-                    {a.name}
+              {accountsLoading ? (
+                <option value="" disabled className="bg-neutral-900">
+                  Cargando cuentas...
+                </option>
+              ) : (
+                <>
+                  <option value="" className="bg-neutral-900">
+                    Seleccionar destino...
                   </option>
-                ))}
+                  {accounts
+                    .filter((a) => a.id !== form.account_id)
+                    .map((a) => (
+                      <option key={a.id} value={a.id} className="bg-neutral-900">
+                        {a.name}
+                      </option>
+                    ))}
+                </>
+              )}
             </select>
           </div>
         )}
