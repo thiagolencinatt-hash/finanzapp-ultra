@@ -8,7 +8,6 @@ import ExcelJS from "exceljs";
 
 // ─── Helpers de estilo ─────────────────────────────────────────────────────
 function hexToArgb(hex: string): string {
-  // ExcelJS usa ARGB, no RGB
   return "FF" + hex.replace("#", "").toUpperCase();
 }
 
@@ -58,30 +57,20 @@ export async function GET(req: NextRequest) {
 
     const supabase = await createAdminClient();
 
-    // Consultar cuentas y transacciones del usuario
-    const [{ data: accounts }, { data: transactions }, { data: categories }] =
-      await Promise.all([
-        supabase
-          .from("accounts")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("name"),
-        supabase
-          .from("transactions")
-          .select("*, account:accounts(name), category:categories(name, color)")
-          .eq("user_id", user.id)
-          .order("date", { ascending: false })
-          .limit(2000),
-        supabase
-          .from("categories")
-          .select("id, name")
-          .or(`user_id.eq.${user.id},is_default.eq.true`),
-      ]);
+    // Consultar cuentas y transacciones
+    const [{ data: accounts }, { data: transactions }] = await Promise.all([
+      supabase.from("accounts").select("*").eq("user_id", user.id).order("name"),
+      supabase
+        .from("transactions")
+        .select("*, account:accounts(name), category:categories(name, color)")
+        .eq("user_id", user.id)
+        .order("date", { ascending: false })
+        .limit(2000),
+    ]);
 
     const accs = accounts ?? [];
     const txs = transactions ?? [];
 
-    // ─── Crear libro ─────────────────────────────────────────────────────
     const workbook = new ExcelJS.Workbook();
     workbook.creator = "FinanzApp Ultra";
     workbook.lastModifiedBy = user.email;
@@ -96,84 +85,76 @@ export async function GET(req: NextRequest) {
     });
 
     // ─────────────────────────────────────────────────────────────────────
-    // HOJA 1: Resumen Ejecutivo
+    // HOJA 1: Resumen General (Tablero Integrado)
     // ─────────────────────────────────────────────────────────────────────
-    const ws1 = workbook.addWorksheet("Resumen Ejecutivo", {
+    const ws1 = workbook.addWorksheet("Resumen General", {
       properties: { tabColor: { argb: "FF059669" } },
     });
 
-    // Título principal
-    ws1.mergeCells("A1:D1");
+    // A. ENCABEZADO SUPERIOR
+    ws1.mergeCells("A1:F1");
     const titleCell = ws1.getCell("A1");
-    titleCell.value = "FinanzApp Ultra — Reporte Financiero";
+    titleCell.value = "FinanzApp Ultra — Control de Ingresos y Gastos";
     titleCell.font = { bold: true, size: 16, color: { argb: "FF0F172A" }, name: "Calibri" };
     titleCell.alignment = { horizontal: "left", vertical: "middle" };
     ws1.getRow(1).height = 30;
 
-    // Subtítulo: fecha y usuario
-    ws1.mergeCells("A2:D2");
+    ws1.mergeCells("A2:F2");
     const subCell = ws1.getCell("A2");
-    subCell.value = `Generado el ${todayStr} a las ${nowStr}  ·  Usuario: ${user.email}`;
+    subCell.value = `Exportado el ${todayStr} a las ${nowStr}  ·  Usuario: ${user.email}`;
     subCell.font = { italic: true, size: 10, color: { argb: "FF64748B" }, name: "Calibri" };
 
-    ws1.addRow([]); // fila vacía
+    ws1.addRow([]); // Fila 3 vacía
+    ws1.addRow([]); // Fila 4 vacía
 
-    // ── Bloque de Totales ─────────────────────────────────────────────
-    const totalIncome = txs
-      .filter((t) => t.type === "income")
-      .reduce((s, t) => s + (t.amount ?? 0), 0);
-    const totalExpense = txs
-      .filter((t) => t.type === "expense")
-      .reduce((s, t) => s + (t.amount ?? 0), 0);
-    const totalBalance = accs.reduce((s, a) => s + (a.balance ?? 0), 0);
+    // B. TARJETAS KPI DE SALDOS (Fila 5)
+    const totalIncome = txs.filter((t) => t.type === "income").reduce((s, t) => s + (t.amount ?? 0), 0);
+    const totalExpense = txs.filter((t) => t.type === "expense").reduce((s, t) => s + (t.amount ?? 0), 0);
+    const balanceNeto = totalIncome - totalExpense;
 
-    // Encabezado de sección
-    ws1.addRow(["RESUMEN FINANCIERO", ""]);
-    const sectionRow = ws1.lastRow!;
-    sectionRow.getCell(1).font = { bold: true, size: 11, color: { argb: "FF0F172A" }, name: "Calibri" };
-    ws1.getRow(sectionRow.number).height = 20;
+    ws1.addRow(["Ingresos Totales", "", "Gastos Totales", "", "Balance Neto", ""]);
+    const kpiTitleRow = ws1.lastRow!;
+    
+    ws1.addRow([totalIncome, "", totalExpense, "", balanceNeto, ""]);
+    const kpiValueRow = ws1.lastRow!;
+    
+    ws1.addRow([]); // Fila 7 vacía
 
-    // Helper para filas de KPI con color
-    function addKpiRow(
-      label: string,
-      value: number,
-      bgFg: { bg: string; fg: string }
-    ) {
-      ws1.addRow([label, value]);
-      const row = ws1.lastRow!;
-      const c1 = row.getCell(1);
-      const c2 = row.getCell(2);
+    ws1.mergeCells("A5:B5"); ws1.mergeCells("A6:B6");
+    ws1.mergeCells("C5:D5"); ws1.mergeCells("C6:D6");
+    ws1.mergeCells("E5:F5"); ws1.mergeCells("E6:F6");
 
-      [c1, c2].forEach((c) => {
-        c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: hexToArgb(bgFg.bg) } };
-        c.font = { bold: true, color: { argb: hexToArgb(bgFg.fg) }, name: "Calibri", size: 10 };
+    function styleKpi(titleCell: ExcelJS.Cell, valueCell: ExcelJS.Cell, bg: string, fg: string) {
+      [titleCell, valueCell].forEach(c => {
+        c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: hexToArgb(bg) } };
         c.border = {
           top: { style: "thin", color: { argb: "FFE2E8F0" } },
           left: { style: "thin", color: { argb: "FFE2E8F0" } },
           bottom: { style: "thin", color: { argb: "FFE2E8F0" } },
           right: { style: "thin", color: { argb: "FFE2E8F0" } },
         };
-        row.height = 18;
+        c.alignment = { horizontal: "center", vertical: "middle" };
       });
-
-      c2.numFmt = "$ #,##0.00";
-      c2.alignment = { horizontal: "right" };
-      c1.alignment = { horizontal: "left", indent: 1 };
+      titleCell.font = { bold: true, color: { argb: hexToArgb(fg) }, size: 10, name: "Calibri" };
+      valueCell.font = { bold: true, color: { argb: hexToArgb(fg) }, size: 14, name: "Calibri" };
+      valueCell.numFmt = "$ #,##0.00";
     }
 
-    addKpiRow("Total Ingresos", totalIncome, { bg: "#D1FAE5", fg: "#065F46" });
-    addKpiRow("Total Gastos", totalExpense, { bg: "#FFE4E6", fg: "#9F1239" });
-    addKpiRow("Balance Neto", totalIncome - totalExpense, { bg: "#EFF6FF", fg: "#1E40AF" });
-    addKpiRow("Balance en Cuentas", totalBalance, { bg: "#F0FDF4", fg: "#166534" });
+    styleKpi(kpiTitleRow.getCell(1), kpiValueRow.getCell(1), "#D1FAE5", "#065F46"); // Ingresos
+    styleKpi(kpiTitleRow.getCell(3), kpiValueRow.getCell(3), "#FFE4E6", "#9F1239"); // Gastos
+    styleKpi(kpiTitleRow.getCell(5), kpiValueRow.getCell(5), "#EFF6FF", "#1E40AF"); // Balance
 
-    ws1.addRow([]); // espacio
+    kpiTitleRow.height = 20;
+    kpiValueRow.height = 30;
 
-    // ── Gastos por Categoría ─────────────────────────────────────────
-    ws1.addRow(["GASTOS POR CATEGORÍA", "", ""]);
+    ws1.addRow([]); // Fila 8 vacía
+
+    // C. TABLA COMPACTA: GASTOS POR CATEGORÍA
+    ws1.addRow(["DISTRIBUCIÓN POR CATEGORÍA", "", ""]);
+    ws1.mergeCells(`A${ws1.lastRow!.number}:C${ws1.lastRow!.number}`);
     const catTitleRow = ws1.lastRow!;
     catTitleRow.getCell(1).font = { bold: true, size: 11, color: { argb: "FF0F172A" }, name: "Calibri" };
-
-    // Encabezados de tabla
+    
     ws1.addRow(["Categoría", "Total Gastado", "% del Total"]);
     const catHeaderRow = ws1.lastRow!;
     ["A", "B", "C"].forEach((col) => {
@@ -181,7 +162,6 @@ export async function GET(req: NextRequest) {
     });
     catHeaderRow.height = 20;
 
-    // Agrupar gastos por categoría
     const catMap = new Map<string, number>();
     txs.filter((t) => t.type === "expense").forEach((t) => {
       const catName = (t.category as { name?: string })?.name ?? "Sin categoría";
@@ -191,32 +171,119 @@ export async function GET(req: NextRequest) {
     const catEntries = Array.from(catMap.entries()).sort((a, b) => b[1] - a[1]);
     const totalCatExp = catEntries.reduce((s, [, v]) => s + v, 0);
 
-    catEntries.forEach(([name, total]) => {
-      const pct = totalCatExp > 0 ? total / totalCatExp : 0;
-      ws1.addRow([name, total, pct]);
-      const row = ws1.lastRow!;
-      applyDataBorder(row.getCell(1));
-      applyDataBorder(row.getCell(2));
-      applyDataBorder(row.getCell(3));
-      row.getCell(1).font = { name: "Calibri", size: 10 };
-      row.getCell(2).numFmt = "$ #,##0.00";
-      row.getCell(2).alignment = { horizontal: "right" };
-      row.getCell(3).numFmt = "0.0%";
-      row.getCell(3).alignment = { horizontal: "center" };
-      row.height = 16;
-    });
-
     if (catEntries.length === 0) {
       ws1.addRow(["Sin gastos registrados", 0, 0]);
+      const row = ws1.lastRow!;
+      applyDataBorder(row.getCell(1)); applyDataBorder(row.getCell(2)); applyDataBorder(row.getCell(3));
+    } else {
+      catEntries.forEach(([name, total]) => {
+        const pct = totalCatExp > 0 ? total / totalCatExp : 0;
+        ws1.addRow([name, total, pct]);
+        const row = ws1.lastRow!;
+        applyDataBorder(row.getCell(1));
+        applyDataBorder(row.getCell(2));
+        applyDataBorder(row.getCell(3));
+        row.getCell(1).font = { name: "Calibri", size: 10 };
+        row.getCell(2).numFmt = "$ #,##0.00";
+        row.getCell(2).alignment = { horizontal: "right" };
+        row.getCell(3).numFmt = "0.0%";
+        row.getCell(3).alignment = { horizontal: "center" };
+        row.height = 16;
+      });
     }
 
-    // Ancho de columnas
-    ws1.columns = [
-      { key: "A", width: 36 },
-      { key: "B", width: 20 },
-      { key: "C", width: 14 },
-      { key: "D", width: 20 },
-    ];
+    ws1.addRow([]); // Fila vacía separadora
+    ws1.addRow([]); // Fila vacía separadora
+
+    // D. LISTA COMPLETA DE MOVIMIENTOS
+    ws1.addRow(["📋 DETALLE COMPLETO DE INGRESOS Y GASTOS"]);
+    const txSectionRow = ws1.lastRow!;
+    ws1.mergeCells(`A${txSectionRow.number}:F${txSectionRow.number}`);
+    const txSectionCell = txSectionRow.getCell(1);
+    txSectionCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: hexToArgb("#1E293B") } };
+    txSectionCell.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 12, name: "Calibri" };
+    txSectionCell.alignment = { horizontal: "left", vertical: "middle", indent: 1 };
+    txSectionRow.height = 25;
+
+    const txHeaders = ["Fecha", "Tipo", "Billetera / Cuenta", "Categoría", "Concepto / Detalle", "Monto ARS"];
+    ws1.addRow(txHeaders);
+    const txHRow = ws1.lastRow!;
+    txHeaders.forEach((_, i) =>
+      applyHeaderStyle(ws1.getCell(txHRow.number, i + 1), "#334155")
+    );
+    txHRow.height = 22;
+
+    const txTypeStyle: Record<string, { fg: string; prefix: string }> = {
+      income:   { fg: "#047857", prefix: "+ " }, // Verde
+      expense:  { fg: "#B91C1C", prefix: "- " }, // Rojo
+      transfer: { fg: "#1D4ED8", prefix: "" },   // Azul
+    };
+    const txTypeLabel: Record<string, string> = {
+      income: "Ingreso", expense: "Gasto", transfer: "Transferencia"
+    };
+
+    if (txs.length === 0) {
+      ws1.addRow([new Date(), "—", "—", "—", "Sin transacciones registradas", 0]);
+      const row = ws1.lastRow!;
+      for (let i = 1; i <= 6; i++) applyDataBorder(row.getCell(i));
+    } else {
+      txs.forEach((t) => {
+        const dateVal = t.date ? new Date(t.date) : new Date();
+        const typeInfo = txTypeStyle[t.type] ?? { fg: "#1E293B", prefix: "" };
+        const acctName = (t.account as { name?: string })?.name ?? "—";
+        const catName = (t.category as { name?: string })?.name ?? "Sin categoría";
+
+        ws1.addRow([
+          dateVal,
+          txTypeLabel[t.type] ?? t.type,
+          acctName,
+          catName,
+          t.description ?? "—",
+          t.amount ?? 0,
+        ]);
+
+        const row = ws1.lastRow!;
+        row.height = 18;
+
+        // Fecha
+        const dateCell = row.getCell(1);
+        dateCell.numFmt = "DD/MM/YYYY";
+        dateCell.alignment = { horizontal: "center" };
+
+        // Tipo
+        const typeCell = row.getCell(2);
+        typeCell.font = { bold: true, color: { argb: hexToArgb(typeInfo.fg) }, size: 10, name: "Calibri" };
+        typeCell.alignment = { horizontal: "center" };
+
+        // Monto
+        const amtCell = row.getCell(6);
+        amtCell.numFmt = `"${typeInfo.prefix}"$ #,##0.00`;
+        amtCell.font = { bold: true, color: { argb: hexToArgb(typeInfo.fg) }, size: 10, name: "Calibri" };
+        amtCell.alignment = { horizontal: "right" };
+
+        for (let i = 1; i <= 6; i++) {
+          const c = row.getCell(i);
+          // Aplicar borde gris fino para que parezca tabla
+          c.border = {
+            top: { style: "thin", color: { argb: "FFCBD5E1" } },
+            left: { style: "thin", color: { argb: "FFCBD5E1" } },
+            bottom: { style: "thin", color: { argb: "FFCBD5E1" } },
+            right: { style: "thin", color: { argb: "FFCBD5E1" } },
+          };
+          if (i !== 2 && i !== 6) {
+            c.font = { name: "Calibri", size: 10 };
+          }
+        }
+      });
+    }
+
+    // E. AJUSTE DE COLUMNAS
+    ws1.getColumn(1).width = 14; // Fecha
+    ws1.getColumn(2).width = 14; // Tipo
+    ws1.getColumn(3).width = 22; // Cuenta
+    ws1.getColumn(4).width = 20; // Categoría
+    ws1.getColumn(5).width = 35; // Descripción
+    ws1.getColumn(6).width = 18; // Monto
 
     // ─────────────────────────────────────────────────────────────────────
     // HOJA 2: Cuentas
@@ -247,102 +314,6 @@ export async function GET(req: NextRequest) {
 
     if (accs.length === 0) ws2.addRow(["Sin cuentas", "-", "ARS", 0, "-"]);
     autoFitColumns(ws2);
-
-    // ─────────────────────────────────────────────────────────────────────
-    // HOJA 3: Detalle de Transacciones (la hoja estrella)
-    // ─────────────────────────────────────────────────────────────────────
-    const ws3 = workbook.addWorksheet("Detalle de Transacciones", {
-      properties: { tabColor: { argb: "FF8B5CF6" } },
-      views: [{ state: "frozen", ySplit: 1 }], // congelar encabezado
-    });
-
-    const txHeaders = ["Fecha", "Tipo", "Cuenta", "Categoría", "Concepto / Descripción", "Monto ARS"];
-    ws3.addRow(txHeaders);
-    const txHRow = ws3.lastRow!;
-    txHeaders.forEach((_, i) =>
-      applyHeaderStyle(ws3.getCell(txHRow.number, i + 1), "#0F172A")
-    );
-    txHRow.height = 22;
-
-    // Mapa de colores según tipo de transacción
-    const txTypeBg: Record<string, { bg: string; fg: string; label: string }> = {
-      income:   { bg: "#D1FAE5", fg: "#065F46", label: "Ingreso" },
-      expense:  { bg: "#FFE4E6", fg: "#9F1239", label: "Gasto" },
-      transfer: { bg: "#DBEAFE", fg: "#1E40AF", label: "Transferencia" },
-    };
-
-    txs.forEach((t) => {
-      const dateVal = t.date ? new Date(t.date) : new Date();
-      const typeInfo = txTypeBg[t.type] ?? { bg: "#F8FAFC", fg: "#1E293B", label: t.type };
-      const acctName = (t.account as { name?: string })?.name ?? "—";
-      const catName = (t.category as { name?: string })?.name ?? "Sin categoría";
-
-      ws3.addRow([
-        dateVal,
-        typeInfo.label,
-        acctName,
-        catName,
-        t.description ?? "—",
-        t.amount ?? 0,
-      ]);
-
-      const row = ws3.lastRow!;
-      row.height = 16;
-
-      // Celda de fecha
-      const dateCell = row.getCell(1);
-      dateCell.numFmt = "DD/MM/YYYY";
-      dateCell.alignment = { horizontal: "center" };
-
-      // Celda de tipo: coloreada según tipo
-      const typeCell = row.getCell(2);
-      typeCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: hexToArgb(typeInfo.bg) } };
-      typeCell.font = { bold: true, color: { argb: hexToArgb(typeInfo.fg) }, size: 9, name: "Calibri" };
-      typeCell.alignment = { horizontal: "center" };
-
-      // Celda de monto con formato bicolor (positivo verde, negativo rojo)
-      const amtCell = row.getCell(6);
-      amtCell.numFmt = '$ #,##0.00;[Red]-$ #,##0.00';
-      amtCell.alignment = { horizontal: "right" };
-
-      // Bordes finos para todas las celdas
-      for (let i = 1; i <= 6; i++) {
-        const c = row.getCell(i);
-        applyDataBorder(c);
-        if (i !== 2) {
-          // fuente base para celdas sin color especial
-          if (!c.font?.bold) {
-            c.font = { name: "Calibri", size: 10 };
-          }
-        }
-      }
-
-      // Zebra striping suave: filas pares con fondo muy sutil
-      if (row.number % 2 === 0) {
-        for (let i = 1; i <= 6; i++) {
-          const c = row.getCell(i);
-          if (i !== 2) {
-            const f = c.fill as ExcelJS.FillPattern | undefined;
-            const hasFill = f?.type === "pattern" && f?.pattern === "solid";
-            if (!hasFill) {
-              c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF8FAFC" } };
-            }
-          }
-        }
-      }
-    });
-
-    if (txs.length === 0) {
-      ws3.addRow([new Date(), "—", "—", "—", "Sin transacciones registradas", 0]);
-    }
-
-    // Anchos optimizados para transacciones
-    ws3.getColumn(1).width = 14; // Fecha
-    ws3.getColumn(2).width = 16; // Tipo
-    ws3.getColumn(3).width = 22; // Cuenta
-    ws3.getColumn(4).width = 24; // Categoría
-    ws3.getColumn(5).width = 42; // Descripción
-    ws3.getColumn(6).width = 18; // Monto
 
     // ─────────────────────────────────────────────────────────────────────
     // Serializar y responder
