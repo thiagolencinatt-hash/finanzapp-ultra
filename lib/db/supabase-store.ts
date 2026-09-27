@@ -12,6 +12,10 @@ import type {
 } from "@/lib/types";
 import * as localStore from "./cloud-store";
 
+export const isUUID = (str: any): boolean =>
+  typeof str === 'string' &&
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
+
 export async function ensureDefaultAccount(userId: string): Promise<string> {
   const DEMO_ACCOUNT_UUID = "11111111-1111-1111-1111-111111111111";
   if (userId === "demo-user") return DEMO_ACCOUNT_UUID;
@@ -153,21 +157,23 @@ export async function updateAccount(
   updates: Partial<Account>
 ): Promise<Account | null> {
   try {
-    const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("accounts")
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", accountId)
-      .eq("user_id", userId)
-      .select()
-      .maybeSingle();
+    if (isUUID(accountId)) {
+      const supabase = await createClient();
+      const { data, error } = await supabase
+        .from("accounts")
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", accountId)
+        .eq("user_id", userId)
+        .select()
+        .maybeSingle();
 
-    if (!error && data) {
-      await localStore.updateUserAccount(userId, accountId, updates);
-      return data;
+      if (!error && data) {
+        await localStore.updateUserAccount(userId, accountId, updates);
+        return data;
+      }
     }
   } catch (err) {
     console.warn("[supabase-store] updateAccount fallback:", err);
@@ -177,16 +183,18 @@ export async function updateAccount(
 
 export async function deleteAccount(userId: string, accountId: string): Promise<boolean> {
   try {
-    const supabase = await createClient();
-    const { error } = await supabase
-      .from("accounts")
-      .update({ is_active: false })
-      .eq("id", accountId)
-      .eq("user_id", userId);
+    if (isUUID(accountId)) {
+      const supabase = await createClient();
+      const { error } = await supabase
+        .from("accounts")
+        .update({ is_active: false })
+        .eq("id", accountId)
+        .eq("user_id", userId);
 
-    if (!error) {
-      await localStore.deleteUserAccount(userId, accountId);
-      return true;
+      if (!error) {
+        await localStore.deleteUserAccount(userId, accountId);
+        return true;
+      }
     }
   } catch (err) {
     console.warn("[supabase-store] deleteAccount fallback:", err);

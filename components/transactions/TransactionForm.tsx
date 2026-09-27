@@ -85,17 +85,22 @@ export function TransactionForm({
     }
   }, [form, transaction]);
 
+  const isUUID = (str: any): boolean =>
+    typeof str === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
+
   useEffect(() => {
     Promise.all([
       fetch("/api/accounts").then((r) => r.json()),
       fetch("/api/categories").then((r) => r.json()),
     ]).then(([accs, cats]) => {
-      setAccounts(accs || []);
+      const validAccs = (accs || []).filter((a: Account) => isUUID(a.id));
+      setAccounts(validAccs);
       setCategories(cats || []);
       if (!transaction) {
         setForm((f) => {
-          if (!f.account_id && accs && accs.length > 0) {
-            const preferred = accs.find((a: Account) => a.name === "Mercado Pago" || a.name === "Efectivo") || accs[0];
+          if (!isUUID(f.account_id) && validAccs.length > 0) {
+            const preferred = validAccs.find((a: Account) => a.name === "Mercado Pago" || a.name === "Efectivo") || validAccs[0];
             return { ...f, account_id: preferred.id };
           }
           return f;
@@ -122,12 +127,17 @@ export function TransactionForm({
     }
 
     const txId = isEditing && transaction?.id ? transaction.id : crypto.randomUUID();
+    let sanitizedAccountId = form.account_id;
+    if (sanitizedAccountId === 'default-cash' || sanitizedAccountId === 'default_cash' || !isUUID(sanitizedAccountId)) {
+      sanitizedAccountId = "";
+    }
+
     const body: Record<string, unknown> = {
       id: txId,
       type: form.type,
       amount: parseFloat(form.amount),
       currency: form.currency,
-      account_id: form.account_id,
+      account_id: sanitizedAccountId,
       category_id: form.category_id || null,
       description: form.description || null,
       date: form.date,
