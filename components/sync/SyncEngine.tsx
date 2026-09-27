@@ -139,6 +139,57 @@ export function SyncEngine() {
     }
   }, []);
 
+  // ─── Hydrate from Cloud (Cold Start) ──────────────────────────────────────
+  const hydrateFromCloud = useCallback(async () => {
+    try {
+      console.log(`${LOG_PREFIX} 📥 Iniciando hidratación en frío (Cold Start)...`);
+      
+      const [resTxs, resAccs, resBudgets, resGoals] = await Promise.all([
+        fetch("/api/transactions", { cache: "no-store" }),
+        fetch("/api/accounts", { cache: "no-store" }),
+        fetch("/api/budgets", { cache: "no-store" }),
+        fetch("/api/goals", { cache: "no-store" })
+      ]);
+      
+      if (resTxs.ok) {
+        const txs = await resTxs.json();
+        if (Array.isArray(txs)) {
+          localStorage.setItem("local_transactions", JSON.stringify(txs.map((t: any) => ({ ...t, synced: true }))));
+        }
+      }
+      
+      if (resAccs.ok) {
+        const accs = await resAccs.json();
+        if (Array.isArray(accs)) {
+          localStorage.setItem("local_accounts", JSON.stringify(accs));
+        }
+      }
+
+      if (resBudgets.ok) {
+        const budgets = await resBudgets.json();
+        if (Array.isArray(budgets)) {
+          localStorage.setItem("local_budgets", JSON.stringify(budgets));
+        }
+      }
+
+      if (resGoals.ok) {
+        const goals = await resGoals.json();
+        if (Array.isArray(goals)) {
+          localStorage.setItem("local_goals", JSON.stringify(goals));
+        }
+      }
+      
+      invalidateSummaryCache();
+      
+      console.log(`${LOG_PREFIX} ✅ Hidratación en frío completada`);
+      window.dispatchEvent(new CustomEvent("finance-refresh", { detail: { source: "cloud_hydration" } }));
+      router.refresh();
+      
+    } catch (err) {
+      console.warn(`${LOG_PREFIX} Error durante la hidratación en frío:`, err);
+    }
+  }, [invalidateSummaryCache, router]);
+
   // ─── Sync Local Unsynced Data to Cloud ────────────────────────────────────
   const syncLocalData = useCallback(async () => {
     try {
@@ -383,6 +434,11 @@ export function SyncEngine() {
             }, 3500);
           }
 
+          // Ejecutar hidratación inicial desde la nube
+          if (isMountedRef.current) {
+            await hydrateFromCloud();
+          }
+
           // Inicializar Realtime WebSocket
           unsubscribeRealtime = setupRealtime();
         }
@@ -406,7 +462,7 @@ export function SyncEngine() {
       window.removeEventListener("focus", handleFocusChange);
       console.log(`${LOG_PREFIX} 🔌 SyncEngine desmontado y limpiado`);
     };
-  }, [syncLocalData, setupRealtime, handleVisibilityChange, handleFocusChange]);
+  }, [syncLocalData, setupRealtime, handleVisibilityChange, handleFocusChange, hydrateFromCloud]);
 
   if (status === "checking" || status === "idle") return null;
 

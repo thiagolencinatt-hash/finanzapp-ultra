@@ -37,24 +37,54 @@ export default function DashboardPage() {
       ]);
       if (resSummary.ok) {
         const data = await resSummary.json();
-        // GEL-021: Validación estricta del resumen antes de aceptar la respuesta
+        // GEL-021 & GEL-023: Validación estricta y Anti-Zero Shield
         if (data && typeof data.total_balance === 'number') {
+          let finalData = data;
+
+          if (data.total_balance === 0 && data.income_30d === 0 && data.expense_30d === 0) {
+            try {
+              const localTxs = JSON.parse(localStorage.getItem("local_transactions") || "[]");
+              if (Array.isArray(localTxs) && localTxs.length > 0) {
+                console.warn("[Dashboard] GEL-023: Servidor devolvió 0 pero hay transacciones locales. Recalculando...");
+                let recalcBal = 0;
+                let recalcInc = 0;
+                let recalcExp = 0;
+                for (const t of localTxs) {
+                  const val = Number(t.amount) || 0;
+                  if (t.type === "income") { recalcBal += val; recalcInc += val; }
+                  else if (t.type === "expense") { recalcBal -= val; recalcExp += val; }
+                }
+                finalData = {
+                  ...data,
+                  total_balance: recalcBal,
+                  income_30d: recalcInc,
+                  expense_30d: recalcExp
+                };
+              }
+            } catch (e) {
+              // ignora error de parseo
+            }
+          }
+
           setSummary((prev) => {
-            // Anti-reset: Si el nuevo resumen tiene 0 transacciones y 0 balance
-            // pero el anterior tenía datos, mantener el anterior (race condition protection)
             if (
               prev &&
               prev.total_balance !== 0 &&
-              data.total_balance === 0 &&
-              (data.income_30d === 0 && data.expense_30d === 0) &&
+              finalData.total_balance === 0 &&
+              (finalData.income_30d === 0 && finalData.expense_30d === 0) &&
               (prev.income_30d > 0 || prev.expense_30d > 0)
             ) {
               console.warn("[Dashboard] Blocked suspicious zero-state summary update. Keeping cached data.");
+              finalData = prev;
               return prev;
             }
-            return data;
+            return finalData;
           });
-          localStorage.setItem("finanzapp_last_summary", JSON.stringify(data));
+          
+          // Guardar el estado final aceptado
+          setTimeout(() => {
+            localStorage.setItem("finanzapp_last_summary", JSON.stringify(finalData));
+          }, 0);
         }
       } else {
         // Anti-reset: Si el servidor falla, leemos del último estado conocido

@@ -303,19 +303,6 @@ async function executeTool(
         const description = (args.description as string) || (args.category_name as string) || "Operación IA";
         const date = (args.date as string) || new Date().toISOString();
 
-        let payload: any = {
-          id: crypto.randomUUID(),
-          user_id: userId,
-          amount,
-          type,
-          description,
-          date,
-          account_id: "", // Se resolverá en addTransaction con ensureDefaultAccount()
-          account_name: args.account_name || "Efectivo",
-          created_at: new Date().toISOString(),
-          synced: false
-        };
-
         try {
           const newTx = await addTransaction(userId, {
             user_id: userId,
@@ -324,15 +311,19 @@ async function executeTool(
             description,
             date,
           });
-          payload = { ...newTx, synced: true };
-        } catch (e) {
-          console.warn("AI DB write failed, deferring to local-first client storage", e);
+          
+          return {
+            data: { action: "create_transaction", transaction: { ...newTx, synced: true } },
+            summary: `✅ ${type === "income" ? "Ingreso" : "Gasto"} de $${amount.toLocaleString("es-AR")} registrado.`,
+          };
+        } catch (e: any) {
+          console.error("AI DB write failed:", e);
+          return {
+            data: null,
+            error: e.message || "No se pudo registrar la transacción",
+            summary: `❌ Hubo un error al intentar registrar el ${type === "income" ? "ingreso" : "gasto"}.`,
+          };
         }
-
-        return {
-          data: { action: "create_transaction", transaction: payload },
-          summary: `✅ ${type === "income" ? "Ingreso" : "Gasto"} de $${amount.toLocaleString("es-AR")} registrado.`,
-        };
       }
 
       case "create_installment": {

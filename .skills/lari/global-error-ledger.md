@@ -248,3 +248,27 @@ Aquí Lari documenta cada incidente crítico y la lección definitiva para la po
   2) **SIEMPRE verificar que las tablas estén en `supabase_realtime`** — sin esta publicación, los WebSockets son canales vacíos.
   3) **SIEMPRE manejar `visibilitychange` y `focus`** en apps financieras móviles para reconectar canales WebSocket zombie.
   4) **SIEMPRE usar `REPLICA IDENTITY FULL`** en tablas donde se necesite el payload completo en eventos DELETE.
+
+---
+### ID: GEL-023 | Hidratación Inicial en Móvil (Cold Start), Persistencia IA y Anti-Zero Shield
+* **Fecha**: 2026-09-26
+* **Síntomas**:
+  1) Al abrir la app en el celular por primera vez (o sin caché), el balance aparecía en $0.00 y no mostraba transacciones, a pesar de que la PC sí las tenía.
+  2) El Asistente IA confirmaba haber creado un ingreso/gasto, inyectaba un estado optimista, pero la transacción se perdía al recargar porque el servidor no la había persistido.
+  3) El dashboard a veces reemplazaba un estado local válido con un { totalBalance: 0 } proveniente del servidor debido a un fallo de red o race condition.
+* **Causas Raíz**:
+  1) **SyncEngine.tsx dependía solo de incremental Realtime events**. No realizaba un fetch total de la base de datos (hydrateFromCloud) al montarse si el localStorage estaba vacío. Supabase Realtime *solo envía eventos futuros*, no backfills pasados.
+  2) **Trago de Errores (Swallowed Error) en API IA**: `api/ai-assistant/route.ts` retornaba "✅ Gasto registrado" ¡incluso si el `addTransaction` fallaba! Esto provocaba una "Transacción Fantasma" que el frontend creía real.
+  3) **Blindaje Anti-Cero débil**: `app/(dashboard)/page.tsx` bloqueaba el reseteo a 0 si `prev.total_balance !== 0`. Pero en el primer render de Cold Start, `prev` es null, por lo que el dashboard aceptaba los datos vacíos y *sobreescribía* el localStorage válido.
+* **Solución**:
+  1) **Cold Start Hydration**: Se añadió `hydrateFromCloud()` en `SyncEngine.tsx` que se ejecuta durante el chequeo inicial. Si el servidor responde OK, inyecta `local_transactions` y otros al `localStorage` inmediatamente, invalidando el cache.
+  2) **Atomicidad IA**: Se arregló `create_transaction` en `api/ai-assistant/route.ts` para que use `await` y si la DB falla, devuelve un error. El cliente ya no inyecta optimistamente falsas transacciones si el backend falló.
+  3) **Anti-Zero Shield Robusto**: El Dashboard ahora escanea el `localStorage` (`local_transactions`) de forma síncrona dentro del procesamiento de datos del servidor. Si el servidor devuelve `$0` *pero* hay transacciones válidas en memoria, ¡RECHAZA EL 0! y calcula sintéticamente los balances basados en las transacciones locales.
+* **Archivos modificados**:
+  - `components/sync/SyncEngine.tsx` (agregado hydrateFromCloud)
+  - `app/api/ai-assistant/route.ts` (manejo correcto de excepciones en tool)
+  - `app/(dashboard)/page.tsx` (recálculo local sintético frente a server 0)
+* **Regla Preventiva**:
+  1) **Todo cliente Local-First necesita una estrategia de "Cold Start Hydration"**. Realtime no es suficiente.
+  2) **Las Tools de IA JAMÁS deben ocultar fallos de Base de Datos**. El "✅" solo se devuelve si el commit SQL fue exitoso.
+  3) **Regla de Oro: Ninguna respuesta nula o fallida del servidor debe borrar datos locales válidos**. Si el servidor da 0 pero tienes caché de transacciones, reconstruye el balance desde tu memoria local.
