@@ -68,15 +68,20 @@ function LoginPageContent() {
         document.cookie = `finance_user_email=${encodeURIComponent(syncEmail)}; path=/; max-age=31536000; SameSite=Lax`;
         document.cookie = `finance_user_name=${encodeURIComponent(syncEmail.split("@")[0])}; path=/; max-age=31536000; SameSite=Lax`;
       }
-      localStorage.setItem("finanzapp_user_profile", JSON.stringify({
+      const cleanSyncEmail = syncEmail || "usuario@finanzapp.com";
+      const profile = {
         id: syncUid,
-        email: syncEmail || "usuario@finanzapp.com",
+        email: cleanSyncEmail,
         name: syncEmail ? syncEmail.split("@")[0] : "Usuario",
-      }));
+      };
+      localStorage.setItem("finanzapp_user_profile", JSON.stringify(profile));
+      localStorage.setItem("local_user_id", syncUid);
+      localStorage.setItem("local_user_email", cleanSyncEmail);
       toast.success("¡Dispositivo vinculado con éxito!");
-      router.push("/");
+      // Recarga completa para que SyncEngine y Header lean el nuevo userId
+      window.location.href = "/";
     }
-  }, [router]);
+  }, []);
 
   // Si ya tiene sesión activa en Supabase, redirigir automáticamente al dashboard
   useEffect(() => {
@@ -332,14 +337,23 @@ function LoginPageContent() {
         }
 
         if (data?.user) {
-          document.cookie = "finance_session=active; path=/; max-age=31536000; SameSite=Lax";
-          document.cookie = `finance_user_email=${encodeURIComponent(data.user.email || cleanEmail)}; path=/; max-age=31536000; SameSite=Lax`;
-          document.cookie = `finance_user_id=${encodeURIComponent(data.user.id || `user_${cleanEmail.replace(/[^a-zA-Z0-9]/g, "_")}`)}; path=/; max-age=31536000; SameSite=Lax`;
-          if (data.user.name) {
-            document.cookie = `finance_user_name=${encodeURIComponent(data.user.name)}; path=/; max-age=31536000; SameSite=Lax`;
-          }
-          localStorage.setItem("finanzapp_user_profile", JSON.stringify(data.user));
+          const finalUserId = data.user.id || "";
+          const finalEmail = data.user.email || cleanEmail;
 
+          // Cookies de sesión (30 días)
+          document.cookie = "finance_session=active; path=/; max-age=2592000; SameSite=Lax";
+          document.cookie = `finance_user_email=${encodeURIComponent(finalEmail)}; path=/; max-age=2592000; SameSite=Lax`;
+          document.cookie = `finance_user_id=${encodeURIComponent(finalUserId)}; path=/; max-age=2592000; SameSite=Lax`;
+          if (data.user.name) {
+            document.cookie = `finance_user_name=${encodeURIComponent(data.user.name)}; path=/; max-age=2592000; SameSite=Lax`;
+          }
+
+          // localStorage — fuente de verdad para SyncEngine, Header y Sidebar
+          localStorage.setItem("finanzapp_user_profile", JSON.stringify(data.user));
+          localStorage.setItem("local_user_id", finalUserId);
+          localStorage.setItem("local_user_email", finalEmail);
+
+          // Intentar sincronizar también con Supabase Auth en segundo plano
           if (isSupabaseConfigured()) {
             try {
               const supabase = createClient();
@@ -349,7 +363,8 @@ function LoginPageContent() {
             }
           }
 
-          router.push("/");
+          // Recarga completa: garantiza que todos los hooks lean el userId correcto
+          window.location.href = "/";
         }
       }
     } catch (err: unknown) {

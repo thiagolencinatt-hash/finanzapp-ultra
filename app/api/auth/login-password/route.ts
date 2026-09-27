@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { verifyUserPassword, getUserByEmail, registerUser, isValidUuid, getDeterministicUserId } from "@/lib/auth/user-store";
+import {
+  verifyUserPassword,
+  getUserByEmail,
+  registerUser,
+  getDeterministicUserId,
+} from "@/lib/auth/user-store";
 
 export async function POST(request: Request) {
   try {
@@ -14,24 +19,40 @@ export async function POST(request: Request) {
       );
     }
 
+    // =========================================================
+    // REGLA FUNDAMENTAL (GEL-032):
+    // El user_id SIEMPRE es el hash SHA-256 determinístico del email.
+    // NUNCA se usa el UUID de Supabase Auth ni crypto.randomUUID().
+    // Esto garantiza que el mismo email siempre produce el mismo ID
+    // y coincide con los datos en Supabase tables (accounts, transactions…).
+    // =========================================================
     const normalizedEmail = email.trim().toLowerCase();
-    let authenticatedUser: { id: string; name: string; email: string; currency: string; salary: number } | null = null;
+    const userId = getDeterministicUserId(normalizedEmail);
+
+    let authenticatedUser: {
+      id: string;
+      name: string;
+      email: string;
+      currency: string;
+      salary: number;
+    } | null = null;
     let authSource = "local";
 
-    // 1. Verificar primero en el almacén persistente local
+    // 1. Verificar en el almacén persistente local
     const localVerification = verifyUserPassword(normalizedEmail, password);
     if (localVerification.valid && localVerification.user) {
       authenticatedUser = {
-        id: isValidUuid(localVerification.user.id) ? localVerification.user.id : getDeterministicUserId(normalizedEmail),
+        id: userId, // SIEMPRE determinístico
         name: localVerification.user.name,
-        email: localVerification.user.email,
+        email: normalizedEmail,
         currency: localVerification.user.currency,
         salary: localVerification.user.salary,
       };
       authSource = "local";
     }
 
-    // 2. Si no se autenticó localmente, intentar con Supabase si está disponible
+    // 2. Si no hubo match local, verificar con Supabase Auth como validador de contraseña.
+    //    El ID sigue siendo el determinístico: NUNCA se usa data.user.id de Supabase Auth.
     if (!authenticatedUser) {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
       const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
@@ -49,40 +70,47 @@ export async function POST(request: Request) {
           });
 
           if (!supaErr && data.user) {
-            authSource = "supabase";
+            authSource = "supabase-verified";
+            // Nombre y metadatos de Supabase Auth, pero ID SIEMPRE determinístico
             authenticatedUser = {
-              id: data.user.id,
-              name: data.user.user_metadata?.name || normalizedEmail.split("@")[0],
-              email: data.user.email || normalizedEmail,
-              currency: data.user.user_metadata?.currency || "ARS",
-              salary: data.user.user_metadata?.salary || 980000,
+              id: userId, // SHA-256 determinístico — NUNCA data.user.id
+              name:
+                (data.user.user_metadata?.name as string) ||
+                normalizedEmail.split("@")[0],
+              email: normalizedEmail,
+              currency:
+                (data.user.user_metadata?.currency as string) || "ARS",
+              salary:
+                Number(data.user.user_metadata?.salary) || 980000,
             };
           }
         } catch {
-          // ignore
+          // silent fallback
         }
       }
     }
 
+    // 3. Usuario existe en store pero contraseña incorrecta → auto-update contraseña
     if (!authenticatedUser) {
       const existingUser = getUserByEmail(normalizedEmail);
       if (existingUser) {
-        // En vez de bloquear al usuario con error de contraseña, actualizamos su contraseña y permitimos el acceso inmediato
         if (password.length >= 6) {
           const { setPasswordForUser } = await import("@/lib/auth/user-store");
           setPasswordForUser(normalizedEmail, password);
         }
         authenticatedUser = {
-          id: isValidUuid(existingUser.id) ? existingUser.id : getDeterministicUserId(normalizedEmail),
+          id: userId, // SIEMPRE determinístico
           name: existingUser.name,
-          email: existingUser.email,
+          email: normalizedEmail,
           currency: existingUser.currency,
           salary: existingUser.salary,
         };
         authSource = "local-auto-updated";
       }
+    }
 
-      // Si el usuario no existe aún y la contraseña tiene >= 6 caracteres, crearlo automáticamente para máxima comodidad
+    // 4. Usuario nuevo → auto-crear cuenta
+    if (!authenticatedUser) {
       if (password.length >= 6) {
         const reg = registerUser({
           email: normalizedEmail,
@@ -93,9 +121,9 @@ export async function POST(request: Request) {
         });
         if (reg.success && reg.user) {
           authenticatedUser = {
-            id: reg.user.id,
+            id: userId, // SIEMPRE determinístico
             name: reg.user.name,
-            email: reg.user.email,
+            email: normalizedEmail,
             currency: reg.user.currency,
             salary: reg.user.salary,
           };
@@ -116,7 +144,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Asegurar que el cloud store esté inicializado
+    // Pre-inicializar el cloud store con el ID correcto
     try {
       const { getUserStore } = await import("@/lib/db/cloud-store");
       await getUserStore(authenticatedUser.id, {
@@ -137,12 +165,13 @@ export async function POST(request: Request) {
     });
 
     const maxAge = 60 * 60 * 24 * 30; // 30 días
+
     response.cookies.set("finance_session", "active", {
       path: "/",
       maxAge,
       sameSite: "lax",
     });
-    // BORRAR explícitamente cualquier cookie de demo previa para que la cuenta tenga todas las funciones desbloqueadas
+    // Borrar cookie demo
     response.cookies.set("finance_demo_session", "", {
       path: "/",
       maxAge: 0,
@@ -151,34 +180,23 @@ export async function POST(request: Request) {
     response.cookies.set(
       "finance_user_name",
       encodeURIComponent(authenticatedUser.name),
-      {
-        path: "/",
-        maxAge,
-        sameSite: "lax",
-      }
+      { path: "/", maxAge, sameSite: "lax" }
     );
     response.cookies.set(
       "finance_user_email",
       encodeURIComponent(authenticatedUser.email),
-      {
-        path: "/",
-        maxAge,
-        sameSite: "lax",
-      }
+      { path: "/", maxAge, sameSite: "lax" }
     );
     response.cookies.set(
       "finance_user_id",
       encodeURIComponent(authenticatedUser.id),
-      {
-        path: "/",
-        maxAge,
-        sameSite: "lax",
-      }
+      { path: "/", maxAge, sameSite: "lax" }
     );
 
     return response;
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Error al iniciar sesión";
+    const message =
+      error instanceof Error ? error.message : "Error al iniciar sesión";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

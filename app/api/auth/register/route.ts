@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { registerUser, getUserByEmail } from "@/lib/auth/user-store";
+import { registerUser, getDeterministicUserId } from "@/lib/auth/user-store";
 
 export async function POST(request: Request) {
   try {
@@ -21,7 +21,11 @@ export async function POST(request: Request) {
       );
     }
 
+    // =========================================================
+    // REGLA FUNDAMENTAL (GEL-032): ID siempre determinístico
+    // =========================================================
     const normalizedEmail = email.trim().toLowerCase();
+    const userId = getDeterministicUserId(normalizedEmail);
     const userName = (name || normalizedEmail.split("@")[0]).trim();
 
     // 1. Registrar usuario en almacén local persistente
@@ -40,21 +44,21 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. Intentar registrar en Supabase en segundo plano si está disponible
+    // 2. Intentar registrar en Supabase Auth en segundo plano (solo para verificación futura)
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-    if (supabaseUrl.length > 15 && supabaseKey.length > 15 && !supabaseUrl.includes("your-project")) {
+    if (
+      supabaseUrl.length > 15 &&
+      supabaseKey.length > 15 &&
+      !supabaseUrl.includes("your-project")
+    ) {
       try {
         const supabase = createClient(supabaseUrl, supabaseKey);
         await supabase.auth.signUp({
           email: normalizedEmail,
           password,
           options: {
-            data: {
-              name: userName,
-              currency,
-              salary: Number(salary) || 980000,
-            },
+            data: { name: userName, currency, salary: Number(salary) || 980000 },
           },
         });
       } catch (e) {
@@ -62,25 +66,25 @@ export async function POST(request: Request) {
       }
     }
 
-    // 3. Inicializar almacén persistente en la nube para este usuario
+    // 3. Inicializar almacén en la nube con el ID determinístico
     try {
       const { getUserStore } = await import("@/lib/db/cloud-store");
-      await getUserStore(regResult.user.id, {
-        email: regResult.user.email,
-        name: regResult.user.name,
-        currency: regResult.user.currency,
-        salary: regResult.user.salary,
+      await getUserStore(userId, {
+        email: normalizedEmail,
+        name: userName,
+        currency,
+        salary: Number(salary) || 980000,
       });
     } catch (e) {
       console.warn("Could not pre-init user store:", e);
     }
 
     const authenticatedUser = {
-      id: regResult.user.id,
-      name: regResult.user.name,
-      email: regResult.user.email,
-      currency: regResult.user.currency,
-      salary: regResult.user.salary,
+      id: userId, // SIEMPRE determinístico
+      name: userName,
+      email: normalizedEmail,
+      currency,
+      salary: Number(salary) || 980000,
     };
 
     const response = NextResponse.json({
@@ -95,7 +99,6 @@ export async function POST(request: Request) {
       maxAge,
       sameSite: "lax",
     });
-    // BORRAR explícitamente cualquier cookie de demo previa
     response.cookies.set("finance_demo_session", "", {
       path: "/",
       maxAge: 0,
@@ -104,34 +107,23 @@ export async function POST(request: Request) {
     response.cookies.set(
       "finance_user_name",
       encodeURIComponent(authenticatedUser.name),
-      {
-        path: "/",
-        maxAge,
-        sameSite: "lax",
-      }
+      { path: "/", maxAge, sameSite: "lax" }
     );
     response.cookies.set(
       "finance_user_email",
       encodeURIComponent(authenticatedUser.email),
-      {
-        path: "/",
-        maxAge,
-        sameSite: "lax",
-      }
+      { path: "/", maxAge, sameSite: "lax" }
     );
     response.cookies.set(
       "finance_user_id",
       encodeURIComponent(authenticatedUser.id),
-      {
-        path: "/",
-        maxAge,
-        sameSite: "lax",
-      }
+      { path: "/", maxAge, sameSite: "lax" }
     );
 
     return response;
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Error al registrar cuenta";
+    const message =
+      error instanceof Error ? error.message : "Error al registrar cuenta";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
