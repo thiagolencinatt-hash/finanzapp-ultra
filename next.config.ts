@@ -8,6 +8,8 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "**.supabase.co" },
     ],
   },
+  // exceljs tiene dependencias con módulos nativos: excluir del bundle del servidor
+  serverExternalPackages: ["exceljs"],
   // PWA se configurará manualmente sin next-pwa para evitar conflictos con Turbopack
 };
 
