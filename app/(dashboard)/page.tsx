@@ -19,6 +19,8 @@ import { Loader2, SlidersHorizontal, ChevronDown, ChevronUp, Lock, UploadCloud, 
 import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
 import { CashFlowProjectionCard } from "@/components/dashboard/CashFlowProjectionCard";
 import { BankStatementModal } from "@/components/import/BankStatementModal";
+import { SalaryCard } from "@/components/dashboard/SalaryCard";
+import { WorkScheduleCard } from "@/components/dashboard/WorkScheduleCard";
 
 
 export default function DashboardPage() {
@@ -178,6 +180,23 @@ export default function DashboardPage() {
                 monthlyInstallments={summary?.total_installments_monthly || 0}
                 onRefresh={loadSummary}
               />
+            </div>
+          </ErrorBoundary>
+
+          {/* 💼 Mi Sueldo & Cobro (GEL-042) */}
+          <ErrorBoundary fallbackTitle="Error en sueldo" fallbackMessage="La tarjeta de sueldo no pudo cargarse.">
+            <div className="animate-slide-up">
+              <SalaryCard
+                initialSalary={summary?.configured_salary || summary?.income_30d || 0}
+                onSalaryUpdated={() => loadSummary()}
+              />
+            </div>
+          </ErrorBoundary>
+
+          {/* 📅 Mis Horarios de Trabajo (GEL-042) */}
+          <ErrorBoundary fallbackTitle="Error en horarios" fallbackMessage="El cronograma de horarios no pudo cargarse.">
+            <div className="animate-slide-up">
+              <WorkScheduleCard />
             </div>
           </ErrorBoundary>
 

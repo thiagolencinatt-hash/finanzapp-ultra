@@ -9,6 +9,8 @@ import type {
   CategoryBudget,
   Subscription,
   ChatMessage,
+  SalaryRecord,
+  WorkShift,
 } from "@/lib/types";
 import * as localStore from "./cloud-store";
 
@@ -1241,3 +1243,127 @@ export async function addChatMessage(
 
   return newMsg;
 }
+
+// ---- GEL-042: Mi Sueldo & Mis Horarios (Supabase + Fallback Local) ----
+
+export async function getSalaryRecords(userId: string): Promise<SalaryRecord[]> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("salary_records")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+
+    if (!error && Array.isArray(data)) {
+      return data;
+    }
+  } catch (err) {
+    console.warn("[supabase-store] getSalaryRecords falling back to localStore:", err);
+  }
+  return localStore.getSalaryRecords(userId);
+}
+
+export async function saveSalaryRecord(
+  userId: string,
+  record: Omit<SalaryRecord, "id" | "user_id" | "created_at">
+): Promise<SalaryRecord> {
+  try {
+    const supabase = await createClient();
+    const newRecord = {
+      user_id: userId,
+      period: record.period,
+      net_salary: Number(record.net_salary) || 0,
+      gross_salary: record.gross_salary !== undefined ? Number(record.gross_salary) : null,
+      total_hours: Number(record.total_hours) || 160,
+      hourly_rate_normal: Number(record.hourly_rate_normal) || 0,
+      hourly_rate_night: Number(record.hourly_rate_night) || 0,
+    };
+
+    const { data, error } = await supabase
+      .from("salary_records")
+      .insert([newRecord])
+      .select("*")
+      .single();
+
+    if (!error && data) {
+      // Sincronizar también con store local
+      await localStore.saveSalaryRecord(userId, record);
+      return data;
+    }
+  } catch (err) {
+    console.warn("[supabase-store] saveSalaryRecord falling back to localStore:", err);
+  }
+  return localStore.saveSalaryRecord(userId, record);
+}
+
+export async function getWorkShifts(userId: string): Promise<WorkShift[]> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("work_shifts")
+      .select("*")
+      .eq("user_id", userId)
+      .order("shift_date", { ascending: true });
+
+    if (!error && Array.isArray(data)) {
+      return data;
+    }
+  } catch (err) {
+    console.warn("[supabase-store] getWorkShifts falling back to localStore:", err);
+  }
+  return localStore.getWorkShifts(userId);
+}
+
+export async function saveWorkShifts(
+  userId: string,
+  shifts: Array<Omit<WorkShift, "id" | "user_id" | "created_at">>
+): Promise<WorkShift[]> {
+  try {
+    const supabase = await createClient();
+    const rows = shifts.map((s) => ({
+      user_id: userId,
+      shift_date: s.shift_date,
+      day_name: s.day_name,
+      start_time: s.start_time,
+      end_time: s.end_time,
+      total_hours: Number(s.total_hours) || 0,
+      night_hours: Number(s.night_hours) || 0,
+      coworkers_overlap: Array.isArray(s.coworkers_overlap) ? s.coworkers_overlap : [],
+      notes: s.notes || null,
+    }));
+
+    const { data, error } = await supabase
+      .from("work_shifts")
+      .upsert(rows, { onConflict: "user_id,shift_date" })
+      .select("*");
+
+    if (!error && data) {
+      await localStore.saveWorkShifts(userId, shifts);
+      return data;
+    }
+  } catch (err) {
+    console.warn("[supabase-store] saveWorkShifts falling back to localStore:", err);
+  }
+  return localStore.saveWorkShifts(userId, shifts);
+}
+
+export async function deleteWorkShift(userId: string, id: string): Promise<boolean> {
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase
+      .from("work_shifts")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", userId);
+
+    if (!error) {
+      await localStore.deleteWorkShift(userId, id);
+      return true;
+    }
+  } catch (err) {
+    console.warn("[supabase-store] deleteWorkShift falling back to localStore:", err);
+  }
+  return localStore.deleteWorkShift(userId, id);
+}
+

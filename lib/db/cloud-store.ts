@@ -10,6 +10,8 @@ import type {
   CategoryBudget,
   Subscription,
   ChatMessage,
+  SalaryRecord,
+  WorkShift,
 } from "@/lib/types";
 import {
   demoAccounts,
@@ -39,6 +41,8 @@ export interface UserFinancialStore {
   budgets: CategoryBudget[];
   subscriptions: Subscription[];
   chatMessages: ChatMessage[];
+  salaryRecords?: SalaryRecord[];
+  workShifts?: WorkShift[];
   lastUpdated: string;
 }
 
@@ -691,3 +695,84 @@ export async function addUserChatMessage(userId: string, message: ChatMessage): 
   }
   await saveUserStore(userId);
 }
+
+// ---- GEL-042: Mi Sueldo & Mis Horarios en Cloud Store ----
+
+export async function getSalaryRecords(userId: string): Promise<SalaryRecord[]> {
+  const store = await getUserStore(userId);
+  return store.salaryRecords || [];
+}
+
+export async function saveSalaryRecord(
+  userId: string,
+  data: Omit<SalaryRecord, "id" | "user_id" | "created_at">
+): Promise<SalaryRecord> {
+  const store = await getUserStore(userId);
+  if (!store.salaryRecords) store.salaryRecords = [];
+
+  const newRecord: SalaryRecord = {
+    id: `sal-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+    user_id: userId,
+    period: data.period,
+    net_salary: Number(data.net_salary) || 0,
+    gross_salary: data.gross_salary !== undefined ? Number(data.gross_salary) : null,
+    total_hours: Number(data.total_hours) || 160,
+    hourly_rate_normal: Number(data.hourly_rate_normal) || 0,
+    hourly_rate_night: Number(data.hourly_rate_night) || 0,
+    created_at: new Date().toISOString(),
+  };
+
+  store.salaryRecords.unshift(newRecord);
+  // También actualizar sueldo en user store y finanzas
+  store.user.salary = newRecord.net_salary;
+  updateUserSalary(userId, newRecord.net_salary);
+
+  await saveUserStore(userId);
+  return newRecord;
+}
+
+export async function getWorkShifts(userId: string): Promise<WorkShift[]> {
+  const store = await getUserStore(userId);
+  return store.workShifts || [];
+}
+
+export async function saveWorkShifts(
+  userId: string,
+  shifts: Array<Omit<WorkShift, "id" | "user_id" | "created_at">>
+): Promise<WorkShift[]> {
+  const store = await getUserStore(userId);
+  if (!store.workShifts) store.workShifts = [];
+
+  const newShifts: WorkShift[] = shifts.map((s, i) => ({
+    id: `shift-${Date.now()}-${i}-${Math.random().toString(36).substring(2, 6)}`,
+    user_id: userId,
+    shift_date: s.shift_date,
+    day_name: s.day_name,
+    start_time: s.start_time,
+    end_time: s.end_time,
+    total_hours: Number(s.total_hours) || 0,
+    night_hours: Number(s.night_hours) || 0,
+    coworkers_overlap: Array.isArray(s.coworkers_overlap) ? s.coworkers_overlap : [],
+    notes: s.notes || null,
+    created_at: new Date().toISOString(),
+  }));
+
+  // Reemplazar o combinar: añadimos los nuevos evitando duplicados de fecha
+  const incomingDates = new Set(newShifts.map((s) => s.shift_date));
+  store.workShifts = [
+    ...newShifts,
+    ...store.workShifts.filter((s) => !incomingDates.has(s.shift_date)),
+  ].sort((a, b) => a.shift_date.localeCompare(b.shift_date));
+
+  await saveUserStore(userId);
+  return store.workShifts;
+}
+
+export async function deleteWorkShift(userId: string, id: string): Promise<boolean> {
+  const store = await getUserStore(userId);
+  if (!store.workShifts) return false;
+  store.workShifts = store.workShifts.filter((s) => s.id !== id);
+  await saveUserStore(userId);
+  return true;
+}
+

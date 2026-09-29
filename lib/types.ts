@@ -266,3 +266,45 @@ export interface SavingsGoalFormData {
   currency: string;
   product_url: string;
 }
+
+// ---- GEL-042: Mi Sueldo & Mis Horarios ----
+
+export interface SalaryRecord {
+  id: string;
+  user_id: string;
+  period: string; // ej: "Marzo 2026"
+  net_salary: number; // Sueldo en mano
+  gross_salary: number | null;
+  total_hours: number; // Horas base mensuales (ej: 160 o 200)
+  hourly_rate_normal: number;
+  hourly_rate_night: number;
+  created_at: string;
+}
+
+export interface CoworkerOverlap {
+  name: string;
+  overlap_hours: number;
+  their_shift?: string;
+}
+
+export interface WorkShift {
+  id: string;
+  user_id: string;
+  shift_date: string; // YYYY-MM-DD
+  day_name?: string; // "Lunes"
+  start_time: string; // "14:00"
+  end_time: string; // "22:00"
+  total_hours: number;
+  night_hours: number; // Horas entre las 21:00 y las 06:00
+  coworkers_overlap: CoworkerOverlap[];
+  notes?: string | null;
+  created_at: string;
+}
+
+export interface SalaryFormData {
+  period: string;
+  net_salary: number;
+  gross_salary?: number;
+  total_hours: number;
+}
+
