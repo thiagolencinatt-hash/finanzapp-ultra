@@ -76,13 +76,13 @@ export async function POST(req: NextRequest) {
       : mimeType || (fileName.endsWith(".png") ? "image/png" : "image/jpeg");
     const base64Data = buffer.toString("base64");
 
-    const prompt = `Eres un extractor contable experto. Analiza este comprobante o extracto bancario de Mercado Pago.
-Extrae todas las transacciones individuales y devuelve EXCLUSIVAMENTE un JSON con este formato:
+    const prompt = `Eres un extractor contable experto. Analiza este comprobante o extracto bancario de Mercado Pago (o cualquier entidad bancaria).
+Extrae TODAS las transacciones individuales (tanto gastos/débitos/pagos como ingresos/cobros/transferencias/rendimientos) y devuelve EXCLUSIVAMENTE un JSON con este formato:
 {
   "transactions": [
     {
       "date": "YYYY-MM-DD",
-      "description": "Nombre del comercio o concepto",
+      "description": "Nombre del comercio, destinatario, emisor o concepto",
       "amount": 1234.50,
       "type": "expense",
       "category": "Comida"
@@ -90,14 +90,15 @@ Extrae todas las transacciones individuales y devuelve EXCLUSIVAMENTE un JSON co
   ]
 }
 
-Reglas estrictas:
-- El campo "amount" debe ser un número positivo (ej: 1250.50, nunca negativo ni con signo $).
-- El campo "type" debe ser "expense" (para compras, pagos, débitos, transferencias enviadas) o "income" (para cobros, transferencias recibidas, sueldos, rendimientos).
-- El campo "category" debe ser una de las siguientes o la más representativa: "Comida" | "Servicios" | "Transporte" | "Transferencia" | "Supermercado" | "Salud" | "Entretenimiento" | "General".
-- El campo "date" debe ser en formato ISO YYYY-MM-DD. Si solo figura día y mes, asume el año actual (2026).
-- Si es un comprobante único (ticket de pago), extrae la transacción principal.
-- Si es un extracto con múltiples filas, extrae cada movimiento individual.
-- Devuelve SOLO el objeto JSON sin texto antes ni después, ni delimitadores markdown como \`\`\`json.`;
+Reglas estrictas e indispensables:
+1. "amount": Debe ser SIEMPRE un número positivo (ej: 1250.50, nunca negativo ni con signo $). Si en el documento aparece con signo negativo (-$1.250,50 o -$ 500), conviértelo a número positivo (1250.50 o 500).
+2. "type": 
+   - Define "expense" para cualquier gasto, compra con tarjeta/QR, pago de servicio, débito o dinero enviado.
+   - Define "income" para transferencias recibidas, cobros, sueldos, liquidaciones, ingresos de dinero o rendimientos de cuenta.
+3. "category": Selecciona la más adecuada entre: "Comida" | "Servicios" | "Transporte" | "Transferencia" | "Supermercado" | "Salud" | "Entretenimiento" | "General".
+4. "date": Fecha en formato estándar ISO YYYY-MM-DD. Si solo indica día y mes (ej: "28 de Septiembre"), añade el año 2026. Si no figura fecha exacta, pon la fecha de hoy.
+5. Extrae TODOS los movimientos visibles en el extracto o comprobante. Si es un comprobante individual de una transferencia o pago, extrae ese único movimiento con exactitud.
+6. Devuelve EXCLUSIVAMENTE el JSON crudo, sin texto adicional, sin introducciones y sin bloques markdown como \`\`\`json.`;
 
     const genai = getGenAI();
     let rawJson: string | null = null;
@@ -123,13 +124,13 @@ Reglas estrictas:
           ],
         });
 
-        const text = response.text || "";
-        const clean = text
+        const responseText = response.text || "";
+        const cleanJson = responseText
           .replace(/```json/gi, "")
-          .replace(/```/g, "")
+          .replace(/```/gi, "")
           .trim();
 
-        const jsonMatch = clean.match(/\{[\s\S]*\}/);
+        const jsonMatch = cleanJson.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           rawJson = jsonMatch[0];
           break;
@@ -154,8 +155,8 @@ Reglas estrictas:
     const rawTxs = Array.isArray(parsedResult.transactions) ? parsedResult.transactions : [];
     if (rawTxs.length === 0) {
       return NextResponse.json(
-        { error: "No se identificaron transacciones en el documento o imagen enviado." },
-        { status: 400 }
+        { error: "No se encontraron movimientos en este documento." },
+        { status: 422 }
       );
     }
 
