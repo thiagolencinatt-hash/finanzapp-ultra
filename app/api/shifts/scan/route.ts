@@ -55,13 +55,17 @@ ${targetEmployee ? `El usuario busca los horarios de: "${targetEmployee}". Si es
 
 Tareas indispensables:
 1. Detecta la lista de todos los nombres de empleados/compañeros presentes en la planilla.
-2. Para cada día de la semana o fecha asignada al empleado objetivo:
-   - Extrae la fecha o día ("YYYY-MM-DD" si figura mes/año, o el día actual proyectado con el día de la semana).
-   - "dayName": Nombre del día en español (ej: "Lunes", "Martes", etc.).
-   - "startTime": Hora de inicio del turno en formato "HH:MM" (ej: "14:00").
-   - "endTime": Hora de finalización del turno en formato "HH:MM" (ej: "22:00").
-   - "totalHours": Horas totales de duración del turno.
-   - "nightHours": Horas nocturnas comprendidas entre las 21:00 y las 06:00.
+2. Identifica la semana completa (Lunes a Domingo):
+   - Horarios de trabajo habituales.
+   - ¡MUY IMPORTANTE!: Identifica explícitamente el día de "Franco", "Libre", "Descanso", "F" o casillero vacío del trabajador. Si un día no trabaja o tiene franco semanal, márcalo con "isRestDay": true, "startTime": "Franco", "endTime": "Franco", "totalHours": 0, "nightHours": 0.
+3. Para cada día de la semana o fecha asignada al empleado objetivo:
+   - "date": Fecha en formato "YYYY-MM-DD" si figura mes/año, o proyectada según el día.
+   - "dayName": Nombre del día en español (ej: "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo").
+   - "startTime": Hora de inicio del turno en formato "HH:MM" (o "Franco" si es día libre).
+   - "endTime": Hora de finalización del turno en formato "HH:MM" (o "Franco" si es día libre).
+   - "totalHours": Horas totales de duración del turno (0 si es franco).
+   - "nightHours": Horas nocturnas comprendidas entre las 21:00 y las 06:00 (0 si es franco).
+   - "isRestDay": Booleano (true si es franco/descanso semanal, false si es laborable).
    - "coworkers": Array de compañeros que trabajan ese mismo día en horarios que se superpongan o compartan franja horaria:
      * "name": Nombre del compañero.
      * "overlapHours": Cantidad de horas exactas que coinciden en el turno.
@@ -79,10 +83,21 @@ Devuelve EXCLUSIVAMENTE un JSON válido con esta estructura:
       "endTime": "22:00",
       "totalHours": 8,
       "nightHours": 1,
+      "isRestDay": false,
       "coworkers": [
         { "name": "Martín", "overlapHours": 4, "theirShift": "18:00 - 02:00" },
         { "name": "Sofía", "overlapHours": 8, "theirShift": "14:00 - 22:00" }
       ]
+    },
+    {
+      "date": "YYYY-MM-DD",
+      "dayName": "Domingo",
+      "startTime": "Franco",
+      "endTime": "Franco",
+      "totalHours": 0,
+      "nightHours": 0,
+      "isRestDay": true,
+      "coworkers": []
     }
   ]
 }
@@ -152,13 +167,28 @@ Reglas estrictas:
       );
     }
 
-    // Normalizar y auditar horas y nocturnidad con la lógica matemática exacta de payroll-calculator
+    // Normalizar y auditar horas, francos y nocturnidad con la lógica matemática exacta
     const today = new Date();
+    const WEEK_DAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+
     const formattedShifts = rawShifts.map((s: any, idx: number) => {
-      const startTime = s.startTime || s.start_time || "09:00";
-      const endTime = s.endTime || s.end_time || "17:00";
-      const totalHours = Number(s.totalHours || s.total_hours) || calculateShiftDuration(startTime, endTime);
-      const nightHours = Number(s.nightHours || s.night_hours) || calculateNightHours(startTime, endTime);
+      const rawStart = String(s.startTime || s.start_time || "09:00").trim();
+      const rawEnd = String(s.endTime || s.end_time || "17:00").trim();
+      const rawDayName = s.dayName || s.day_name || "Día";
+      const notes = s.notes || "";
+
+      const isRest = 
+        Boolean(s.isRestDay || s.is_rest_day) ||
+        rawStart.toLowerCase().includes("franco") ||
+        rawStart.toLowerCase().includes("libre") ||
+        rawStart.toLowerCase().includes("descanso") ||
+        rawEnd.toLowerCase().includes("franco") ||
+        notes.toLowerCase().includes("franco");
+
+      const startTime = isRest ? "Franco" : rawStart;
+      const endTime = isRest ? "Franco" : rawEnd;
+      const totalHours = isRest ? 0 : (Number(s.totalHours || s.total_hours) || calculateShiftDuration(startTime, endTime));
+      const nightHours = isRest ? 0 : (Number(s.nightHours || s.night_hours) || calculateNightHours(startTime, endTime));
 
       // Si no hay fecha YYYY-MM-DD completa, asignar fecha secuencial a partir de hoy
       let shiftDate = s.date || s.shift_date;
@@ -178,15 +208,43 @@ Reglas estrictas:
 
       return {
         shift_date: shiftDate,
-        day_name: s.dayName || s.day_name || "Día",
+        day_name: rawDayName,
         start_time: startTime,
         end_time: endTime,
         total_hours: totalHours,
         night_hours: nightHours,
+        is_rest_day: isRest,
         coworkers_overlap: coworkers,
-        notes: s.notes || null,
+        notes: isRest ? "Franco semanal (Día de descanso)" : (notes || null),
       };
     });
+
+    // GEL-043: Si la planilla tiene 6 días laborables y ningún franco, inferir y agregar el día restante como Franco
+    const hasAnyRestDay = formattedShifts.some((s: any) => s.is_rest_day);
+    if (!hasAnyRestDay && formattedShifts.length === 6) {
+      const normalizeDay = (d: string) => d.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const presentDays = new Set(formattedShifts.map((s: any) => normalizeDay(s.day_name)));
+      const missingDay = WEEK_DAYS.find((d) => !presentDays.has(normalizeDay(d)));
+
+      if (missingDay) {
+        // Encontrar fecha adecuada o agregar un día después del último
+        const lastShiftDate = formattedShifts[formattedShifts.length - 1].shift_date;
+        const nextDate = new Date(lastShiftDate);
+        nextDate.setDate(nextDate.getDate() + 1);
+
+        formattedShifts.push({
+          shift_date: nextDate.toISOString().split("T")[0],
+          day_name: missingDay,
+          start_time: "Franco",
+          end_time: "Franco",
+          total_hours: 0,
+          night_hours: 0,
+          is_rest_day: true,
+          coworkers_overlap: [],
+          notes: "Franco semanal (Día de descanso)",
+        });
+      }
+    }
 
     return NextResponse.json({
       success: true,

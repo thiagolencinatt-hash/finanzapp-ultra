@@ -754,6 +754,7 @@ export async function saveWorkShifts(
     night_hours: Number(s.night_hours) || 0,
     coworkers_overlap: Array.isArray(s.coworkers_overlap) ? s.coworkers_overlap : [],
     notes: s.notes || null,
+    is_rest_day: Boolean(s.is_rest_day) || s.start_time?.toLowerCase().includes("franco") || s.notes?.toLowerCase().includes("franco") || false,
     created_at: new Date().toISOString(),
   }));
 

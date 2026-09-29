@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS public.work_shifts (
     night_hours NUMERIC NOT NULL DEFAULT 0,
     coworkers_overlap JSONB DEFAULT '[]'::jsonb,
     notes TEXT,
+    is_rest_day BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

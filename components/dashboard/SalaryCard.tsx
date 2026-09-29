@@ -170,37 +170,39 @@ export function SalaryCard({ initialSalary = 0, onSalaryUpdated }: SalaryCardPro
         <div className="absolute -top-16 -right-16 w-52 h-52 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
 
         {/* Encabezado */}
-        <div className="flex items-center justify-between gap-3 mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-9 h-9 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 flex items-center justify-center shrink-0">
               <Briefcase className="w-4 h-4 stroke-[2.4]" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-sm sm:text-base font-extrabold text-white truncate">
                   Mi Sueldo & Cobro
                 </h3>
                 {salaryRecord?.period && (
-                  <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono bg-white/[0.05] text-neutral-300 border border-white/[0.08]">
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono bg-white/[0.05] text-neutral-300 border border-white/[0.08]">
                     {salaryRecord.period}
                   </span>
                 )}
               </div>
-              <p className="text-xs text-neutral-400">
+              <p className="text-xs text-neutral-400 truncate">
                 Liquidación de haberes y cálculo de jornada
               </p>
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setShowModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-xs font-bold text-neutral-200 transition-all cursor-pointer active:scale-95 shrink-0 shadow-sm"
-            title="Ajustar o escanear recibo"
-          >
-            <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="hidden xs:inline">Actualizar</span>
-          </button>
+          <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={() => setShowModal(true)}
+              className="w-full sm:w-auto min-h-[46px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-xs font-bold text-neutral-200 transition-all cursor-pointer active:scale-95 shadow-sm"
+              title="Ajustar o escanear recibo"
+            >
+              <SlidersHorizontal className="w-4 h-4 text-emerald-400" />
+              <span>Actualizar Sueldo</span>
+            </button>
+          </div>
         </div>
 
         {/* Cifra Principal: Sueldo en Mano */}
@@ -282,7 +284,7 @@ export function SalaryCard({ initialSalary = 0, onSalaryUpdated }: SalaryCardPro
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in">
           <div className="fixed inset-0" onClick={() => !scanning && setShowModal(false)} />
 
-          <div className="relative w-full max-w-lg max-h-[85dvh] flex flex-col rounded-3xl bg-neutral-950 border border-white/10 shadow-[0_25px_70px_rgba(0,0,0,0.9)] overflow-hidden z-10 animate-slide-up">
+          <div className="relative w-full max-w-lg max-h-[88dvh] flex flex-col rounded-3xl bg-neutral-950 border border-white/10 shadow-[0_25px_70px_rgba(0,0,0,0.9)] overflow-hidden z-10 animate-slide-up pb-safe">
             {/* Header del Modal */}
             <div className="sticky top-0 bg-neutral-900/95 backdrop-blur-md z-10 px-5 py-4 border-b border-white/10 flex items-center justify-between">
               <div>
@@ -307,29 +309,29 @@ export function SalaryCard({ initialSalary = 0, onSalaryUpdated }: SalaryCardPro
             </div>
 
             {/* Selector de Pestañas */}
-            <div className="px-5 pt-3 pb-1 border-b border-white/[0.06] flex gap-2">
+            <div className="px-5 pt-3 pb-2 border-b border-white/[0.06] flex flex-col sm:flex-row gap-2.5 sm:gap-3 w-full">
               <button
                 type="button"
                 onClick={() => setActiveTab("scan")}
-                className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                className={`w-full sm:w-auto flex-1 min-h-[46px] px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${
                   activeTab === "scan"
                     ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-sm"
-                    : "text-neutral-400 hover:text-neutral-200"
+                    : "text-neutral-400 hover:text-neutral-200 bg-white/[0.02]"
                 }`}
               >
-                <Sparkles className="w-3.5 h-3.5" />
+                <Sparkles className="w-4 h-4" />
                 <span>Escanear con IA (Foto/PDF)</span>
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab("manual")}
-                className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                className={`w-full sm:w-auto flex-1 min-h-[46px] px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${
                   activeTab === "manual"
                     ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-sm"
-                    : "text-neutral-400 hover:text-neutral-200"
+                    : "text-neutral-400 hover:text-neutral-200 bg-white/[0.02]"
                 }`}
               >
-                <SlidersHorizontal className="w-3.5 h-3.5" />
+                <SlidersHorizontal className="w-4 h-4" />
                 <span>Ajuste Manual</span>
               </button>
             </div>
@@ -356,16 +358,19 @@ export function SalaryCard({ initialSalary = 0, onSalaryUpdated }: SalaryCardPro
                         <p className="text-xs text-neutral-400 max-w-xs mb-4">
                           Acepta fotos de cámara, capturas o archivos PDF oficiales
                         </p>
-                        <label className="px-5 py-3 rounded-xl bg-emerald-500 text-black font-bold text-xs uppercase tracking-wider hover:bg-emerald-400 transition-all cursor-pointer active:scale-95 shadow-md shadow-emerald-500/20">
-                          Seleccionar Archivo o Tomar Foto
-                          <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="application/pdf,image/png,image/jpeg,image/webp"
-                            onChange={handleFileUpload}
-                            className="hidden"
-                          />
-                        </label>
+                        <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 w-full max-w-xs justify-center">
+                          <label className="w-full min-h-[46px] px-5 py-2.5 rounded-xl bg-emerald-500 text-black font-bold text-xs uppercase tracking-wider hover:bg-emerald-400 transition-all cursor-pointer active:scale-95 shadow-md shadow-emerald-500/20 flex items-center justify-center gap-2">
+                            <UploadCloud className="w-4 h-4" />
+                            <span>Seleccionar Archivo o Foto</span>
+                            <input
+                              ref={fileInputRef}
+                              type="file"
+                              accept="application/pdf,image/png,image/jpeg,image/webp"
+                              onChange={handleFileUpload}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
                       </>
                     )}
                   </div>
@@ -458,7 +463,7 @@ export function SalaryCard({ initialSalary = 0, onSalaryUpdated }: SalaryCardPro
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full py-3.5 rounded-xl bg-emerald-500 text-black font-extrabold text-sm uppercase tracking-wider hover:bg-emerald-400 transition-all cursor-pointer active:scale-95 shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
+                    className="w-full min-h-[46px] px-4 py-2.5 rounded-xl bg-emerald-500 text-black font-extrabold text-sm uppercase tracking-wider hover:bg-emerald-400 transition-all cursor-pointer active:scale-95 shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
                   >
                     {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4 stroke-[3]" />}
                     <span>Confirmar y Guardar Sueldo</span>

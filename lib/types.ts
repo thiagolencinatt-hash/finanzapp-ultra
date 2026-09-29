@@ -298,6 +298,7 @@ export interface WorkShift {
   night_hours: number; // Horas entre las 21:00 y las 06:00
   coworkers_overlap: CoworkerOverlap[];
   notes?: string | null;
+  is_rest_day?: boolean; // Día libre o franco semanal
   created_at: string;
 }
 
