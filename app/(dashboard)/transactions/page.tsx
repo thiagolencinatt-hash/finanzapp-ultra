@@ -157,7 +157,7 @@ export default function TransactionsPage() {
     <div className="flex flex-col">
       <Header title="Transacciones & Gastos" subtitle={`${total} movimientos registrados`} />
 
-      <div className="flex-1 p-4 lg:p-6">
+      <div className="flex-1 p-4 lg:p-6 pb-32 lg:pb-8">
         {/* Quick summary stats */}
         {transactions.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">

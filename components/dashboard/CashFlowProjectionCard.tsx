@@ -57,7 +57,7 @@ export function CashFlowProjectionCard({ summary }: CashFlowProjectionCardProps)
   }[analysis.healthStatus];
 
   return (
-    <div className="rounded-[2rem] glass-strong p-4 sm:p-6 lg:p-7 relative overflow-hidden card-hover">
+    <div className="rounded-2xl sm:rounded-[2rem] p-5 sm:p-6 lg:p-7 border border-white/5 bg-neutral-900/60 backdrop-blur-md relative overflow-hidden shadow-xl">
       {/* Glow ambiental */}
       <div 
         className="absolute -top-20 -right-20 w-60 h-60 rounded-full opacity-10 blur-3xl pointer-events-none"

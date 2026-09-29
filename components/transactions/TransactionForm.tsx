@@ -297,25 +297,29 @@ export function TransactionForm({
       windowId="transaction-form-window"
       defaultPosition={{ x: 0, y: 0 }}
       footer={
-        <div className="flex w-full gap-3">
+        <div className="flex flex-col sm:flex-row w-full gap-2 sm:gap-3">
           {isEditing && (
             <button
               type="button"
               onClick={handleDelete}
               disabled={loading}
-              className="py-3 px-4 rounded-xl text-sm font-bold text-rose-500 bg-rose-500/10 hover:bg-rose-500/20 transition-colors disabled:opacity-50"
+              className="w-full sm:w-auto min-h-[48px] h-12 sm:h-13 px-5 rounded-2xl text-sm font-bold text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 transition-all disabled:opacity-50 cursor-pointer active:scale-[0.98]"
             >
               Eliminar
             </button>
           )}
-          <button type="button" onClick={onClose} className="flex-1 py-3 rounded-xl text-sm font-bold btn-3d-secondary">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full sm:flex-1 min-h-[48px] h-12 sm:h-13 py-3 rounded-2xl text-sm font-semibold btn-3d-secondary cursor-pointer active:scale-[0.98]"
+          >
             Cancelar
           </button>
           <button
             type="submit"
             form="transaction-form"
             disabled={loading}
-            className="flex-1 py-3 rounded-xl text-sm font-bold text-black gradient-primary btn-3d flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+            className="w-full sm:flex-1 min-h-[48px] h-12 sm:h-13 py-3 rounded-2xl text-sm font-extrabold text-black gradient-primary btn-3d flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer active:scale-[0.98]"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin text-black" /> : null}
             {loading ? "Guardando..." : isEditing ? "Guardar cambios" : "Registrar"}
@@ -323,7 +327,7 @@ export function TransactionForm({
         </div>
       }
     >
-      <form id="transaction-form" onSubmit={handleSubmit} className="space-y-5 animate-fade-in">
+      <form id="transaction-form" onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 animate-fade-in pb-2">
         {/* Scanner de Comprobantes con IA */}
         {!isEditing && (
           <div className="flex items-center justify-between p-3 rounded-2xl bg-zinc-900/60 border border-white/[0.08]">
@@ -341,7 +345,7 @@ export function TransactionForm({
               type="button"
               disabled={scanningReceipt}
               onClick={() => receiptInputRef.current?.click()}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-zinc-100 bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.1] transition-all cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-2 min-h-[38px] rounded-xl text-xs font-bold text-zinc-100 bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.1] transition-all cursor-pointer disabled:opacity-50 active:scale-95"
             >
               {scanningReceipt ? (
                 <>
@@ -372,15 +376,14 @@ export function TransactionForm({
         )}
 
         {/* Type selector */}
-        <div className="flex rounded-xl p-1 bg-black/20 shadow-inner">
-
+        <div className="flex rounded-2xl p-1.5 bg-black/30 border border-white/[0.08] shadow-inner gap-1">
           {TRANSACTION_TYPES.map((t) => (
             <button
               key={t.value}
               type="button"
               onClick={() => set("type", t.value)}
-              className={`flex-1 min-h-[44px] py-2.5 text-xs font-bold rounded-lg transition-all duration-300 cursor-pointer ${
-                form.type === t.value ? "shadow-lg scale-[1.02]" : "opacity-60 hover:opacity-100"
+              className={`flex-1 min-h-[48px] py-3 text-xs sm:text-sm font-bold rounded-xl transition-all duration-200 cursor-pointer active:scale-[0.98] ${
+                form.type === t.value ? "shadow-md scale-[1.02]" : "opacity-60 hover:opacity-100"
               }`}
               style={{
                 background:
@@ -400,28 +403,34 @@ export function TransactionForm({
         </div>
 
         {/* Amount + Currency */}
-        <div className="flex gap-3">
+        <div className="flex gap-2.5 sm:gap-3">
           <div className="flex-1">
-            <label className="text-xs font-semibold uppercase tracking-wider block mb-1.5 opacity-80">Monto</label>
-            <input
-              type="number"
-              step="any"
-              min="0"
-              value={form.amount}
-              onChange={(e) => set("amount", e.target.value)}
-              placeholder="0.00"
-              required
-              className="w-full px-4 py-3 rounded-xl outline-none text-base sm:text-xl font-bold bg-black/10 border focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-              style={{ borderColor: "hsl(var(--border) / 0.5)", color: "hsl(var(--foreground))" }}
-            />
+            <label className="text-xs font-bold uppercase tracking-wider block mb-1.5 text-zinc-400">
+              Monto
+            </label>
+            <div className="relative flex items-center">
+              <span className="absolute left-4 text-2xl sm:text-3xl font-extrabold text-zinc-500 select-none">$</span>
+              <input
+                type="number"
+                step="any"
+                inputMode="decimal"
+                min="0"
+                value={form.amount}
+                onChange={(e) => set("amount", e.target.value)}
+                placeholder="0.00"
+                required
+                className="w-full pl-10 pr-4 h-14 sm:h-16 rounded-2xl outline-none text-2xl sm:text-3xl font-extrabold tracking-tight bg-black/20 border border-white/[0.1] focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-mono tabular-nums text-foreground"
+              />
+            </div>
           </div>
-          <div className="w-28">
-            <label className="text-xs font-semibold uppercase tracking-wider block mb-1.5 opacity-80">Moneda</label>
+          <div className="w-28 sm:w-32">
+            <label className="text-xs font-bold uppercase tracking-wider block mb-1.5 text-zinc-400">
+              Moneda
+            </label>
             <select
               value={form.currency}
               onChange={(e) => set("currency", e.target.value)}
-              className="w-full px-3 py-3 rounded-xl text-base sm:text-sm font-semibold outline-none bg-black/10 border focus:border-primary focus:ring-1 focus:ring-primary transition-all cursor-pointer"
-              style={{ borderColor: "hsl(var(--border) / 0.5)", color: "hsl(var(--foreground))" }}
+              className="w-full px-3 h-14 sm:h-16 rounded-2xl text-base font-bold outline-none bg-black/20 border border-white/[0.1] focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer text-foreground"
             >
               {CURRENCIES.map((c) => (
                 <option key={c} value={c} className="bg-neutral-900">
@@ -432,17 +441,17 @@ export function TransactionForm({
           </div>
         </div>
 
+
         {/* Account */}
         <div>
-          <label className="text-xs font-semibold uppercase tracking-wider block mb-1.5 opacity-80">
+          <label className="text-xs font-bold uppercase tracking-wider block mb-1.5 text-zinc-400">
             {form.type === "transfer" ? "Desde" : "Cuenta de origen / destino"}
           </label>
           <select
             value={form.account_id}
             onChange={(e) => set("account_id", e.target.value)}
             required
-            className="w-full px-4 py-3 rounded-xl text-base sm:text-sm font-medium outline-none bg-black/10 border focus:border-primary focus:ring-1 focus:ring-primary transition-all cursor-pointer"
-            style={{ borderColor: "hsl(var(--border) / 0.5)", color: "hsl(var(--foreground))" }}
+            className="w-full px-4 h-12 sm:h-13 rounded-2xl text-base font-medium outline-none bg-black/20 border border-white/[0.1] focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer text-foreground"
           >
             {accountsLoading ? (
               <option value="" disabled className="bg-neutral-900">
@@ -471,13 +480,12 @@ export function TransactionForm({
         {/* Transfer to */}
         {form.type === "transfer" && (
           <div className="animate-fade-in">
-            <label className="text-xs font-semibold uppercase tracking-wider block mb-1.5 opacity-80">Hacia</label>
+            <label className="text-xs font-bold uppercase tracking-wider block mb-1.5 text-zinc-400">Hacia</label>
             <select
               value={form.transfer_to_account_id}
               onChange={(e) => set("transfer_to_account_id", e.target.value)}
               required
-              className="w-full px-4 py-3 rounded-xl text-sm font-medium outline-none bg-black/10 border focus:border-primary focus:ring-1 focus:ring-primary transition-all cursor-pointer"
-              style={{ borderColor: "hsl(var(--border) / 0.5)", color: "hsl(var(--foreground))" }}
+              className="w-full px-4 h-12 sm:h-13 rounded-2xl text-base font-medium outline-none bg-black/20 border border-white/[0.1] focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer text-foreground"
             >
               {accountsLoading ? (
                 <option value="" disabled className="bg-neutral-900">
@@ -504,14 +512,13 @@ export function TransactionForm({
         {/* Category */}
         {form.type !== "transfer" && (
           <div className="animate-fade-in">
-            <label className="text-xs font-semibold uppercase tracking-wider block mb-1.5 opacity-80">
+            <label className="text-xs font-bold uppercase tracking-wider block mb-1.5 text-zinc-400">
               Categoría ({form.type === "income" ? "Ingreso" : "Gasto"})
             </label>
             <select
               value={form.category_id}
               onChange={(e) => set("category_id", e.target.value)}
-              className="w-full px-4 py-3 rounded-xl text-sm font-medium outline-none bg-black/10 border focus:border-primary focus:ring-1 focus:ring-primary transition-all cursor-pointer"
-              style={{ borderColor: "hsl(var(--border) / 0.5)", color: "hsl(var(--foreground))" }}
+              className="w-full px-4 h-12 sm:h-13 rounded-2xl text-base font-medium outline-none bg-black/20 border border-white/[0.1] focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer text-foreground"
             >
               <option value="" className="bg-neutral-900">
                 Sin categoría
@@ -526,27 +533,25 @@ export function TransactionForm({
         )}
 
         {/* Description & Date */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <div>
-            <label className="text-xs font-semibold uppercase tracking-wider block mb-1.5 opacity-80">
+            <label className="text-xs font-bold uppercase tracking-wider block mb-1.5 text-zinc-400">
               Descripción / Concepto
             </label>
             <input
               value={form.description}
               onChange={(e) => set("description", e.target.value)}
               placeholder="Ej: Sueldo, Freelance, Coto..."
-              className="w-full px-4 py-3 rounded-xl text-sm font-medium outline-none bg-black/10 border focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-              style={{ borderColor: "hsl(var(--border) / 0.5)", color: "hsl(var(--foreground))" }}
+              className="w-full px-4 h-12 sm:h-13 rounded-2xl text-base font-medium outline-none bg-black/20 border border-white/[0.1] focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-foreground placeholder:text-zinc-500"
             />
           </div>
           <div>
-            <label className="text-xs font-semibold uppercase tracking-wider block mb-1.5 opacity-80">Fecha</label>
+            <label className="text-xs font-bold uppercase tracking-wider block mb-1.5 text-zinc-400">Fecha</label>
             <input
               type="date"
               value={form.date}
               onChange={(e) => set("date", e.target.value)}
-              className="w-full px-4 py-3 rounded-xl text-sm font-medium outline-none bg-black/10 border focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-              style={{ borderColor: "hsl(var(--border) / 0.5)", color: "hsl(var(--foreground))" }}
+              className="w-full px-4 h-12 sm:h-13 rounded-2xl text-base font-medium outline-none bg-black/20 border border-white/[0.1] focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-foreground"
             />
           </div>
         </div>

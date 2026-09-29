@@ -148,11 +148,11 @@ export function QuickExpenseModal({ isOpen, onClose, onSuccess }: QuickExpenseMo
       windowId="quick-expense-modal"
       defaultPosition={{ x: 0, y: -40 }}
       footer={
-        <div className="flex w-full gap-2">
+        <div className="flex flex-col sm:flex-row w-full gap-2 sm:gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 py-3 rounded-xl text-xs font-bold text-muted-foreground hover:bg-white/5 border border-white/10 transition-colors"
+            className="w-full sm:flex-1 min-h-[48px] h-12 py-3 rounded-2xl text-sm font-semibold btn-3d-secondary cursor-pointer active:scale-[0.98]"
           >
             Cancelar
           </button>
@@ -160,13 +160,13 @@ export function QuickExpenseModal({ isOpen, onClose, onSuccess }: QuickExpenseMo
             type="submit"
             form="quick-expense-form"
             disabled={submitting || !amount}
-            className="flex-1 py-3 rounded-xl text-xs font-black text-black gradient-primary btn-3d flex items-center justify-center gap-1.5 disabled:opacity-50"
+            className="w-full sm:flex-1 min-h-[48px] h-12 py-3 rounded-2xl text-sm font-extrabold text-black gradient-primary btn-3d flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer active:scale-[0.98]"
           >
             {submitting ? (
               <Loader2 className="w-4 h-4 animate-spin text-black" />
             ) : (
               <>
-                <Check className="w-4 h-4" />
+                <Check className="w-4 h-4 stroke-[3]" />
                 <span>Registrar Ahora</span>
               </>
             )}
@@ -176,28 +176,28 @@ export function QuickExpenseModal({ isOpen, onClose, onSuccess }: QuickExpenseMo
     >
       <div className="flex flex-col space-y-4">
         {/* Toggle Gasto/Ingreso */}
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-center gap-2 mb-1">
           <button
             type="button"
             onClick={() => setType("expense")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+            className={`flex-1 min-h-[44px] py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98] ${
               type === "expense"
                 ? "bg-red-500/20 text-red-400 border border-red-500/30 shadow-sm"
-                : "text-muted-foreground hover:bg-white/5 border border-transparent"
+                : "text-muted-foreground hover:bg-white/5 border border-white/5"
             }`}
           >
-            <ArrowDownRight className="w-3.5 h-3.5" /> Gasto
+            <ArrowDownRight className="w-4 h-4" /> Gasto
           </button>
           <button
             type="button"
             onClick={() => setType("income")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+            className={`flex-1 min-h-[44px] py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98] ${
               type === "income"
                 ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-sm"
-                : "text-muted-foreground hover:bg-white/5 border border-transparent"
+                : "text-muted-foreground hover:bg-white/5 border border-white/5"
             }`}
           >
-            <ArrowUpRight className="w-3.5 h-3.5" /> Ingreso
+            <ArrowUpRight className="w-4 h-4" /> Ingreso
           </button>
         </div>
 
@@ -232,11 +232,11 @@ export function QuickExpenseModal({ isOpen, onClose, onSuccess }: QuickExpenseMo
               placeholder="ej. Café, Uber, Supermercado..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-card border border-white/10 text-sm text-foreground outline-none focus:border-primary"
+              className="w-full px-4 h-12 rounded-2xl bg-black/20 border border-white/10 text-base text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-muted-foreground mb-1">
                 Categoría
@@ -244,7 +244,7 @@ export function QuickExpenseModal({ isOpen, onClose, onSuccess }: QuickExpenseMo
               <select
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl bg-card border border-white/10 text-xs text-foreground outline-none focus:border-primary cursor-pointer"
+                className="w-full px-4 h-12 rounded-2xl bg-black/20 border border-white/10 text-base text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 cursor-pointer"
               >
                 {filteredCategories.map((c) => (
                   <option key={c.id} value={c.id} className="bg-neutral-900">
@@ -261,7 +261,7 @@ export function QuickExpenseModal({ isOpen, onClose, onSuccess }: QuickExpenseMo
               <select
                 value={accountId}
                 onChange={(e) => setAccountId(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl bg-card border border-white/10 text-xs text-foreground outline-none focus:border-primary cursor-pointer"
+                className="w-full px-4 h-12 rounded-2xl bg-black/20 border border-white/10 text-base text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 cursor-pointer"
               >
                 {accounts.map((a) => (
                   <option key={a.id} value={a.id} className="bg-neutral-900">

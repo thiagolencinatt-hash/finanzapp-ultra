@@ -137,7 +137,7 @@ export default function AnalyticsPage() {
 
   return (
     <FreemiumGate action="view_analytics">
-      <div className="flex flex-col h-full overflow-y-auto pb-20 md:pb-6">
+      <div className="flex flex-col h-full overflow-y-auto pb-32 md:pb-8">
         <Header
           title="Analíticas Avanzadas"
           subtitle="Monitorea tus tendencias y salud financiera"

@@ -34,7 +34,7 @@ export function BalanceCard({
   return (
     <>
       <div
-        className="relative rounded-2xl sm:rounded-[2rem] p-4 sm:p-6 lg:p-8 overflow-hidden glass-strong"
+        className="relative rounded-2xl sm:rounded-[2rem] p-5 sm:p-6 lg:p-8 overflow-hidden border border-white/5 bg-neutral-900/60 backdrop-blur-md shadow-xl"
       >
         {/* Luces de acento de fondo */}
         <div

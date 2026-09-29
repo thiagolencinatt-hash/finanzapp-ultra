@@ -76,7 +76,7 @@ export function RecentTransactions() {
   return (
     <>
       <div
-        className="rounded-[2rem] glass-strong p-4 sm:p-5"
+        className="rounded-2xl sm:rounded-[2rem] border border-white/5 bg-neutral-900/60 backdrop-blur-md p-5 sm:p-6 shadow-xl"
       >
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -138,7 +138,7 @@ export function RecentTransactions() {
                 <div
                   key={t.id}
                   onClick={() => setSelectedTx(t)}
-                  className="px-4 py-3.5 min-h-[44px] flex items-center gap-3 bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.03] rounded-2xl transition-all cursor-pointer group active:scale-[0.98] card-hover"
+                  className="px-3.5 py-3.5 min-h-[56px] flex items-center gap-3 bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.04] rounded-xl transition-all cursor-pointer group active:scale-[0.98]"
                 >
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: bgColor }}>
                     <Icon className="w-4 h-4" style={{ color }} />

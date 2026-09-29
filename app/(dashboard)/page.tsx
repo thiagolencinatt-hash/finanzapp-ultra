@@ -151,7 +151,7 @@ export default function DashboardPage() {
       {loading ? (
         <DashboardSkeleton />
       ) : (
-        <div className="flex-1 p-4 sm:p-5 lg:p-6 space-y-5 md:space-y-6 max-w-7xl mx-auto w-full pb-28 md:pb-12">
+        <div className="flex-1 px-4 py-5 pb-32 max-w-7xl mx-auto w-full space-y-5 md:space-y-6">
 
           {/* 1. 💡 Smart Tip — Coach IA */}
           <ErrorBoundary fallbackTitle="Error en sugerencias" fallbackMessage="Las sugerencias no pudieron cargarse. Tu dashboard sigue funcionando.">
