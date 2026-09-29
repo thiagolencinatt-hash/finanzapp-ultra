@@ -24,9 +24,10 @@ interface BankStatementModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  initialBank?: string;
 }
 
-export function BankStatementModal({ isOpen, onClose, onSuccess }: BankStatementModalProps) {
+export function BankStatementModal({ isOpen, onClose, onSuccess, initialBank }: BankStatementModalProps) {
   const [file, setFile] = useState<File | null>(null);
   const [parsing, setParsing] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -51,6 +52,16 @@ export function BankStatementModal({ isOpen, onClose, onSuccess }: BankStatement
       ]).then(([accs, cats]) => {
         if (Array.isArray(accs) && accs.length > 0) {
           setAccounts(accs);
+          if (initialBank) {
+            const matched = accs.find((a) =>
+              a.name.toLowerCase().includes(initialBank.toLowerCase()) ||
+              initialBank.toLowerCase().includes(a.name.toLowerCase())
+            );
+            if (matched) {
+              setSelectedAccountId(matched.id);
+              return;
+            }
+          }
           const defaultAcc = accs.find((a) => a.name.toLowerCase().includes("mercado") || a.name.toLowerCase().includes("banco")) || accs[0];
           setSelectedAccountId(defaultAcc.id);
         }
@@ -64,7 +75,7 @@ export function BankStatementModal({ isOpen, onClose, onSuccess }: BankStatement
       setParsedData(null);
       setError(null);
     }
-  }, [isOpen]);
+  }, [isOpen, initialBank]);
 
   if (!isOpen) return null;
 
@@ -74,37 +85,69 @@ export function BankStatementModal({ isOpen, onClose, onSuccess }: BankStatement
     setParsing(true);
 
     try {
-      const buffer = await selectedFile.arrayBuffer();
-      const result = parseBankStatementBuffer(buffer);
+      // 1. Enviar al endpoint con soporte de Gemini para PDF/Imágenes y Parser para Excel/CSV
+      const formData = new FormData();
+      formData.append("file", selectedFile);
 
-      if (result.error) {
-        setError(result.error);
-        setParsedData(null);
-      } else if (result.transactions.length === 0) {
+      const res = await fetch("/api/import/statement", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "No se pudo procesar el archivo.");
+      }
+
+      if (!data.transactions || data.transactions.length === 0) {
         setError("No se encontraron transacciones legibles en el archivo.");
         setParsedData(null);
-      } else {
-        setParsedData({
-          detectedBank: result.detectedBank,
-          transactions: result.transactions,
-          totalIncome: result.totalIncome,
-          totalExpense: result.totalExpense,
-        });
-
-        // Intentar auto-seleccionar la cuenta que coincida con el banco detectado
-        if (result.detectedBank && accounts.length > 0) {
-          const match = accounts.find((a) =>
-            a.name.toLowerCase().includes(result.detectedBank.toLowerCase()) ||
-            result.detectedBank.toLowerCase().includes(a.name.toLowerCase())
-          );
-          if (match) setSelectedAccountId(match.id);
-        }
-
-        toast.success(`¡Detectado ${result.detectedBank}! Se encontraron ${result.transactions.length} movimientos.`);
+        return;
       }
+
+      setParsedData({
+        detectedBank: data.detectedBank || "Extracto Bancario",
+        transactions: data.transactions,
+        totalIncome: data.totalIncome || 0,
+        totalExpense: data.totalExpense || 0,
+      });
+
+      // Auto-seleccionar la cuenta que coincida con el banco detectado o initialBank
+      const targetBank = initialBank || data.detectedBank;
+      if (targetBank && accounts.length > 0) {
+        const match = accounts.find((a) =>
+          a.name.toLowerCase().includes(targetBank.toLowerCase()) ||
+          targetBank.toLowerCase().includes(a.name.toLowerCase()) ||
+          (targetBank.toLowerCase().includes("mercado") && a.name.toLowerCase().includes("mercado"))
+        );
+        if (match) setSelectedAccountId(match.id);
+      }
+
+      toast.success(`¡Lectura exitosa! Se encontraron ${data.transactions.length} movimientos.`);
     } catch (err: any) {
-      console.error("Error processing statement file:", err);
-      setError(err.message || "Error al leer el archivo.");
+      console.warn("API import fallback check:", err);
+      // Fallback local en caso de que sea CSV/Excel
+      const isSpreadsheet = selectedFile.name.match(/\.(csv|xlsx|xls)$/i);
+      if (isSpreadsheet) {
+        try {
+          const buffer = await selectedFile.arrayBuffer();
+          const localResult = parseBankStatementBuffer(buffer);
+          if (!localResult.error && localResult.transactions.length > 0) {
+            setParsedData({
+              detectedBank: localResult.detectedBank,
+              transactions: localResult.transactions,
+              totalIncome: localResult.totalIncome,
+              totalExpense: localResult.totalExpense,
+            });
+            toast.success(`¡Detectado ${localResult.detectedBank}! Se encontraron ${localResult.transactions.length} movimientos.`);
+            return;
+          }
+        } catch {
+          // ignore
+        }
+      }
+      setError(err.message || "Error al procesar el archivo.");
       setParsedData(null);
     } finally {
       setParsing(false);
@@ -197,10 +240,13 @@ export function BankStatementModal({ isOpen, onClose, onSuccess }: BankStatement
   const selectedCount = parsedData ? parsedData.transactions.filter((t) => t.selected).length : 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-md animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-5 bg-black/80 backdrop-blur-md animate-fade-in">
       <div 
-        className="w-full max-w-3xl max-h-[90vh] flex flex-col rounded-3xl bg-zinc-950 border border-white/[0.1] shadow-[0_25px_70px_rgba(0,0,0,0.8)] overflow-hidden"
+        className="w-full max-w-3xl max-h-[92dvh] sm:max-h-[90vh] flex flex-col rounded-t-3xl sm:rounded-3xl bg-zinc-950 border-t border-x sm:border border-white/[0.1] shadow-[0_25px_70px_rgba(0,0,0,0.8)] overflow-hidden"
       >
+        {/* Handle pill para móvil */}
+        <div className="w-12 h-1.5 bg-neutral-600 rounded-full mx-auto mt-3 mb-1 sm:hidden shrink-0" />
+
         {/* Header */}
         <div className="flex items-center justify-between p-4 sm:p-6 border-b border-white/[0.08] bg-zinc-900/40">
           <div className="flex items-center gap-3">
@@ -209,19 +255,19 @@ export function BankStatementModal({ isOpen, onClose, onSuccess }: BankStatement
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-bold text-zinc-100 flex items-center gap-2">
-                Importar Extracto Bancario
+                {initialBank ? `Importar Extracto / Comprobante de ${initialBank}` : "Importar Extracto o Comprobante"}
                 <span className="text-[10px] px-2 py-0.5 rounded-full font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  Multibanco
+                  PDF • IA • Excel
                 </span>
               </h2>
               <p className="text-xs text-zinc-400">
-                Soporta Mercado Pago, Santander, Galicia, BBVA, Brubank y archivos CSV / Excel
+                Soporta PDF de Mercado Pago, capturas de pantalla, fotos y archivos Excel / CSV
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06] transition-colors cursor-pointer"
+            className="w-9 h-9 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06] transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -248,10 +294,10 @@ export function BankStatementModal({ isOpen, onClose, onSuccess }: BankStatement
 
                 <div className="space-y-1">
                   <p className="text-sm sm:text-base font-bold text-zinc-200">
-                    {parsing ? "Analizando columnas y movimientos..." : "Arrastrá tu extracto aquí o hacé clic"}
+                    {parsing ? "Analizando comprobantes o extracto con IA..." : "Arrastrá tu PDF, captura o extracto aquí o hacé clic"}
                   </p>
-                  <p className="text-xs text-zinc-500">
-                    Formatos soportados: <span className="text-zinc-300 font-semibold">.CSV, .XLSX, .XLS</span> (hasta 500 filas)
+                  <p className="text-xs text-zinc-400">
+                    Formatos soportados: <span className="text-emerald-400 font-semibold">PDF de Mercado Pago</span>, <span className="text-zinc-300 font-semibold">Capturas / Fotos, Excel y CSV</span>
                   </p>
                 </div>
 
@@ -263,7 +309,7 @@ export function BankStatementModal({ isOpen, onClose, onSuccess }: BankStatement
                       handleFileProcess(e.target.files[0]);
                     }
                   }}
-                  accept=".csv,.xlsx,.xls,.tsv"
+                  accept=".pdf,.png,.jpg,.jpeg,.webp,.csv,.xlsx,.xls,.tsv,application/pdf,image/*"
                   className="hidden"
                 />
               </div>
@@ -433,10 +479,10 @@ export function BankStatementModal({ isOpen, onClose, onSuccess }: BankStatement
         </div>
 
         {/* Footer */}
-        <div className="p-4 sm:p-6 border-t border-white/[0.08] bg-zinc-900/40 flex items-center justify-between">
+        <div className="p-4 sm:p-6 pb-safe border-t border-white/[0.08] bg-zinc-900/40 flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-4">
           <button
             onClick={onClose}
-            className="px-4 py-2.5 rounded-xl text-xs font-bold text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05] transition-all cursor-pointer"
+            className="w-full sm:w-auto min-h-[48px] h-12 px-6 rounded-2xl text-sm font-semibold text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05] transition-all cursor-pointer border border-white/5 order-2 sm:order-1"
           >
             Cancelar
           </button>
@@ -445,7 +491,7 @@ export function BankStatementModal({ isOpen, onClose, onSuccess }: BankStatement
             <button
               onClick={handleExecuteImport}
               disabled={importing || selectedCount === 0}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold text-black bg-emerald-400 hover:bg-emerald-300 disabled:opacity-50 transition-all cursor-pointer shadow-[0_8px_20px_rgba(16,185,129,0.3)] active:scale-[0.98]"
+              className="w-full sm:w-auto min-h-[48px] h-12 flex items-center justify-center gap-2 px-6 py-3 rounded-2xl text-sm font-extrabold text-black bg-emerald-400 hover:bg-emerald-300 disabled:opacity-50 transition-all cursor-pointer shadow-[0_8px_20px_rgba(16,185,129,0.3)] active:scale-[0.98] order-1 sm:order-2"
             >
               {importing ? (
                 <>

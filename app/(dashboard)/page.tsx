@@ -14,10 +14,11 @@ import { FreemiumGate } from "@/components/ui/FreemiumGate";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { isDemoUser } from "@/lib/freemium";
 import type { FinancialSummary, Category } from "@/lib/types";
-import { Loader2, SlidersHorizontal, ChevronDown, ChevronUp, Lock } from "lucide-react";
+import { Loader2, SlidersHorizontal, ChevronDown, ChevronUp, Lock, UploadCloud, ChevronRight } from "lucide-react";
 
 import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
 import { CashFlowProjectionCard } from "@/components/dashboard/CashFlowProjectionCard";
+import { BankStatementModal } from "@/components/import/BankStatementModal";
 
 
 export default function DashboardPage() {
@@ -26,6 +27,7 @@ export default function DashboardPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [showQuickModal, setShowQuickModal] = useState(false);
+  const [showMPModal, setShowMPModal] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [dateSubtitle, setDateSubtitle] = useState("");
   const [greeting, setGreeting] = useState("¡Hola");
@@ -179,6 +181,40 @@ export default function DashboardPage() {
             </div>
           </ErrorBoundary>
 
+          {/* 📲 Botón Destacado de Mercado Pago (GEL-037) */}
+          <div className="animate-slide-up">
+            <button
+              type="button"
+              onClick={() => setShowMPModal(true)}
+              className="w-full text-left p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-gradient-to-r from-sky-500/15 via-emerald-500/10 to-transparent border border-sky-500/25 hover:border-sky-500/50 hover:bg-white/[0.04] transition-all cursor-pointer group active:scale-[0.99] shadow-lg flex items-center justify-between gap-3 sm:gap-4"
+            >
+              <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-sky-500/20 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0 group-hover:scale-105 transition-transform shadow-[0_4px_15px_rgba(14,165,233,0.2)]">
+                  <span className="text-xl sm:text-2xl">📲</span>
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm sm:text-base font-extrabold text-zinc-100 group-hover:text-sky-300 transition-colors truncate">
+                      Cargar Extracto o Comprobante de Mercado Pago
+                    </h3>
+                    <span className="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-bold font-mono bg-sky-500/20 text-sky-300 border border-sky-500/30 shrink-0">
+                      PDF / IA
+                    </span>
+                  </div>
+                  <p className="text-xs text-zinc-400 mt-0.5 truncate">
+                    Acepta PDF de Mercado Pago, capturas de pantalla o planillas Excel
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.05] group-hover:bg-sky-500/20 border border-white/[0.08] group-hover:border-sky-500/30 text-xs font-bold text-zinc-300 group-hover:text-sky-200 transition-all shrink-0">
+                <UploadCloud className="w-4 h-4 text-sky-400" />
+                <span className="hidden xs:inline">Cargar</span>
+                <ChevronRight className="w-4 h-4 text-zinc-500 group-hover:translate-x-0.5 transition-transform" />
+              </div>
+            </button>
+          </div>
+
           {/* 3. ⚡ Proyección de Dinero Libre Real & Timeline de Vencimientos */}
           <ErrorBoundary fallbackTitle="Error en proyección" fallbackMessage="La proyección de flujo de fondos no pudo calcularse.">
             <div className="animate-slide-up">
@@ -263,6 +299,18 @@ export default function DashboardPage() {
           onClose={() => setShowQuickModal(false)}
           onSuccess={() => {
             setShowQuickModal(false);
+            loadSummary();
+          }}
+        />
+      )}
+
+      {showMPModal && (
+        <BankStatementModal
+          isOpen={showMPModal}
+          initialBank="Mercado Pago"
+          onClose={() => setShowMPModal(false)}
+          onSuccess={() => {
+            setShowMPModal(false);
             loadSummary();
           }}
         />
