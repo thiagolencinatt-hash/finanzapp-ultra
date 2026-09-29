@@ -107,7 +107,14 @@
   * {
     -webkit-tap-highlight-color: transparent;
   }
+
+  /* Tabular numbers para alineación contable y financiera perfecta */
+  .tabular-nums, font-mono {
+    font-variant-numeric: tabular-nums lining-nums;
+    font-feature-settings: "tnum" 1, "zero" 1;
+  }
 }
+
 
 .pt-safe {
   padding-top: env(safe-area-inset-top, 0px);

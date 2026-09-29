@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Lock } from "lucide-react";
+import { Loader2, Lock, Camera, Sparkles, Undo2 } from "lucide-react";
 import type { Account, Category, Transaction } from "@/lib/types";
 import { toast } from "sonner";
 import { DraggableWindow } from "../ui/DraggableWindow";
@@ -34,9 +34,12 @@ export function TransactionForm({
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
+  const [scanningReceipt, setScanningReceipt] = useState(false);
   const [error, setError] = useState("");
+  const receiptInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const isEditing = Boolean(transaction);
+
 
   // Clave para persistir el borrador en localStorage sólo al crear nuevas transacciones
   const draftKey = "financeAI_transaction_draft";
@@ -186,19 +189,96 @@ export function TransactionForm({
     }
   }
 
+  async function handleReceiptScan(file: File) {
+    if (!file) return;
+    setScanningReceipt(true);
+    setError("");
+    try {
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+      });
+      reader.readAsDataURL(file);
+      const b64 = await base64Promise;
+
+      const res = await fetch("/api/scan-receipt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          image_base64: b64,
+          image_mime_type: file.type || "image/jpeg",
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "No se pudo leer el comprobante");
+
+      if (data.data) {
+        const { merchant, total, date, category, type, itemsSummary } = data.data;
+        setForm((prev) => {
+          let matchingCatId = prev.category_id;
+          if (categories.length > 0 && category) {
+            const match = categories.find(
+              (c) =>
+                c.name.toLowerCase().includes(category.toLowerCase()) ||
+                category.toLowerCase().includes(c.name.toLowerCase())
+            );
+            if (match) matchingCatId = match.id;
+          }
+
+          return {
+            ...prev,
+            amount: total ? String(total) : prev.amount,
+            description: merchant ? (itemsSummary ? `${merchant} - ${itemsSummary}` : merchant) : prev.description,
+            date: date || prev.date,
+            type: type || prev.type,
+            category_id: matchingCatId,
+          };
+        });
+        toast.success(`¡Comprobante escaneado! Datos de ${data.data.merchant || "compra"} autocompletados.`);
+      }
+    } catch (err: any) {
+      console.error("Receipt scan error:", err);
+      toast.error(err.message || "Error al escanear comprobante.");
+    } finally {
+      setScanningReceipt(false);
+      if (receiptInputRef.current) receiptInputRef.current.value = "";
+    }
+  }
+
   async function handleDelete() {
     if (!transaction?.id) return;
     if (!confirm("¿Estás seguro de que deseas eliminar este movimiento? Se actualizará tu saldo automáticamente.")) return;
 
+    const backupTx = { ...transaction };
     setLoading(true);
     try {
-      // Call API DELETE
       const res = await fetch(`/api/transactions?id=${transaction.id}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Error al eliminar en la nube");
 
-      toast.success("Movimiento eliminado correctamente");
+      toast.success("Movimiento eliminado", {
+        action: {
+          label: "Deshacer",
+          onClick: async () => {
+            try {
+              await fetch("/api/transactions", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(backupTx),
+              });
+              toast.success("Movimiento restaurado correctamente");
+              window.dispatchEvent(new Event("finance-refresh"));
+            } catch {
+              toast.error("No se pudo restaurar el movimiento");
+            }
+          },
+        },
+        duration: 6000,
+      });
+
       window.dispatchEvent(new Event("finance-refresh"));
       onSuccess();
     } catch (err) {
@@ -244,8 +324,56 @@ export function TransactionForm({
       }
     >
       <form id="transaction-form" onSubmit={handleSubmit} className="space-y-5 animate-fade-in">
+        {/* Scanner de Comprobantes con IA */}
+        {!isEditing && (
+          <div className="flex items-center justify-between p-3 rounded-2xl bg-zinc-900/60 border border-white/[0.08]">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-zinc-200">Escanear Ticket o Factura con IA</p>
+                <p className="text-[10px] text-zinc-500">Sube una foto y Gemini extrae monto y comercio</p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              disabled={scanningReceipt}
+              onClick={() => receiptInputRef.current?.click()}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-zinc-100 bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.1] transition-all cursor-pointer disabled:opacity-50"
+            >
+              {scanningReceipt ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+                  <span>Leyendo...</span>
+                </>
+              ) : (
+                <>
+                  <Camera className="w-3.5 h-3.5 text-primary" />
+                  <span>Foto / Archivo</span>
+                </>
+              )}
+            </button>
+
+            <input
+              type="file"
+              ref={receiptInputRef}
+              accept="image/*"
+              capture="environment"
+              onChange={(e) => {
+                if (e.target.files && e.target.files[0]) {
+                  handleReceiptScan(e.target.files[0]);
+                }
+              }}
+              className="hidden"
+            />
+          </div>
+        )}
+
         {/* Type selector */}
         <div className="flex rounded-xl p-1 bg-black/20 shadow-inner">
+
           {TRANSACTION_TYPES.map((t) => (
             <button
               key={t.value}

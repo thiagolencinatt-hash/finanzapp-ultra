@@ -389,6 +389,68 @@ export async function addTransaction(
   }
 }
 
+export async function addTransactionsBatch(
+  userId: string,
+  txs: Array<Partial<Transaction>>
+): Promise<{ success: boolean; count: number }> {
+  if (!txs || txs.length === 0) return { success: true, count: 0 };
+  const supabase = await createClient();
+  const isValidUUID = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+  
+  const defaultAccountId = await ensureDefaultAccount(userId);
+  const accountBalanceDeltas: Record<string, number> = {};
+
+  const insertRows = txs.map((tx) => {
+    const amount = Number(tx.amount) || 0;
+    const type = tx.type || "expense";
+    const description = tx.description || "Movimiento importado";
+    const date = tx.date || new Date().toISOString();
+    const finalAccountId = tx.account_id && isValidUUID(tx.account_id) ? tx.account_id : defaultAccountId;
+    const categoryId = tx.category_id || (tx as any).category || "General";
+
+    const delta = type === "income" ? amount : -amount;
+    accountBalanceDeltas[finalAccountId] = (accountBalanceDeltas[finalAccountId] || 0) + delta;
+
+    const row: Record<string, any> = {
+      user_id: userId,
+      account_id: finalAccountId,
+      category: categoryId,
+      type,
+      amount,
+      description,
+      date,
+    };
+    if (tx.id) row.id = tx.id;
+    return row;
+  });
+
+  const { data, error } = await supabase.from("transactions").insert(insertRows).select();
+  if (error) {
+    console.error("[supabase-store] addTransactionsBatch error:", error);
+    throw new Error(error.message || "Error al insertar lote de transacciones");
+  }
+
+  // Actualizar balances de las cuentas involucradas
+  for (const [accId, delta] of Object.entries(accountBalanceDeltas)) {
+    try {
+      const { data: acc } = await supabase
+        .from("accounts")
+        .select("balance")
+        .eq("id", accId)
+        .maybeSingle();
+      if (acc) {
+        const currentBal = Number(acc.balance) || 0;
+        await supabase.from("accounts").update({ balance: currentBal + delta }).eq("id", accId);
+      }
+    } catch (e) {
+      console.warn(`[supabase-store] Error actualizando balance de cuenta ${accId}:`, e);
+    }
+  }
+
+  return { success: true, count: data?.length || insertRows.length };
+}
+
+
 export async function deleteTransaction(userId: string, transactionId: string): Promise<boolean> {
   try {
     const supabase = await createClient();

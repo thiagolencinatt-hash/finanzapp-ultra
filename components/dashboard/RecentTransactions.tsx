@@ -9,6 +9,7 @@ import { formatCurrency } from "@/lib/utils/currency";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { TransactionForm } from "@/components/transactions/TransactionForm";
+import { usePrivacy } from "@/components/providers/PrivacyProvider";
 
 /**
  * Safely format a date string for display. Falls back gracefully
@@ -29,9 +30,11 @@ function safeFormatDate(dateStr: string | undefined | null): string {
 }
 
 export function RecentTransactions() {
+  const { isPrivate } = usePrivacy();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
+
 
   const fetchTransactions = () => {
     fetch("/api/transactions?limit=8", { cache: "no-store" })
@@ -159,15 +162,16 @@ export function RecentTransactions() {
                     </p>
                   </div>
                   <div className="text-right shrink-0 pl-2">
-                    <p className="text-sm font-extrabold drop-shadow-sm" style={{ color }}>
-                      {isIncome ? "+" : isTransfer ? "" : "-"}{formatCurrency(displayAmount, t.currency, true)}
+                    <p className="text-sm font-extrabold drop-shadow-sm font-mono tabular-nums" style={{ color }}>
+                      {isPrivate ? "$ ••••••" : `${isIncome ? "+" : isTransfer ? "" : "-"}${formatCurrency(displayAmount, t.currency, true)}`}
                     </p>
-                    {t.currency !== "ARS" && (
-                      <span className="text-[10px] font-medium text-zinc-500">
+                    {t.currency !== "ARS" && !isPrivate && (
+                      <span className="text-[10px] font-medium text-zinc-500 font-mono">
                         {t.currency}
                       </span>
                     )}
                   </div>
+
                 </div>
               );
             })

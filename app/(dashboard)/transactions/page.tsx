@@ -4,11 +4,14 @@ import { useEffect, useState, useCallback } from "react";
 import { Header } from "@/components/layout/Header";
 import { TransactionForm } from "@/components/transactions/TransactionForm";
 import { TransactionFilters } from "@/components/transactions/TransactionFilters";
-import { Plus, TrendingUp, TrendingDown, ArrowLeftRight, Filter, Download, Edit3, Trash2 } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, ArrowLeftRight, Filter, Download, Edit3, Trash2, UploadCloud } from "lucide-react";
 import type { Transaction } from "@/lib/types";
 import { normalizeTransactions } from "@/lib/utils/normalize-transaction";
 import { formatCurrency } from "@/lib/utils/currency";
 import { ExportExcelButton } from "@/components/dashboard/ExportExcelButton";
+import { BankStatementModal } from "@/components/import/BankStatementModal";
+import { usePrivacy } from "@/components/providers/PrivacyProvider";
+import { toast } from "sonner";
 
 /** GEL-021: Safe date formatting that never crashes on malformed dates */
 function safeFormatDate(dateStr: string | undefined | null, fmt: string = "d MMM yyyy"): string {
@@ -24,15 +27,18 @@ function safeFormatDate(dateStr: string | undefined | null, fmt: string = "d MMM
 }
 
 export default function TransactionsPage() {
+  const { isPrivate } = usePrivacy();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({ type: "", from: "", to: "", account_id: "" });
   const [offset, setOffset] = useState(0);
   const LIMIT = 20;
+
 
   const loadTransactions = useCallback(async (reset = false) => {
     setLoading(true);
@@ -74,16 +80,42 @@ export default function TransactionsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters]);
 
-  async function handleDelete(e: React.MouseEvent, id: string) {
+  async function handleDelete(e: React.MouseEvent, tx: Transaction) {
     e.stopPropagation();
-    if (!confirm("¿Eliminar este movimiento?")) return;
-    await fetch("/api/transactions", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
-    loadTransactions(true);
+    if (!confirm("¿Eliminar este movimiento? Se actualizará tu saldo automáticamente.")) return;
+    const backupTx = { ...tx };
+    try {
+      const res = await fetch(`/api/transactions?id=${tx.id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Error al eliminar");
+      toast.success("Movimiento eliminado", {
+        action: {
+          label: "Deshacer",
+          onClick: async () => {
+            try {
+              await fetch("/api/transactions", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(backupTx),
+              });
+              toast.success("Movimiento restaurado correctamente");
+              loadTransactions(true);
+              window.dispatchEvent(new Event("finance-refresh"));
+            } catch {
+              toast.error("No se pudo restaurar");
+            }
+          },
+        },
+        duration: 6000,
+      });
+      loadTransactions(true);
+      window.dispatchEvent(new Event("finance-refresh"));
+    } catch {
+      toast.error("Error al eliminar el movimiento");
+    }
   }
+
 
   function handleEdit(tx: Transaction) {
     setSelectedTx(tx);
@@ -131,11 +163,15 @@ export default function TransactionsPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
             <div className="p-3.5 rounded-xl gradient-income">
               <span className="text-[11px] font-bold text-income">Ingresos listados</span>
-              <p className="text-lg font-black mt-0.5 text-income">+{formatCurrency(incomeTotal, "ARS", true)}</p>
+              <p className="text-lg font-black mt-0.5 text-income font-mono tabular-nums">
+                +{isPrivate ? "$ ••••••" : formatCurrency(incomeTotal, "ARS", true)}
+              </p>
             </div>
             <div className="p-3.5 rounded-xl gradient-expense">
               <span className="text-[11px] font-bold text-expense">Gastos listados</span>
-              <p className="text-lg font-black mt-0.5 text-expense">-{formatCurrency(expenseTotal, "ARS", true)}</p>
+              <p className="text-lg font-black mt-0.5 text-expense font-mono tabular-nums">
+                -{isPrivate ? "$ ••••••" : formatCurrency(expenseTotal, "ARS", true)}
+              </p>
             </div>
             <div className="hidden sm:block p-3.5 rounded-xl glass">
               <span className="text-[11px] font-bold" style={{ color: "hsl(var(--muted-foreground))" }}>Total registros</span>
@@ -158,7 +194,18 @@ export default function TransactionsPage() {
             <Filter className="w-4 h-4" /> Filtros
           </button>
 
+          {/* Botón Importar Extracto Bancario */}
+          <button
+            type="button"
+            onClick={() => setShowImportModal(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-sm font-bold transition-all btn-3d-secondary text-blue-400 border-blue-500/20 hover:bg-blue-500/10 cursor-pointer"
+            title="Importar extracto bancario CSV / Excel (Mercado Pago, Santander, etc.)"
+          >
+            <UploadCloud className="w-4 h-4" /> Importar Extracto
+          </button>
+
           <ExportExcelButton variant="outline" label="Exportar Excel" />
+
 
           {transactions.length > 0 && (
             <button
@@ -244,8 +291,8 @@ export default function TransactionsPage() {
 
                     <div className="text-right flex items-center gap-2 sm:gap-3 shrink-0">
                       <div>
-                        <p className="text-xs sm:text-base font-extrabold" style={{ color }}>
-                          {isIncome ? "+" : isTransfer ? "" : "-"}{formatCurrency(t.amount, t.currency, true)}
+                        <p className="text-xs sm:text-base font-extrabold font-mono tabular-nums" style={{ color }}>
+                          {isPrivate ? "$ ••••••" : `${isIncome ? "+" : isTransfer ? "" : "-"}${formatCurrency(t.amount, t.currency, true)}`}
                         </p>
                       </div>
 
@@ -261,7 +308,7 @@ export default function TransactionsPage() {
                         </button>
                         <button
                           type="button"
-                          onClick={(e) => handleDelete(e, t.id)}
+                          onClick={(e) => handleDelete(e, t)}
                           className="p-1.5 rounded-lg transition-all opacity-80 hover:opacity-100 hover:bg-red-500/20 text-red-400"
                           title="Eliminar movimiento"
                         >
@@ -305,6 +352,14 @@ export default function TransactionsPage() {
           }}
         />
       )}
+
+      {/* Modal de Importación Bancaria Multibanco */}
+      <BankStatementModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onSuccess={() => loadTransactions(true)}
+      />
     </div>
   );
 }
+

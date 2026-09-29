@@ -1,18 +1,25 @@
 # Checkpoint - FinanzApp Ultra
 
-**Fecha:** 2026-09-09
+**Fecha:** 2026-09-28
 **Estado:** Producción Lista (30/30 rutas generadas con 0 errores)
 
-## Resumen de Sesión & Logros
-- **Modo Nuevo Usuario ("Empezar en Limpio"):** Implementado botón y modal interactivo para resetear todas las finanzas a $0 (transacciones, deudas, cuotas, presupuestos y suscripciones) permitiendo al usuario configurar su saldo bancario inicial y sueldo real.
-- **Exportación Contable a Microsoft Excel (.xlsx):** Creado generador multisolapa profesional en `lib/export/excel-generator.ts` con SheetJS (`xlsx`). Incluye 5 solapas: Resumen Ejecutivo, Transacciones Detalladas, Cuotas y Deudas, Metas de Ahorro y Presupuestos con Suscripciones.
-- **Botones y Accesos Directos:** Disponibles en Header, Configuración, Transacciones e Historial para descargar Excel o reiniciar a $0 en cualquier momento.
-- **Auditoría y Corrección de Errores:** 
-  - `RecentTransactions` ahora escucha eventos reactivos `finance-refresh`.
-  - `SmartTipCard` maneja estado en limpio ($0) sin calcular ratios erróneos.
-  - Corrección de `req.json()` en `/api/transactions` para evitar errores 500 en payloads atípicos.
-  - Build de producción `npm run build` y chequeo TypeScript `npx tsc --noEmit` superados al 100%.
-
-## Próximos Pasos
-- Explorar carga masiva de extractos bancarios (importar desde CSV/Excel bancario).
-- Integración con bancos locales vía Open Banking o scraping de resúmenes.
+## Resumen de Sesión & Logros Implementados
+1. **Importador Inteligente de Extractos Bancarios (Multibanco CSV / Excel):**
+   - Motor parser en `lib/import/statement-parser.ts` compatible con Mercado Pago, Santander, Galicia, BBVA, Brubank, Lemon Cash y formatos genéricos.
+   - Endpoint `POST /api/transactions/batch` e inserción masiva en `lib/db/supabase-store.ts` con actualización atómica de balance de cuentas.
+   - Modal interactivo `BankStatementModal.tsx` con drag & drop, detector de banco, sumatoria de ingresos/gastos y tabla editable con checkboxes.
+2. **Escáner OCR de Tickets & Facturas con IA:**
+   - Endpoint `POST /api/scan-receipt` con modelos Gemini y extracción estructurada (comercio, fecha, monto total, categoría y tipo).
+   - Botón directo "Escanear Ticket o Factura con IA" en `TransactionForm.tsx` con soporte para cámara móvil (`capture="environment"`) y fotos.
+3. **Proyección de Dinero Libre Real & Timeline de Vencimientos (Cash Flow):**
+   - Utilidad `lib/utils/cash-flow.ts` para cálculo de dinero libre real, runway en meses y timeline cronológico a 30 días.
+   - Componente visual `CashFlowProjectionCard.tsx` integrado en el Dashboard con estados de salud y badges de vencimiento.
+4. **Modo Privacidad Global (Eye Toggle) & Tabular Figures:**
+   - `PrivacyProvider.tsx` con atajo de teclado global `P` y botón de ojo en Header y BalanceCard.
+   - Cifras financieras con `font-mono tabular-nums` y enmascaramiento `$ ••••••`.
+5. **Paleta de Comandos Global (Ctrl+K / Cmd+K) & Deshacer (Undo Toast):**
+   - Modal `CommandPalette.tsx` para búsqueda y atajos rápidos a todas las acciones y vistas.
+   - Botón "Deshacer" con toast de 6 segundos en eliminación de movimientos tanto en `TransactionForm` como en `TransactionsPage`.
+6. **Verificación & Calidad:**
+   - `npx tsc --noEmit` superado con 0 errores de tipos.
+   - `npm run build` completado exitosamente con 30/30 rutas estáticas y dinámicas optimizadas.

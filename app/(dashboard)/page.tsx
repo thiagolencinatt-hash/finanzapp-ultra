@@ -17,6 +17,8 @@ import type { FinancialSummary, Category } from "@/lib/types";
 import { Loader2, SlidersHorizontal, ChevronDown, ChevronUp, Lock } from "lucide-react";
 
 import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
+import { CashFlowProjectionCard } from "@/components/dashboard/CashFlowProjectionCard";
+
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -177,8 +179,16 @@ export default function DashboardPage() {
             </div>
           </ErrorBoundary>
 
-          {/* 3. 📊 Gráfico de Gastos + Transacciones Recientes */}
+          {/* 3. ⚡ Proyección de Dinero Libre Real & Timeline de Vencimientos */}
+          <ErrorBoundary fallbackTitle="Error en proyección" fallbackMessage="La proyección de flujo de fondos no pudo calcularse.">
+            <div className="animate-slide-up">
+              <CashFlowProjectionCard summary={summary} />
+            </div>
+          </ErrorBoundary>
+
+          {/* 4. 📊 Gráfico de Gastos + Transacciones Recientes */}
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 animate-slide-up">
+
             <div className="lg:col-span-2">
               <ErrorBoundary fallbackTitle="Error en gráfico" fallbackMessage="El gráfico no pudo renderizarse.">
                 <SpendingChart categories={summary?.top_categories || []} />

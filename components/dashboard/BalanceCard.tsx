@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { TrendingUp, TrendingDown, CreditCard, DollarSign, PlusCircle, MinusCircle, RotateCcw, Trash2 } from "lucide-react";
+import { TrendingUp, TrendingDown, CreditCard, DollarSign, PlusCircle, MinusCircle, RotateCcw, Trash2, Eye, EyeOff } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 import { TransactionForm } from "@/components/transactions/TransactionForm";
 import { ResetDataModal } from "@/components/dashboard/ResetDataModal";
+import { usePrivacy } from "@/components/providers/PrivacyProvider";
 
 interface BalanceCardProps {
   totalBalance: number;
@@ -22,14 +23,13 @@ export function BalanceCard({
   monthlyInstallments,
   onRefresh,
 }: BalanceCardProps) {
+  const { isPrivate, togglePrivacy } = usePrivacy();
   const [formType, setFormType] = useState<"income" | "expense" | null>(null);
   const [showResetModal, setShowResetModal] = useState(false);
   
   // Eliminado estado optimista (GEL-025)
   // El balance ahora proviene estrictamente de las props (Supabase SSoT)
   const netFlow = income30d - expense30d;
-
-  // useEffect handleOptimisticTx eliminado
 
   return (
     <>
@@ -56,6 +56,14 @@ export function BalanceCard({
                 Balance General
               </p>
             </div>
+
+            <button
+              onClick={togglePrivacy}
+              className="p-1.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
+              title={isPrivate ? "Mostrar números confidenciales" : "Ocultar números confidenciales (Modo Privacidad)"}
+            >
+              {isPrivate ? <EyeOff className="w-4 h-4 text-amber-400" /> : <Eye className="w-4 h-4" />}
+            </button>
           </div>
 
           <motion.div
@@ -63,14 +71,15 @@ export function BalanceCard({
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.4 }}
           >
-            <p className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-zinc-100 mb-1 tracking-tighter truncate drop-shadow-md">
-              {formatCurrency(totalBalance)}
+            <p className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-zinc-100 mb-1 tracking-tighter truncate drop-shadow-md font-mono tabular-nums">
+              {isPrivate ? "$ ••••••" : formatCurrency(totalBalance)}
             </p>
           </motion.div>
 
           <p className="text-[11px] sm:text-xs text-zinc-500 mb-5 font-medium">
             Saldo total acumulado en todas tus cuentas
           </p>
+
 
           {/* Botones de acción principales grandes para pulgar móvil */}
           <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-4 sm:mb-5">
@@ -105,7 +114,9 @@ export function BalanceCard({
                   <span className="text-[11px] sm:text-xs font-semibold text-emerald-400">Ingresos</span>
                 </div>
               </div>
-              <p className="text-base sm:text-lg font-bold text-zinc-100 truncate">{formatCurrency(income30d, "ARS", true)}</p>
+              <p className="text-base sm:text-lg font-bold text-zinc-100 truncate font-mono tabular-nums">
+                {isPrivate ? "$ ••••••" : formatCurrency(income30d, "ARS", true)}
+              </p>
               <p className="text-[10px] text-zinc-500 font-medium">últimos 30 días</p>
             </div>
 
@@ -120,7 +131,9 @@ export function BalanceCard({
                   <span className="text-[11px] sm:text-xs font-semibold text-rose-400">Gastos</span>
                 </div>
               </div>
-              <p className="text-base sm:text-lg font-bold text-zinc-100 truncate">{formatCurrency(expense30d, "ARS", true)}</p>
+              <p className="text-base sm:text-lg font-bold text-zinc-100 truncate font-mono tabular-nums">
+                {isPrivate ? "$ ••••••" : formatCurrency(expense30d, "ARS", true)}
+              </p>
               <p className="text-[10px] text-zinc-500 font-medium">últimos 30 días</p>
             </div>
 
@@ -132,8 +145,8 @@ export function BalanceCard({
                   <span className="text-[11px] sm:text-xs font-semibold text-indigo-400">Cuotas Mensuales</span>
                 </div>
               </div>
-              <p className="text-base sm:text-lg font-bold text-zinc-100 truncate">
-                {formatCurrency(monthlyInstallments, "ARS", true)}
+              <p className="text-base sm:text-lg font-bold text-zinc-100 truncate font-mono tabular-nums">
+                {isPrivate ? "$ ••••••" : formatCurrency(monthlyInstallments, "ARS", true)}
               </p>
               <p className="text-[10px] text-zinc-500 font-medium">por mes</p>
             </div>
@@ -148,13 +161,16 @@ export function BalanceCard({
               />
               <p className="text-xs text-zinc-300 font-medium">
                 Flujo neto:{" "}
-                <span className={`font-bold ${netFlow >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{formatCurrency(Math.abs(netFlow), "ARS", true)}</span>{" "}
+                <span className={`font-bold font-mono tabular-nums ${netFlow >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  {isPrivate ? "$ ••••••" : formatCurrency(Math.abs(netFlow), "ARS", true)}
+                </span>{" "}
                 <span className="text-zinc-500">
                   {netFlow >= 0 ? "a favor este mes 🎉" : "en déficit este mes ⚠️"}
                 </span>
               </p>
             </div>
           )}
+
         </div>
       </div>
 

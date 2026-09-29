@@ -4,14 +4,35 @@ import { toast } from "sonner";
 import { useEffect, useState, useRef } from "react";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
-import { Sun, Moon, Bell, LogOut, Settings, User as UserIcon, Check, ChevronDown, RotateCcw, FileSpreadsheet, Cloud, Users } from "lucide-react";
+import { 
+  Sun, 
+  Moon, 
+  Bell, 
+  LogOut, 
+  Settings, 
+  User as UserIcon, 
+  Check, 
+  ChevronDown, 
+  RotateCcw, 
+  FileSpreadsheet, 
+  Cloud, 
+  Users,
+  Eye,
+  EyeOff,
+  UploadCloud,
+  Command,
+  Search,
+  QrCode
+} from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { ResetDataModal } from "@/components/dashboard/ResetDataModal";
 import { ExportModal } from "@/components/export/ExportModal";
 import { ViewModeSelector } from "@/components/ui/ViewModeSelector";
 import { QRConnectModal } from "@/components/ui/QRConnectModal";
-import { QrCode } from "lucide-react";
+import { BankStatementModal } from "@/components/import/BankStatementModal";
+import { CommandPalette } from "@/components/ui/CommandPalette";
+import { usePrivacy } from "@/components/providers/PrivacyProvider";
 
 interface HeaderProps {
   title: string;
@@ -21,6 +42,7 @@ interface HeaderProps {
 
 export function Header({ title, subtitle, actionButton }: HeaderProps) {
   const { theme, setTheme } = useTheme();
+  const { isPrivate, togglePrivacy } = usePrivacy();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [userName, setUserName] = useState("Usuario");
@@ -30,7 +52,10 @@ export function Header({ title, subtitle, actionButton }: HeaderProps) {
   const [showResetModal, setShowResetModal] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
 
   useEffect(() => {
     setMounted(true);
@@ -72,7 +97,20 @@ export function Header({ title, subtitle, actionButton }: HeaderProps) {
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+
+    // Global Cmd+K / Ctrl+K listener
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setShowCommandPalette((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
   }, []);
 
   async function handleLogout() {
@@ -119,7 +157,43 @@ export function Header({ title, subtitle, actionButton }: HeaderProps) {
           {/* Selector de modo Móvil / Computadora */}
           <ViewModeSelector compact />
 
+          {/* Paleta de Comandos / Búsqueda (Cmd+K) */}
+          <button
+            onClick={() => setShowCommandPalette(true)}
+            className="flex items-center gap-1.5 py-1.5 px-2.5 rounded-full border border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.06] text-zinc-300 text-xs font-semibold transition-all cursor-pointer"
+            title="Buscar o comandos rápidos (Ctrl + K)"
+          >
+            <Search className="w-3.5 h-3.5 text-zinc-400" />
+            <span className="hidden xl:inline text-zinc-400 font-normal">Buscar</span>
+            <kbd className="hidden lg:inline text-[9px] font-mono text-zinc-400 bg-white/[0.06] px-1.5 py-0.5 rounded border border-white/[0.06]">
+              ⌘K
+            </kbd>
+          </button>
+
+          {/* Modo Privacidad (Eye Toggle) */}
+          <button
+            onClick={togglePrivacy}
+            className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all border cursor-pointer ${
+              isPrivate
+                ? "bg-amber-500/15 border-amber-500/30 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.2)]"
+                : "bg-white/[0.03] hover:bg-white/[0.08] border-white/[0.05] text-zinc-400 hover:text-zinc-200"
+            }`}
+            title={isPrivate ? "Desactivar modo privacidad (P)" : "Modo Privacidad [P] (Ocultar saldos)"}
+          >
+            {isPrivate ? <EyeOff className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+          </button>
+
           {actionButton}
+
+          {/* Botón rápido Importar Extracto */}
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="hidden sm:inline-flex items-center gap-1.5 py-1.5 px-3 rounded-full border border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.06] text-zinc-300 text-xs font-semibold transition-all cursor-pointer"
+            title="Importar extracto bancario (CSV o Excel de Mercado Pago, Santander, Galicia, etc.)"
+          >
+            <UploadCloud className="w-3.5 h-3.5 text-blue-400" />
+            <span className="hidden md:inline">Importar</span>
+          </button>
 
           {/* Botón Conectar Móvil (QR) */}
           <button
@@ -140,6 +214,7 @@ export function Header({ title, subtitle, actionButton }: HeaderProps) {
             <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
             <span className="hidden md:inline">Excel</span>
           </button>
+
 
           {/* Notificaciones */}
           <button
@@ -209,14 +284,35 @@ export function Header({ title, subtitle, actionButton }: HeaderProps) {
                 <button
                   onClick={() => {
                     setShowUserMenu(false);
-                    router.push("/login");
+                    setShowImportModal(true);
                   }}
                   className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-blue-400 hover:bg-blue-500/10 transition-colors cursor-pointer"
+                >
+                  <UploadCloud className="w-4 h-4" />
+                  <span>Importar Extracto Bancario</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    togglePrivacy();
+                    setShowUserMenu(false);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-amber-400 hover:bg-amber-500/10 transition-colors cursor-pointer"
+                >
+                  {isPrivate ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  <span>{isPrivate ? "Desactivar Privacidad" : "Modo Privacidad (P)"}</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setShowUserMenu(false);
+                    router.push("/login");
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-zinc-300 hover:bg-white/[0.06] transition-colors cursor-pointer"
                 >
                   <Users className="w-4 h-4" />
                   <span>Cambiar / Nuevo Usuario</span>
                 </button>
-
 
                 <button
                   onClick={() => {
@@ -270,7 +366,23 @@ export function Header({ title, subtitle, actionButton }: HeaderProps) {
         isOpen={showExportModal}
         onClose={() => setShowExportModal(false)}
       />
+
+      {/* Modal de Importación Bancaria (CSV / Excel Multibanco) */}
+      <BankStatementModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onSuccess={() => router.refresh()}
+      />
+
+      {/* Paleta de Comandos Global (Cmd+K / Ctrl+K) */}
+      <CommandPalette
+        isOpen={showCommandPalette}
+        onClose={() => setShowCommandPalette(false)}
+        onOpenImportModal={() => setShowImportModal(true)}
+        onOpenExportModal={() => setShowExportModal(true)}
+      />
     </>
   );
 }
+
 

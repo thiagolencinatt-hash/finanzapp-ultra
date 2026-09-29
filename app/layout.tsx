@@ -48,6 +48,7 @@ import { Toaster } from "@/components/ui/Toaster";
 import { ViewModeProvider } from "@/components/providers/ViewModeProvider";
 import { PWARegister } from "@/components/providers/PWARegister";
 import { RealtimeSync } from "@/components/providers/RealtimeSync";
+import { PrivacyProvider } from "@/components/providers/PrivacyProvider";
 
 export default function RootLayout({
   children,
@@ -64,13 +65,16 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <ViewModeProvider>
-            <PWARegister />
-            <RealtimeSync />
-            {children}
-            <Toaster position="top-center" />
+            <PrivacyProvider>
+              <PWARegister />
+              <RealtimeSync />
+              {children}
+              <Toaster position="top-center" />
+            </PrivacyProvider>
           </ViewModeProvider>
         </ThemeProvider>
       </body>
     </html>
   );
 }
+
