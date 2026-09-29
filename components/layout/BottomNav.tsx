@@ -1,95 +1,134 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, ArrowUpDown, Bot, Target, Plus, BarChart2 } from "lucide-react";
+import { 
+  Wallet, 
+  Clock, 
+  Sparkles, 
+  Radar, 
+  Plus
+} from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { QuickExpenseModal } from "./QuickExpenseModal";
-import { openAIAssistant } from "../ai/GlobalAIAssistant";
+
+export type ModularTab = "finanzas" | "trabajo" | "asistente" | "radar";
 
 export function BottomNav() {
   const pathname = usePathname();
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<ModularTab>("finanzas");
   const [showQuickModal, setShowQuickModal] = useState(false);
+
+  // Sincronizar pestaña activa de forma segura en cliente sin romper prerender
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const currentParam = params.get("tab") as ModularTab;
+      if (currentParam && ["finanzas", "trabajo", "asistente", "radar"].includes(currentParam)) {
+        setActiveTab(currentParam);
+      }
+    }
+
+    const handleTabChange = (e: CustomEvent<ModularTab>) => {
+      if (e.detail && ["finanzas", "trabajo", "asistente", "radar"].includes(e.detail)) {
+        setActiveTab(e.detail);
+      }
+    };
+
+    window.addEventListener("finanzapp-tab-change" as any, handleTabChange);
+    return () => window.removeEventListener("finanzapp-tab-change" as any, handleTabChange);
+  }, [pathname]);
+
+  const handleSelectTab = (tab: ModularTab) => {
+    setActiveTab(tab);
+    window.dispatchEvent(new CustomEvent("finanzapp-tab-change", { detail: tab }));
+
+    if (pathname === "/") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("tab", tab);
+      window.history.replaceState(null, "", url.toString());
+    } else {
+      router.push(`/?tab=${tab}`);
+    }
+  };
+
+  const TABS = [
+    {
+      id: "finanzas" as ModularTab,
+      label: "Finanzas",
+      icon: Wallet,
+      color: "text-emerald-400",
+      activeBg: "bg-emerald-500/15 border-emerald-500/30",
+    },
+    {
+      id: "trabajo" as ModularTab,
+      label: "Trabajo",
+      icon: Clock,
+      color: "text-blue-400",
+      activeBg: "bg-blue-500/15 border-blue-500/30",
+    },
+    {
+      id: "asistente" as ModularTab,
+      label: "Asistente",
+      icon: Sparkles,
+      color: "text-purple-400",
+      activeBg: "bg-purple-500/15 border-purple-500/30",
+    },
+    {
+      id: "radar" as ModularTab,
+      label: "Radar",
+      icon: Radar,
+      color: "text-rose-400",
+      activeBg: "bg-rose-500/15 border-rose-500/30",
+    },
+  ];
 
   return (
     <>
       <nav
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 pb-safe bg-neutral-950/80 backdrop-blur-xl border-t border-white/10 shadow-2xl select-none"
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 pb-safe bg-[#090D14]/90 backdrop-blur-2xl border-t border-white/10 shadow-[0_-8px_30px_rgba(0,0,0,0.6)] select-none"
       >
-        <div className="flex items-center justify-around px-2 h-[68px] relative">
-          {/* Inicio */}
-          <Link
-            href="/"
-            className={cn(
-              "flex flex-col items-center justify-center min-w-[56px] py-1 px-2 rounded-2xl transition-all duration-200 active:scale-95 touch-manipulation",
-              pathname === "/" ? "text-primary font-bold" : "text-zinc-400 hover:text-zinc-200"
-            )}
-          >
-            <LayoutDashboard className="w-5 h-5" />
-            <span className="text-[11px] font-semibold tracking-tight">Inicio</span>
-          </Link>
+        <div className="grid grid-cols-4 items-center px-1.5 h-[64px]">
+          {TABS.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = (pathname === "/" && activeTab === tab.id);
 
-          {/* Transacciones */}
-          <Link
-            href="/transactions"
-            className={cn(
-              "flex flex-col items-center justify-center min-w-[56px] py-1 px-2 rounded-2xl transition-all duration-200 active:scale-95 touch-manipulation",
-              pathname.startsWith("/transactions")
-                ? "text-primary font-bold"
-                : "text-zinc-400 hover:text-zinc-200"
-            )}
-          >
-            <ArrowUpDown className="w-5 h-5" />
-            <span className="text-[11px] font-semibold tracking-tight">Cargas</span>
-          </Link>
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => handleSelectTab(tab.id)}
+                className={cn(
+                  "flex flex-col items-center justify-center h-[52px] py-1 px-1 rounded-2xl transition-all duration-200 active:scale-90 touch-manipulation cursor-pointer relative",
+                  isActive
+                    ? `${tab.color} font-bold`
+                    : "text-neutral-400 hover:text-neutral-200"
+                )}
+              >
+                <div
+                  className={cn(
+                    "p-1.5 rounded-xl transition-all",
+                    isActive ? tab.activeBg + " border" : "bg-transparent"
+                  )}
+                >
+                  <Icon className="w-5 h-5 stroke-[2.2]" />
+                </div>
+                <span className="text-[11px] font-semibold tracking-tight mt-0.5">
+                  {tab.label}
+                </span>
 
-          {/* Floating Central Quick Action Button */}
-          <div className="-mt-6 flex flex-col items-center">
-            <button
-              type="button"
-              onClick={() => setShowQuickModal(true)}
-              className="w-[52px] h-[52px] rounded-full gradient-primary flex items-center justify-center text-black shadow-[0_8px_25px_rgba(16,185,129,0.35),0_0_15px_rgba(245,203,26,0.25)] active:scale-90 transition-transform cursor-pointer border border-white/20"
-              title="Registrar Gasto Rápido"
-            >
-              <Plus className="w-6 h-6 stroke-[3]" />
-            </button>
-            <span className="text-[11px] font-extrabold text-zinc-200 mt-1 tracking-tight">
-              Nuevo
-            </span>
-          </div>
-
-          {/* Analíticas */}
-          <Link
-            href="/analytics"
-            className={cn(
-              "flex flex-col items-center justify-center min-w-[56px] py-1 px-2 rounded-2xl transition-all duration-200 active:scale-95 touch-manipulation",
-              pathname.startsWith("/analytics")
-                ? "text-primary font-bold"
-                : "text-zinc-400 hover:text-zinc-200"
-            )}
-          >
-            <BarChart2 className="w-5 h-5" />
-            <span className="text-[11px] font-semibold tracking-tight">Análisis</span>
-          </Link>
-
-          {/* IA Chat */}
-          <button
-            type="button"
-            onClick={() => openAIAssistant()}
-            className="flex flex-col items-center justify-center min-w-[56px] py-1 px-2 rounded-2xl transition-all duration-200 text-zinc-400 hover:text-zinc-200 active:scale-95 touch-manipulation cursor-pointer"
-          >
-            <div className="w-5 h-5 rounded-md overflow-hidden border border-emerald-400/40 shadow-sm">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/ai-dollar-icon.jpg" alt="IA Dólar" className="w-full h-full object-cover" />
-            </div>
-            <span className="text-[11px] tracking-tight font-bold text-emerald-400">Coach</span>
-          </button>
+                {/* Micro indicador activo */}
+                {isActive && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-current absolute bottom-0.5 shadow-sm" />
+                )}
+              </button>
+            );
+          })}
         </div>
       </nav>
 
-      {/* Quick Modal */}
+      {/* Modal de Carga Rápida */}
       {showQuickModal && (
         <QuickExpenseModal
           isOpen={showQuickModal}

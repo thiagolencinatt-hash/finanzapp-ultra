@@ -18,6 +18,8 @@ import {
   PieChart,
   Wallet,
   BarChart2,
+  Clock,
+  Radar,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { createClient } from "@/lib/supabase/client";
@@ -25,15 +27,15 @@ import { useState, useEffect } from "react";
 import { openAIAssistant } from "../ai/GlobalAIAssistant";
 
 const navItems = [
-  { href: "/", icon: LayoutDashboard, label: "Dashboard" },
-  { href: "/accounts", icon: Wallet, label: "Cuentas" },
+  { href: "/", icon: LayoutDashboard, label: "Finanzas" },
+  { href: "/?tab=trabajo", icon: Clock, label: "Trabajo & Turnos" },
+  { href: "/?tab=asistente", icon: Bot, label: "Auditor IA" },
+  { href: "/?tab=radar", icon: Radar, label: "Radar Débitos" },
   { href: "/transactions", icon: ArrowUpDown, label: "Transacciones" },
-  { href: "/history", icon: History, label: "Historial" },
-  { href: "/analytics", icon: BarChart2, label: "Analíticas" },
+  { href: "/accounts", icon: Wallet, label: "Cuentas" },
   { href: "/installments", icon: CreditCard, label: "Cuotas" },
   { href: "/goals", icon: Target, label: "Metas" },
-  { href: "/budgets", icon: PieChart, label: "Presupuestos" },
-  { href: "/ai-assistant", icon: Bot, label: "IA Coach" },
+  { href: "/analytics", icon: BarChart2, label: "Analíticas" },
 ];
 
 export function Sidebar({ forceVisible = false }: { forceVisible?: boolean }) {
@@ -150,11 +152,19 @@ export function Sidebar({ forceVisible = false }: { forceVisible?: boolean }) {
             );
           }
 
-          const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+          const isActive = pathname === item.href.split("?")[0] && (item.href === "/" ? pathname === "/" : true);
           return (
             <Link
               key={item.href}
               href={item.href}
+              onClick={() => {
+                if (item.href.includes("?tab=")) {
+                  const t = item.href.split("?tab=")[1];
+                  window.dispatchEvent(new CustomEvent("finanzapp-tab-change", { detail: t }));
+                } else if (item.href === "/") {
+                  window.dispatchEvent(new CustomEvent("finanzapp-tab-change", { detail: "finanzas" }));
+                }
+              }}
               title={collapsed ? item.label : undefined}
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 group relative",

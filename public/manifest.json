@@ -1,11 +1,11 @@
 {
-  "name": "Finanzas",
-  "short_name": "Finanzas",
-  "description": "Control de gastos personal y finanzas con IA",
+  "name": "FinanzApp Ultra",
+  "short_name": "FinanzApp",
+  "description": "Control de finanzas personales, haberes laborales y análisis inteligente",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#03060C",
-  "theme_color": "#10B981",
+  "background_color": "#090D14",
+  "theme_color": "#090D14",
   "orientation": "portrait-primary",
   "icons": [
     {
@@ -23,13 +23,23 @@
   ],
   "shortcuts": [
     {
-      "name": "Nuevo gasto",
-      "url": "/transactions?action=new&type=expense",
+      "name": "Finanzas",
+      "url": "/?tab=finanzas",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     },
     {
-      "name": "Dashboard",
-      "url": "/",
+      "name": "Mis Horarios",
+      "url": "/?tab=trabajo",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Asistente IA",
+      "url": "/?tab=asistente",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Radar",
+      "url": "/?tab=radar",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     }
   ]

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/layout/Header";
 import { BalanceCard } from "@/components/dashboard/BalanceCard";
@@ -14,17 +14,34 @@ import { FreemiumGate } from "@/components/ui/FreemiumGate";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { isDemoUser } from "@/lib/freemium";
 import type { FinancialSummary, Category } from "@/lib/types";
-import { Loader2, SlidersHorizontal, ChevronDown, ChevronUp, Lock, UploadCloud, ChevronRight } from "lucide-react";
+import { 
+  SlidersHorizontal, 
+  ChevronDown, 
+  ChevronUp, 
+  Lock, 
+  UploadCloud, 
+  ChevronRight,
+  Wallet,
+  Clock,
+  Sparkles,
+  Radar
+} from "lucide-react";
 
 import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
 import { CashFlowProjectionCard } from "@/components/dashboard/CashFlowProjectionCard";
 import { BankStatementModal } from "@/components/import/BankStatementModal";
 import { SalaryCard } from "@/components/dashboard/SalaryCard";
 import { WorkScheduleCard } from "@/components/dashboard/WorkScheduleCard";
+import { LaborAuditorCard } from "@/components/dashboard/LaborAuditorCard";
+import { FinancialAuditorChat } from "@/components/ai/FinancialAuditorChat";
+import { SubscriptionRadarCard } from "@/components/dashboard/SubscriptionRadarCard";
+import { SmartRemindersBanner } from "@/components/dashboard/SmartRemindersBanner";
 
+type ModularTab = "finanzas" | "trabajo" | "asistente" | "radar";
 
-export default function DashboardPage() {
+function DashboardContent() {
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<ModularTab>("finanzas");
   const [summary, setSummary] = useState<FinancialSummary | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,22 +52,44 @@ export default function DashboardPage() {
   const [greeting, setGreeting] = useState("¡Hola");
   const [mounted, setMounted] = useState(false);
 
+  // Sincronizar pestaña activa de forma segura en cliente sin romper prerendering
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get("tab") as ModularTab;
+      if (tabParam && ["finanzas", "trabajo", "asistente", "radar"].includes(tabParam)) {
+        setActiveTab(tabParam);
+      }
+    }
+
+    const handleTabChange = (e: any) => {
+      if (e.detail && ["finanzas", "trabajo", "asistente", "radar"].includes(e.detail)) {
+        setActiveTab(e.detail);
+      }
+    };
+
+    window.addEventListener("finanzapp-tab-change", handleTabChange);
+    return () => window.removeEventListener("finanzapp-tab-change", handleTabChange);
+  }, []);
+
+  const switchTab = (tab: ModularTab) => {
+    setActiveTab(tab);
+    window.dispatchEvent(new CustomEvent("finanzapp-tab-change", { detail: tab }));
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", tab);
+    window.history.replaceState(null, "", url.toString());
+  };
+
   const loadSummary = useCallback(async () => {
     try {
-      const [resSummary, resCats, resTxs] = await Promise.all([
+      const [resSummary, resCats] = await Promise.all([
         fetch("/api/summary", { cache: "no-store" }),
         fetch("/api/categories", { cache: "no-store" }),
-        fetch("/api/transactions", { cache: "no-store" }),
       ]);
       if (resSummary.ok) {
         const data = await resSummary.json();
-        // GEL-021 & GEL-023: Validación estricta y Anti-Zero Shield
         if (data && typeof data.total_balance === 'number') {
           let finalData = data;
-
-          // Eliminado el cálculo acumulativo en local_transactions (GEL-025).
-          // El servidor es la ÚNICA fuente de verdad.
-
           setSummary((prev) => {
             if (
               prev &&
@@ -59,20 +98,17 @@ export default function DashboardPage() {
               (finalData.income_30d === 0 && finalData.expense_30d === 0) &&
               (prev.income_30d > 0 || prev.expense_30d > 0)
             ) {
-              console.warn("[Dashboard] Blocked suspicious zero-state summary update. Keeping cached data.");
               finalData = prev;
               return prev;
             }
             return finalData;
           });
           
-          // Guardar el estado final aceptado
           setTimeout(() => {
             localStorage.setItem("finanzapp_last_summary", JSON.stringify(finalData));
           }, 0);
         }
       } else {
-        // Anti-reset: Si el servidor falla, leemos del último estado conocido
         const cached = localStorage.getItem("finanzapp_last_summary");
         if (cached) {
           try {
@@ -80,7 +116,7 @@ export default function DashboardPage() {
             if (parsed && typeof parsed.total_balance === 'number') {
               setSummary(parsed);
             }
-          } catch { /* ignore corrupt cache */ }
+          } catch { /* ignore */ }
         }
       }
       
@@ -99,7 +135,7 @@ export default function DashboardPage() {
           if (parsed && typeof parsed.total_balance === 'number') {
             setSummary(parsed);
           }
-        } catch { /* ignore corrupt cache */ }
+        } catch { /* ignore */ }
       }
     } finally {
       setLoading(false);
@@ -119,11 +155,18 @@ export default function DashboardPage() {
     return () => window.removeEventListener("finance-refresh", handleExternalRefresh);
   }, [loadSummary]);
 
+  const MODULAR_TABS = [
+    { id: "finanzas" as ModularTab, label: "Finanzas", icon: Wallet, color: "text-emerald-400" },
+    { id: "trabajo" as ModularTab, label: "Trabajo", icon: Clock, color: "text-blue-400" },
+    { id: "asistente" as ModularTab, label: "Asistente IA", icon: Sparkles, color: "text-purple-400" },
+    { id: "radar" as ModularTab, label: "Radar", icon: Radar, color: "text-rose-400" },
+  ];
+
   return (
     <div className="flex flex-col">
       <Header
         title={`${greeting}! 👋`}
-        subtitle={dateSubtitle || "Tu panel de finanzas"}
+        subtitle={dateSubtitle || "Tu panel de finanzas y horarios"}
         actionButton={
           mounted && isDemoUser() ? (
             <button
@@ -156,151 +199,226 @@ export default function DashboardPage() {
         <DashboardSkeleton />
       ) : (
         <div className="flex-1 px-4 pt-3 pb-36 space-y-4 max-w-5xl mx-auto w-full">
+          {/* Switcher de Pestañas Modular (60 FPS & Cero Saturación) */}
+          <div className="flex items-center justify-between p-1.5 rounded-2xl bg-neutral-900/80 border border-white/10 backdrop-blur-xl gap-1 overflow-x-auto no-scrollbar shadow-sm">
+            {MODULAR_TABS.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => switchTab(tab.id)}
+                  className={`flex-1 min-h-[46px] py-2 px-3 rounded-xl text-xs font-bold transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer active:scale-95 ${
+                    isActive
+                      ? "bg-white/[0.08] text-white shadow-sm border border-white/15"
+                      : "text-neutral-400 hover:text-white hover:bg-white/[0.03]"
+                  }`}
+                >
+                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? tab.color : "text-neutral-400"}`} />
+                  <span className="whitespace-nowrap">{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
 
-          {/* 1. 💡 Smart Tip — Coach IA */}
-          <ErrorBoundary fallbackTitle="Error en sugerencias" fallbackMessage="Las sugerencias no pudieron cargarse. Tu dashboard sigue funcionando.">
-            <div className="animate-slide-up">
-              <SmartTipCard
-                income30d={summary?.income_30d || 0}
-                expense30d={summary?.expense_30d || 0}
-                installmentsMonthly={summary?.total_installments_monthly || 0}
-                topCategory={summary?.top_categories?.[0]?.category_name}
-                goalsCount={summary?.savings_goals?.length || 0}
-              />
-            </div>
-          </ErrorBoundary>
+          {/* =============================================================== */}
+          {/* 1. PESTAÑA: FINANZAS (Balance, Dinero Libre, MP y Movimientos) */}
+          {/* =============================================================== */}
+          {activeTab === "finanzas" && (
+            <div className="space-y-4 animate-fade-in">
+              <SmartRemindersBanner onNavigateTab={(t) => switchTab(t as ModularTab)} />
 
-          {/* 2. 💰 Balance Total + Ingresos vs Gastos */}
-          <ErrorBoundary fallbackTitle="Error en el balance" fallbackMessage="El balance no pudo renderizarse. Tus datos están seguros.">
-            <div className="animate-slide-up">
-              <BalanceCard
-                totalBalance={summary?.total_balance || 0}
-                income30d={summary?.income_30d || 0}
-                expense30d={summary?.expense_30d || 0}
-                monthlyInstallments={summary?.total_installments_monthly || 0}
-                onRefresh={loadSummary}
-              />
-            </div>
-          </ErrorBoundary>
-
-          {/* 💼 Mi Sueldo & Cobro (GEL-042) */}
-          <ErrorBoundary fallbackTitle="Error en sueldo" fallbackMessage="La tarjeta de sueldo no pudo cargarse.">
-            <div className="animate-slide-up">
-              <SalaryCard
-                initialSalary={summary?.configured_salary || summary?.income_30d || 0}
-                onSalaryUpdated={() => loadSummary()}
-              />
-            </div>
-          </ErrorBoundary>
-
-          {/* 📅 Mis Horarios de Trabajo (GEL-042) */}
-          <ErrorBoundary fallbackTitle="Error en horarios" fallbackMessage="El cronograma de horarios no pudo cargarse.">
-            <div className="animate-slide-up">
-              <WorkScheduleCard />
-            </div>
-          </ErrorBoundary>
-
-          {/* 📲 Botón Destacado de Mercado Pago (GEL-037 & GEL-041 Luxury) */}
-          <div className="animate-slide-up">
-            <button
-              type="button"
-              onClick={() => setShowMPModal(true)}
-              className="w-full text-left p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-sky-500/10 via-neutral-900/80 to-neutral-950/80 backdrop-blur-2xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.06)] hover:border-sky-500/40 hover:bg-neutral-900/90 transition-all cursor-pointer group active:scale-[0.99] flex items-center justify-between gap-3 sm:gap-4"
-            >
-              <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-sky-500/20 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0 group-hover:scale-105 transition-transform shadow-[0_4px_15px_rgba(14,165,233,0.2)]">
-                  <span className="text-xl sm:text-2xl">📲</span>
+              {/* Coach IA Smart Tip */}
+              <ErrorBoundary fallbackTitle="Error en sugerencias" fallbackMessage="Las sugerencias no pudieron cargarse.">
+                <div className="animate-slide-up">
+                  <SmartTipCard
+                    income30d={summary?.income_30d || 0}
+                    expense30d={summary?.expense_30d || 0}
+                    installmentsMonthly={summary?.total_installments_monthly || 0}
+                    topCategory={summary?.top_categories?.[0]?.category_name}
+                    goalsCount={summary?.savings_goals?.length || 0}
+                  />
                 </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm sm:text-base font-extrabold text-white group-hover:text-sky-300 transition-colors truncate">
-                      Cargar Extracto o Comprobante de Mercado Pago
-                    </h3>
-                    <span className="hidden sm:inline-block px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-md bg-sky-500/20 text-sky-300 border border-sky-500/30 shrink-0 font-mono">
-                      PDF / IA
-                    </span>
+              </ErrorBoundary>
+
+              {/* Balance Total + Ingresos vs Gastos */}
+              <ErrorBoundary fallbackTitle="Error en el balance" fallbackMessage="El balance no pudo renderizarse.">
+                <div className="animate-slide-up">
+                  <BalanceCard
+                    totalBalance={summary?.total_balance || 0}
+                    income30d={summary?.income_30d || 0}
+                    expense30d={summary?.expense_30d || 0}
+                    monthlyInstallments={summary?.total_installments_monthly || 0}
+                    onRefresh={loadSummary}
+                  />
+                </div>
+              </ErrorBoundary>
+
+              {/* Botón Destacado de Mercado Pago (PDF / IA / Capturas) */}
+              <div className="animate-slide-up">
+                <button
+                  type="button"
+                  onClick={() => setShowMPModal(true)}
+                  className="w-full text-left p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-sky-500/10 via-neutral-900/80 to-neutral-950/80 backdrop-blur-2xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.06)] hover:border-sky-500/40 hover:bg-neutral-900/90 transition-all cursor-pointer group active:scale-[0.99] flex items-center justify-between gap-3 sm:gap-4"
+                >
+                  <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-sky-500/20 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0 group-hover:scale-105 transition-transform shadow-[0_4px_15px_rgba(14,165,233,0.2)]">
+                      <span className="text-xl sm:text-2xl">📲</span>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm sm:text-base font-extrabold text-white group-hover:text-sky-300 transition-colors truncate">
+                          Cargar Extracto o Comprobante de Mercado Pago
+                        </h3>
+                        <span className="hidden sm:inline-block px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-md bg-sky-500/20 text-sky-300 border border-sky-500/30 shrink-0 font-mono">
+                          PDF / IA
+                        </span>
+                      </div>
+                      <p className="text-xs text-neutral-400 mt-0.5 truncate">
+                        Acepta PDF de Mercado Pago, capturas de pantalla o planillas Excel
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-xs text-neutral-400 mt-0.5 truncate">
-                    Acepta PDF de Mercado Pago, capturas de pantalla o planillas Excel
-                  </p>
+
+                  <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.05] group-hover:bg-sky-500/20 border border-white/[0.08] group-hover:border-sky-500/30 text-xs font-bold text-neutral-300 group-hover:text-sky-200 transition-all shrink-0">
+                    <UploadCloud className="w-4 h-4 text-sky-400" />
+                    <span className="hidden xs:inline">Cargar</span>
+                    <ChevronRight className="w-4 h-4 text-neutral-500 group-hover:translate-x-0.5 transition-transform" />
+                  </div>
+                </button>
+              </div>
+
+              {/* Proyección de Dinero Libre Real */}
+              <ErrorBoundary fallbackTitle="Error en proyección" fallbackMessage="La proyección de flujo de fondos no pudo calcularse.">
+                <div className="animate-slide-up">
+                  <CashFlowProjectionCard summary={summary} />
                 </div>
-              </div>
-
-              <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.05] group-hover:bg-sky-500/20 border border-white/[0.08] group-hover:border-sky-500/30 text-xs font-bold text-neutral-300 group-hover:text-sky-200 transition-all shrink-0">
-                <UploadCloud className="w-4 h-4 text-sky-400" />
-                <span className="hidden xs:inline">Cargar</span>
-                <ChevronRight className="w-4 h-4 text-neutral-500 group-hover:translate-x-0.5 transition-transform" />
-              </div>
-            </button>
-          </div>
-
-          {/* 3. ⚡ Proyección de Dinero Libre Real & Timeline de Vencimientos */}
-          <ErrorBoundary fallbackTitle="Error en proyección" fallbackMessage="La proyección de flujo de fondos no pudo calcularse.">
-            <div className="animate-slide-up">
-              <CashFlowProjectionCard summary={summary} />
-            </div>
-          </ErrorBoundary>
-
-          {/* 4. 📊 Gráfico de Gastos + Transacciones Recientes */}
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 animate-slide-up">
-
-            <div className="lg:col-span-2">
-              <ErrorBoundary fallbackTitle="Error en gráfico" fallbackMessage="El gráfico no pudo renderizarse.">
-                <SpendingChart categories={summary?.top_categories || []} />
               </ErrorBoundary>
-            </div>
-            <div className="lg:col-span-3">
-              <ErrorBoundary fallbackTitle="Error en transacciones" fallbackMessage="Las transacciones no pudieron cargarse.">
-                <RecentTransactions />
-              </ErrorBoundary>
-            </div>
-          </div>
 
-          {/* 4. 🎯 Metas de Ahorro */}
-          <FreemiumGate action="manage_goals" className="animate-slide-up">
-            <ErrorBoundary fallbackTitle="Error en metas" fallbackMessage="Las metas no pudieron renderizarse.">
-              <DashboardGoalsSection
-                goals={summary?.savings_goals || []}
-                salary={summary?.configured_salary || summary?.income_30d || 980000}
-                onRefresh={loadSummary}
-              />
-            </ErrorBoundary>
-          </FreemiumGate>
-
-          {/* ▼ Sección Avanzada (expandible) */}
-          <FreemiumGate action="manage_installments" className="animate-slide-up">
-            <div>
-              <button
-                type="button"
-                onClick={() => setShowAdvanced(!showAdvanced)}
-                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-bold transition-all cursor-pointer bg-neutral-900/60 border border-white/[0.08] text-neutral-400 hover:text-white hover:bg-neutral-900/90 shadow-sm"
-              >
-                {showAdvanced ? (
-                  <>
-                    <ChevronUp className="w-4 h-4" />
-                    Ocultar sección avanzada
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown className="w-4 h-4" />
-                    Ver cuotas, suscripciones y más
-                  </>
-                )}
-              </button>
-
-              {showAdvanced && (
-                <div className="space-y-5 mt-5 animate-slide-up">
-                  <ErrorBoundary fallbackTitle="Error en cuotas" fallbackMessage="Las cuotas no pudieron renderizarse.">
-                    <DashboardInstallmentsSection
-                      installments={summary?.active_installments || []}
-                      monthlyTotal={summary?.total_installments_monthly || 0}
-                      onRefresh={loadSummary}
-                    />
+              {/* Gráfico y Movimientos Recientes */}
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 animate-slide-up">
+                <div className="lg:col-span-2">
+                  <ErrorBoundary fallbackTitle="Error en gráfico" fallbackMessage="El gráfico no pudo renderizarse.">
+                    <SpendingChart categories={summary?.top_categories || []} />
                   </ErrorBoundary>
                 </div>
-              )}
+                <div className="lg:col-span-3">
+                  <ErrorBoundary fallbackTitle="Error en transacciones" fallbackMessage="Las transacciones no pudieron cargarse.">
+                    <RecentTransactions />
+                  </ErrorBoundary>
+                </div>
+              </div>
+
+              {/* Metas de Ahorro */}
+              <FreemiumGate action="manage_goals" className="animate-slide-up">
+                <ErrorBoundary fallbackTitle="Error en metas" fallbackMessage="Las metas no pudieron renderizarse.">
+                  <DashboardGoalsSection
+                    goals={summary?.savings_goals || []}
+                    salary={summary?.configured_salary || summary?.income_30d || 980000}
+                    onRefresh={loadSummary}
+                  />
+                </ErrorBoundary>
+              </FreemiumGate>
+
+              {/* Sección Avanzada (Cuotas) */}
+              <FreemiumGate action="manage_installments" className="animate-slide-up">
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setShowAdvanced(!showAdvanced)}
+                    className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-bold transition-all cursor-pointer bg-neutral-900/60 border border-white/[0.08] text-neutral-400 hover:text-white hover:bg-neutral-900/90 shadow-sm"
+                  >
+                    {showAdvanced ? (
+                      <>
+                        <ChevronUp className="w-4 h-4" />
+                        Ocultar compras en cuotas
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="w-4 h-4" />
+                        Ver compras en cuotas activas
+                      </>
+                    )}
+                  </button>
+
+                  {showAdvanced && (
+                    <div className="space-y-5 mt-5 animate-slide-up">
+                      <ErrorBoundary fallbackTitle="Error en cuotas" fallbackMessage="Las cuotas no pudieron renderizarse.">
+                        <DashboardInstallmentsSection
+                          installments={summary?.active_installments || []}
+                          monthlyTotal={summary?.total_installments_monthly || 0}
+                          onRefresh={loadSummary}
+                        />
+                      </ErrorBoundary>
+                    </div>
+                  )}
+                </div>
+              </FreemiumGate>
             </div>
-          </FreemiumGate>
+          )}
+
+          {/* =============================================================== */}
+          {/* 2. PESTAÑA: TRABAJO (Horarios, Franco, Cobro y Auditor Laboral) */}
+          {/* =============================================================== */}
+          {activeTab === "trabajo" && (
+            <div className="space-y-4 animate-fade-in">
+              <SmartRemindersBanner onNavigateTab={(t) => switchTab(t as ModularTab)} />
+
+              {/* Tarjeta de Sueldo & 5to Día Hábil */}
+              <ErrorBoundary fallbackTitle="Error en sueldo" fallbackMessage="La tarjeta de sueldo no pudo cargarse.">
+                <div className="animate-slide-up">
+                  <SalaryCard
+                    initialSalary={summary?.configured_salary || summary?.income_30d || 0}
+                    onSalaryUpdated={() => loadSummary()}
+                  />
+                </div>
+              </ErrorBoundary>
+
+              {/* Auditor Laboral: Horas Trabajadas vs Horas Liquidadas (FEATURE 1) */}
+              <ErrorBoundary fallbackTitle="Error en auditor laboral" fallbackMessage="El módulo de auditoría laboral no pudo cargarse.">
+                <div className="animate-slide-up">
+                  <LaborAuditorCard />
+                </div>
+              </ErrorBoundary>
+
+              {/* Horarios de Trabajo con Francos Semanales */}
+              <ErrorBoundary fallbackTitle="Error en horarios" fallbackMessage="El cronograma de horarios no pudo cargarse.">
+                <div className="animate-slide-up">
+                  <WorkScheduleCard />
+                </div>
+              </ErrorBoundary>
+            </div>
+          )}
+
+          {/* =============================================================== */}
+          {/* 3. PESTAÑA: ASISTENTE (Chat NotebookLM + Audio Resumen Semanal) */}
+          {/* =============================================================== */}
+          {activeTab === "asistente" && (
+            <div className="space-y-4 animate-fade-in">
+              <ErrorBoundary fallbackTitle="Error en Asistente IA" fallbackMessage="El chat con IA no pudo cargarse.">
+                <div className="animate-slide-up">
+                  <FinancialAuditorChat onDataRefresh={loadSummary} />
+                </div>
+              </ErrorBoundary>
+            </div>
+          )}
+
+          {/* =============================================================== */}
+          {/* 4. PESTAÑA: RADAR (Suscripciones, Débitos, Aumentos y Alertas) */}
+          {/* =============================================================== */}
+          {activeTab === "radar" && (
+            <div className="space-y-4 animate-fade-in">
+              <SmartRemindersBanner onNavigateTab={(t) => switchTab(t as ModularTab)} />
+
+              {/* Radar de Suscripciones & Débitos Automáticos (FEATURE 4) */}
+              <ErrorBoundary fallbackTitle="Error en Radar" fallbackMessage="El radar de suscripciones no pudo cargarse.">
+                <div className="animate-slide-up">
+                  <SubscriptionRadarCard />
+                </div>
+              </ErrorBoundary>
+            </div>
+          )}
         </div>
       )}
 
@@ -330,5 +448,13 @@ export default function DashboardPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<DashboardSkeleton />}>
+      <DashboardContent />
+    </Suspense>
   );
 }

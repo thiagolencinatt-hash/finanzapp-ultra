@@ -13,6 +13,8 @@ import {
   getGoals,
   getChatMessages,
   addChatMessage,
+  getSalaryRecords,
+  getWorkShifts,
 } from "@/lib/db/supabase-store";
 
 // Rate Limiter — 30 solicitudes por minuto por IP
@@ -120,7 +122,12 @@ export async function POST(req: NextRequest) {
       };
     }
 
-    const financialContext = buildFinancialContext(summary);
+    const [salaryRecords, workShifts] = await Promise.all([
+      getSalaryRecords(user.id).catch(() => []),
+      getWorkShifts(user.id).catch(() => []),
+    ]);
+
+    const financialContext = buildFinancialContext(summary, salaryRecords, workShifts);
     const isGeminiConfigured = Boolean(process.env.GEMINI_API_KEY && !process.env.GEMINI_API_KEY.includes("your-gemini"));
 
     if (isGeminiConfigured) {
@@ -433,7 +440,11 @@ async function executeTool(
   }
 }
 
-function buildFinancialContext(summary: FinancialSummary): string {
+function buildFinancialContext(
+  summary: FinancialSummary,
+  salaryRecords?: any[],
+  workShifts?: any[]
+): string {
   const accountsList = (summary.accounts || [])
     .map((a) => `  - ${a.name}: $${a.balance?.toLocaleString("es-AR")} ${a.currency}`)
     .join("\n");
@@ -452,6 +463,20 @@ function buildFinancialContext(summary: FinancialSummary): string {
     (summary.total_installments_monthly || 0) -
     (summary.total_subscriptions_monthly || 0);
 
+  const latestSalary = salaryRecords?.[0];
+  const salaryContext = latestSalary
+    ? `RECIBO DE HABERES (${latestSalary.period}):
+  - Sueldo en mano neto: $${latestSalary.net_salary?.toLocaleString("es-AR")} ARS
+  - Horas base pactadas: ${latestSalary.total_hours} hs
+  - Valor hora normal: $${latestSalary.hourly_rate_normal?.toLocaleString("es-AR")} ARS/h
+  - Valor hora nocturna (LCT): $${latestSalary.hourly_rate_night?.toLocaleString("es-AR")} ARS/h`
+    : `RECIBO DE HABERES: Sin recibo registrado aún.`;
+
+  const shiftsContext = (workShifts && workShifts.length > 0)
+    ? `CRONOGRAMA DE TURNOS LABORALES:
+` + workShifts.slice(0, 10).map((s: any) => `  - ${s.day_name || s.shift_date}: ${s.is_rest_day ? "FRANCO SEMANAL (Descanso)" : `${s.start_time} a ${s.end_time} (${s.total_hours} hs${s.night_hours > 0 ? `, ${s.night_hours} hs nocturnas` : ""})${s.coworkers_overlap?.length ? ` [Coincide con: ${s.coworkers_overlap.map((c: any) => c.name).join(", ")}]` : ""}`}`).join("\n")
+    : `CRONOGRAMA DE TURNOS: Sin turnos cargados.`;
+
   return `
 ESTADO DE CUENTAS:
 ${accountsList || "  - Sin cuentas registradas"}
@@ -462,6 +487,10 @@ GASTOS ULTIMOS 30 DIAS: $${(summary.expense_30d || 0).toLocaleString("es-AR")} A
 COMPROMISO MENSUAL EN CUOTAS: $${(summary.total_installments_monthly || 0).toLocaleString("es-AR")} ARS
 GASTO FIJO MENSUAL SUSCRIPCIONES: $${(summary.total_subscriptions_monthly || 0).toLocaleString("es-AR")} ARS
 SUELDO LIBRE ESTIMADO: $${freeIncome.toLocaleString("es-AR")} ARS
+
+${salaryContext}
+
+${shiftsContext}
 
 METAS DE AHORRO ACTIVAS:
 ${goalsList || "  - Sin metas de ahorro aún"}

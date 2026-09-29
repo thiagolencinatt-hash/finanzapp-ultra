@@ -10,14 +10,14 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  applicationName: "Finanzas",
+  applicationName: "FinanzApp Ultra",
   title: {
-    default: "Finanzas — Control de Gastos Pro",
-    template: "%s | Finanzas",
+    default: "FinanzApp Ultra — Finanzas & Horarios Pro",
+    template: "%s | FinanzApp Ultra",
   },
   description:
-    "Controlá tus gastos, cuotas y metas de ahorro con la ayuda de un asistente de IA personal. Gestión financiera inteligente.",
-  keywords: ["finanzas", "finanzas personales", "control de gastos", "ahorro", "IA"],
+    "Control de finanzas personales, haberes laborales, turnos semanales y auditoría inteligente con IA.",
+  keywords: ["finanzas", "finanzas personales", "control de gastos", "haberes", "recibo de sueldo", "turnos laborales", "IA"],
   manifest: "/manifest.json",
   icons: {
     icon: "/favicon.ico",
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Finanzas",
+    title: "FinanzApp Ultra",
   },
   formatDetection: {
     telephone: false,
@@ -35,8 +35,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: dark)", color: "#0a0f1e" },
-    { media: "(prefers-color-scheme: light)", color: "#6366f1" },
+    { media: "(prefers-color-scheme: dark)", color: "#090D14" },
+    { media: "(prefers-color-scheme: light)", color: "#090D14" },
   ],
   width: "device-width",
   initialScale: 1,
