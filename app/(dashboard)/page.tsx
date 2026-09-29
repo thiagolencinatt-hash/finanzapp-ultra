@@ -153,7 +153,7 @@ export default function DashboardPage() {
       {loading ? (
         <DashboardSkeleton />
       ) : (
-        <div className="flex-1 px-4 py-5 pb-32 max-w-7xl mx-auto w-full space-y-5 md:space-y-6">
+        <div className="flex-1 px-4 pt-3 pb-36 space-y-4 max-w-5xl mx-auto w-full">
 
           {/* 1. 💡 Smart Tip — Coach IA */}
           <ErrorBoundary fallbackTitle="Error en sugerencias" fallbackMessage="Las sugerencias no pudieron cargarse. Tu dashboard sigue funcionando.">
@@ -181,12 +181,12 @@ export default function DashboardPage() {
             </div>
           </ErrorBoundary>
 
-          {/* 📲 Botón Destacado de Mercado Pago (GEL-037) */}
+          {/* 📲 Botón Destacado de Mercado Pago (GEL-037 & GEL-041 Luxury) */}
           <div className="animate-slide-up">
             <button
               type="button"
               onClick={() => setShowMPModal(true)}
-              className="w-full text-left p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-gradient-to-r from-sky-500/15 via-emerald-500/10 to-transparent border border-sky-500/25 hover:border-sky-500/50 hover:bg-white/[0.04] transition-all cursor-pointer group active:scale-[0.99] shadow-lg flex items-center justify-between gap-3 sm:gap-4"
+              className="w-full text-left p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-sky-500/10 via-neutral-900/80 to-neutral-950/80 backdrop-blur-2xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.06)] hover:border-sky-500/40 hover:bg-neutral-900/90 transition-all cursor-pointer group active:scale-[0.99] flex items-center justify-between gap-3 sm:gap-4"
             >
               <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                 <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-sky-500/20 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0 group-hover:scale-105 transition-transform shadow-[0_4px_15px_rgba(14,165,233,0.2)]">
@@ -194,23 +194,23 @@ export default function DashboardPage() {
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm sm:text-base font-extrabold text-zinc-100 group-hover:text-sky-300 transition-colors truncate">
+                    <h3 className="text-sm sm:text-base font-extrabold text-white group-hover:text-sky-300 transition-colors truncate">
                       Cargar Extracto o Comprobante de Mercado Pago
                     </h3>
-                    <span className="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-bold font-mono bg-sky-500/20 text-sky-300 border border-sky-500/30 shrink-0">
+                    <span className="hidden sm:inline-block px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-md bg-sky-500/20 text-sky-300 border border-sky-500/30 shrink-0 font-mono">
                       PDF / IA
                     </span>
                   </div>
-                  <p className="text-xs text-zinc-400 mt-0.5 truncate">
+                  <p className="text-xs text-neutral-400 mt-0.5 truncate">
                     Acepta PDF de Mercado Pago, capturas de pantalla o planillas Excel
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.05] group-hover:bg-sky-500/20 border border-white/[0.08] group-hover:border-sky-500/30 text-xs font-bold text-zinc-300 group-hover:text-sky-200 transition-all shrink-0">
+              <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.05] group-hover:bg-sky-500/20 border border-white/[0.08] group-hover:border-sky-500/30 text-xs font-bold text-neutral-300 group-hover:text-sky-200 transition-all shrink-0">
                 <UploadCloud className="w-4 h-4 text-sky-400" />
                 <span className="hidden xs:inline">Cargar</span>
-                <ChevronRight className="w-4 h-4 text-zinc-500 group-hover:translate-x-0.5 transition-transform" />
+                <ChevronRight className="w-4 h-4 text-neutral-500 group-hover:translate-x-0.5 transition-transform" />
               </div>
             </button>
           </div>
@@ -223,7 +223,7 @@ export default function DashboardPage() {
           </ErrorBoundary>
 
           {/* 4. 📊 Gráfico de Gastos + Transacciones Recientes */}
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 animate-slide-up">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 animate-slide-up">
 
             <div className="lg:col-span-2">
               <ErrorBoundary fallbackTitle="Error en gráfico" fallbackMessage="El gráfico no pudo renderizarse.">
@@ -254,12 +254,7 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={() => setShowAdvanced(!showAdvanced)}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all cursor-pointer"
-                style={{
-                  background: "hsl(var(--card))",
-                  border: "1px solid hsl(var(--border))",
-                  color: "hsl(var(--muted-foreground))",
-                }}
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-bold transition-all cursor-pointer bg-neutral-900/60 border border-white/[0.08] text-neutral-400 hover:text-white hover:bg-neutral-900/90 shadow-sm"
               >
                 {showAdvanced ? (
                   <>

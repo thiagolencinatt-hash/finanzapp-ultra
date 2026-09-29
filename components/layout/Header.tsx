@@ -148,16 +148,19 @@ export function Header({ title, subtitle, actionButton }: HeaderProps) {
   return (
     <>
       <header
-        className="sticky top-0 z-30 flex items-center justify-between px-3.5 sm:px-5 h-15 sm:h-16 bg-zinc-950/80 backdrop-blur-xl border-b border-white/[0.08]"
+        className="sticky top-0 z-30 flex items-center justify-between px-4 sm:px-6 pt-[max(1rem,env(safe-area-inset-top))] pb-3 min-h-[68px] bg-zinc-950/80 backdrop-blur-xl border-b border-white/[0.08]"
       >
-        {/* Cabecera Móvil Minimalista: Logo y Nombre "FinanzApp" */}
+        {/* Cabecera Móvil Minimalista: Logo y Nombre "FinanzApp" con Destello Esmeralda */}
         <div className="flex items-center gap-2.5 sm:hidden">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-amber-500 flex items-center justify-center text-black font-black text-sm shadow-md shadow-primary/20">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-black font-black text-sm shadow-md shadow-emerald-500/20 ring-1 ring-emerald-400/30">
             ⚡
           </div>
-          <span className="font-extrabold text-base tracking-tight text-white">
-            FinanzApp
-          </span>
+          <div className="flex items-center">
+            <span className="tracking-tight font-extrabold text-lg text-white">
+              FinanzApp
+            </span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 ml-1 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+          </div>
         </div>
 
         {/* Título en Escritorio (sm: en adelante) */}
@@ -366,37 +369,37 @@ export function Header({ title, subtitle, actionButton }: HeaderProps) {
           </div>
         </div>
 
-        {/* Controles Móviles: DOS únicos elementos amplios (mínimo 44x44px) */}
-        <div className="flex sm:hidden items-center gap-2 shrink-0 relative" ref={mobileMenuRef}>
-          {/* 1. Pastilla de Usuario / ID (44x44px) */}
+        {/* Controles Móviles: Proporción de Alta Gama (42x42px) */}
+        <div className="flex sm:hidden items-center gap-2.5 shrink-0 relative" ref={mobileMenuRef}>
+          {/* 1. Pastilla / Avatar de Usuario (42x42px de micro-brillo metalizado) */}
           <button
             type="button"
             onClick={() => setShowUserMenu(!showUserMenu)}
-            className="w-11 h-11 rounded-2xl flex items-center justify-center bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] transition-all cursor-pointer active:scale-95 shadow-sm"
+            className="w-[42px] h-[42px] rounded-2xl flex items-center justify-center bg-gradient-to-b from-neutral-800 to-neutral-950 ring-1 ring-white/15 shadow-inner transition-all cursor-pointer active:scale-95"
             title={`Perfil: ${userName}`}
           >
-            <div className="w-7 h-7 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs border border-emerald-500/30">
+            <span className="text-sm font-semibold tracking-wide text-neutral-100 select-none">
               {userName.charAt(0).toUpperCase()}
-            </div>
+            </span>
           </button>
 
-          {/* 2. Botón de Menú de Acciones Rápidas (44x44px) */}
+          {/* 2. Botón de Acciones Rápidas (42x42px de lujo) */}
           <button
             type="button"
             onClick={() => {
               setShowUserMenu(false);
               setShowMobileActionSheet(true);
             }}
-            className="w-11 h-11 rounded-2xl flex items-center justify-center bg-gradient-to-br from-primary/20 to-amber-500/10 text-primary border border-primary/30 hover:bg-primary/25 transition-all cursor-pointer active:scale-95 shadow-[0_4px_15px_rgba(245,203,26,0.15)]"
+            className="w-[42px] h-[42px] rounded-2xl flex items-center justify-center border border-amber-500/20 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 active:scale-95 transition-all shadow-[0_4px_15px_rgba(245,158,11,0.15)] cursor-pointer"
             title="Acciones Rápidas"
           >
-            <Sparkles className="w-5 h-5 text-primary stroke-[2.2]" />
+            <Sparkles className="w-5 h-5 text-amber-400 stroke-[2.2]" />
           </button>
 
           {/* Menú de Usuario en Móviles */}
           {showUserMenu && (
             <div
-              className="absolute right-0 top-13 w-64 rounded-2xl p-2 shadow-[0_12px_40px_rgba(0,0,0,0.7)] border border-white/[0.1] bg-zinc-900/95 backdrop-blur-2xl z-50 animate-slide-up sm:hidden"
+              className="absolute right-0 top-14 w-64 rounded-2xl p-2 shadow-[0_12px_40px_rgba(0,0,0,0.7)] border border-white/[0.1] bg-zinc-900/95 backdrop-blur-2xl z-50 animate-slide-up sm:hidden"
             >
               <div className="px-3 py-2.5 border-b mb-1 border-white/[0.08]">
                 <div className="flex items-center justify-between">

@@ -34,7 +34,7 @@ export function BalanceCard({
   return (
     <>
       <div
-        className="relative rounded-2xl sm:rounded-[2rem] p-5 sm:p-6 lg:p-8 overflow-hidden border border-white/5 bg-neutral-900/60 backdrop-blur-md shadow-xl"
+        className="relative rounded-3xl p-5 sm:p-7 lg:p-8 overflow-hidden bg-gradient-to-b from-neutral-900/80 to-neutral-950/80 backdrop-blur-2xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_0_0_rgba(255,255,255,0.08)]"
       >
         {/* Luces de acento de fondo */}
         <div
@@ -48,18 +48,18 @@ export function BalanceCard({
 
         <div className="relative z-10">
           <div className="flex items-center justify-between gap-2 mb-2">
-            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-              <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-white/[0.05] text-zinc-300 shrink-0 border border-white/[0.08]">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-white/[0.05] text-emerald-400 shrink-0 border border-white/[0.08]">
                 <DollarSign className="w-4 h-4 font-bold" />
               </div>
-              <p className="text-[11px] sm:text-sm font-semibold uppercase tracking-widest text-zinc-400 truncate">
+              <p className="text-xs font-medium uppercase tracking-wider text-neutral-400 truncate">
                 Balance General
               </p>
             </div>
 
             <button
               onClick={togglePrivacy}
-              className="p-1.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
+              className="p-2 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] text-neutral-400 hover:text-neutral-200 transition-colors cursor-pointer border border-white/[0.05]"
               title={isPrivate ? "Mostrar números confidenciales" : "Ocultar números confidenciales (Modo Privacidad)"}
             >
               {isPrivate ? <EyeOff className="w-4 h-4 text-amber-400" /> : <Eye className="w-4 h-4" />}
@@ -71,12 +71,12 @@ export function BalanceCard({
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.4 }}
           >
-            <p className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-zinc-100 mb-1 tracking-tighter truncate drop-shadow-md font-mono tabular-nums">
+            <p className="text-3xl sm:text-4xl lg:text-5xl font-black text-white mb-1 font-mono tabular-nums tracking-tight truncate drop-shadow-md">
               {isPrivate ? "$ ••••••" : formatCurrency(totalBalance)}
             </p>
           </motion.div>
 
-          <p className="text-[11px] sm:text-xs text-zinc-500 mb-5 font-medium">
+          <p className="text-xs text-neutral-400 mb-5 font-medium">
             Saldo total acumulado en todas tus cuentas
           </p>
 
@@ -106,7 +106,7 @@ export function BalanceCard({
             {/* Ingresos card */}
             <div
               onClick={() => setFormType("income")}
-              className="rounded-2xl p-3 sm:p-4 bg-zinc-900/50 border border-white/[0.06] hover:bg-zinc-900/80 cursor-pointer card-hover"
+              className="rounded-2xl p-3.5 sm:p-4 bg-neutral-900/60 border border-white/[0.08] hover:bg-neutral-900/90 transition-all cursor-pointer shadow-sm"
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-1.5">
@@ -114,16 +114,16 @@ export function BalanceCard({
                   <span className="text-[11px] sm:text-xs font-semibold text-emerald-400">Ingresos</span>
                 </div>
               </div>
-              <p className="text-base sm:text-lg font-bold text-zinc-100 truncate font-mono tabular-nums">
+              <p className="text-base sm:text-lg font-black text-white truncate font-mono tabular-nums tracking-tight">
                 {isPrivate ? "$ ••••••" : formatCurrency(income30d, "ARS", true)}
               </p>
-              <p className="text-[10px] text-zinc-500 font-medium">últimos 30 días</p>
+              <p className="text-[10px] text-neutral-400 font-medium uppercase tracking-wider">últimos 30 días</p>
             </div>
 
             {/* Gastos card */}
             <div
               onClick={() => setFormType("expense")}
-              className="rounded-2xl p-3 sm:p-4 bg-zinc-900/50 border border-white/[0.06] hover:bg-zinc-900/80 cursor-pointer card-hover"
+              className="rounded-2xl p-3.5 sm:p-4 bg-neutral-900/60 border border-white/[0.08] hover:bg-neutral-900/90 transition-all cursor-pointer shadow-sm"
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-1.5">
@@ -131,40 +131,40 @@ export function BalanceCard({
                   <span className="text-[11px] sm:text-xs font-semibold text-rose-400">Gastos</span>
                 </div>
               </div>
-              <p className="text-base sm:text-lg font-bold text-zinc-100 truncate font-mono tabular-nums">
+              <p className="text-base sm:text-lg font-black text-white truncate font-mono tabular-nums tracking-tight">
                 {isPrivate ? "$ ••••••" : formatCurrency(expense30d, "ARS", true)}
               </p>
-              <p className="text-[10px] text-zinc-500 font-medium">últimos 30 días</p>
+              <p className="text-[10px] text-neutral-400 font-medium uppercase tracking-wider">últimos 30 días</p>
             </div>
 
             {/* Cuotas card */}
-            <div className="col-span-2 sm:col-span-1 rounded-2xl p-3 sm:p-4 bg-zinc-900/50 border border-white/[0.06] card-hover">
+            <div className="col-span-2 sm:col-span-1 rounded-2xl p-3.5 sm:p-4 bg-neutral-900/60 border border-white/[0.08] shadow-sm">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-1.5">
                   <CreditCard className="w-4 h-4 text-indigo-400" />
                   <span className="text-[11px] sm:text-xs font-semibold text-indigo-400">Cuotas Mensuales</span>
                 </div>
               </div>
-              <p className="text-base sm:text-lg font-bold text-zinc-100 truncate font-mono tabular-nums">
+              <p className="text-base sm:text-lg font-black text-white truncate font-mono tabular-nums tracking-tight">
                 {isPrivate ? "$ ••••••" : formatCurrency(monthlyInstallments, "ARS", true)}
               </p>
-              <p className="text-[10px] text-zinc-500 font-medium">por mes</p>
+              <p className="text-[10px] text-neutral-400 font-medium uppercase tracking-wider">por mes</p>
             </div>
           </div>
 
           {/* Net flow indicator */}
           {(income30d > 0 || expense30d > 0) && (
-            <div className="mt-4 flex items-center gap-2 rounded-xl px-4 py-3 bg-white/[0.02] border border-white/[0.05]">
+            <div className="mt-4 flex items-center gap-2 rounded-2xl px-4 py-3 bg-white/[0.02] border border-white/[0.06] backdrop-blur-md">
               <div
                 className="w-2.5 h-2.5 rounded-full"
                 style={{ background: netFlow >= 0 ? "#34d399" : "#fb7185", boxShadow: `0 0 10px ${netFlow >= 0 ? '#34d399' : '#fb7185'}` }}
               />
-              <p className="text-xs text-zinc-300 font-medium">
+              <p className="text-xs text-neutral-300 font-medium">
                 Flujo neto:{" "}
-                <span className={`font-bold font-mono tabular-nums ${netFlow >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                <span className={`font-black font-mono tabular-nums tracking-tight ${netFlow >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                   {isPrivate ? "$ ••••••" : formatCurrency(Math.abs(netFlow), "ARS", true)}
                 </span>{" "}
-                <span className="text-zinc-500">
+                <span className="text-neutral-400">
                   {netFlow >= 0 ? "a favor este mes 🎉" : "en déficit este mes ⚠️"}
                 </span>
               </p>

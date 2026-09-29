@@ -76,7 +76,7 @@ export function RecentTransactions() {
   return (
     <>
       <div
-        className="rounded-2xl sm:rounded-[2rem] border border-white/5 bg-neutral-900/60 backdrop-blur-md p-5 sm:p-6 shadow-xl"
+        className="rounded-3xl border border-white/[0.08] bg-gradient-to-b from-neutral-900/80 to-neutral-950/80 backdrop-blur-2xl p-5 sm:p-7 shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_0_0_rgba(255,255,255,0.08)]"
       >
         <div className="flex items-center justify-between mb-4">
           <div>

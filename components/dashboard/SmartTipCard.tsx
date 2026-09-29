@@ -154,7 +154,7 @@ export function SmartTipCard(props: SmartTipCardProps) {
 
   return (
     <div
-      className="rounded-2xl p-4 transition-all duration-300"
+      className="rounded-3xl p-4 sm:p-5 transition-all duration-300 backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.06)]"
       style={{
         background: bgGradient,
         border: `1px solid ${borderColor}`,

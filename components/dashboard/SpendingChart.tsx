@@ -49,8 +49,7 @@ export function SpendingChart({ categories }: SpendingChartProps) {
   if (categories.length === 0 || total === 0) {
     return (
       <div
-        className="rounded-3xl p-6 h-64 flex flex-col items-center justify-center text-center glass shadow-lg"
-        style={{ border: "1px solid hsl(var(--border) / 0.5)" }}
+        className="rounded-3xl p-6 h-64 flex flex-col items-center justify-center text-center bg-gradient-to-b from-neutral-900/80 to-neutral-950/80 backdrop-blur-2xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_0_0_rgba(255,255,255,0.08)]"
       >
         <div className="w-12 h-12 rounded-2xl bg-income/15 text-income flex items-center justify-center mb-3">
           <Sparkles className="w-6 h-6" />
@@ -67,8 +66,7 @@ export function SpendingChart({ categories }: SpendingChartProps) {
 
   return (
     <div
-      className="rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 glass shadow-lg"
-      style={{ border: "1px solid hsl(var(--border) / 0.5)" }}
+      className="rounded-3xl p-4 sm:p-6 bg-gradient-to-b from-neutral-900/80 to-neutral-950/80 backdrop-blur-2xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_0_0_rgba(255,255,255,0.08)]"
     >
       <div className="flex items-center justify-between mb-3 sm:mb-4">
         <h2 className="text-sm sm:text-base font-bold" style={{ color: "hsl(var(--foreground))" }}>

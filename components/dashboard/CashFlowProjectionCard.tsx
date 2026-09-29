@@ -57,7 +57,7 @@ export function CashFlowProjectionCard({ summary }: CashFlowProjectionCardProps)
   }[analysis.healthStatus];
 
   return (
-    <div className="rounded-2xl sm:rounded-[2rem] p-5 sm:p-6 lg:p-7 border border-white/5 bg-neutral-900/60 backdrop-blur-md relative overflow-hidden shadow-xl">
+    <div className="rounded-3xl p-5 sm:p-7 lg:p-8 bg-gradient-to-b from-neutral-900/80 to-neutral-950/80 backdrop-blur-2xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_0_0_rgba(255,255,255,0.08)] relative overflow-hidden">
       {/* Glow ambiental */}
       <div 
         className="absolute -top-20 -right-20 w-60 h-60 rounded-full opacity-10 blur-3xl pointer-events-none"
@@ -71,23 +71,23 @@ export function CashFlowProjectionCard({ summary }: CashFlowProjectionCardProps)
             <Zap className="w-4 h-4 stroke-[2.5]" />
           </div>
           <div>
-            <h3 className="text-sm sm:text-base font-bold text-zinc-100 flex items-center gap-2">
+            <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
               Proyección de Dinero Libre Real
-              <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${statusConfig.color}`}>
+              <span className={`text-[10px] font-mono font-bold px-3 py-1 rounded-full border backdrop-blur-md ${statusConfig.color}`}>
                 {statusConfig.badge}
               </span>
             </h3>
-            <p className="text-[11px] text-zinc-400">
+            <p className="text-xs text-neutral-400">
               Lo que podés gastar tranquilamente sin comprometer tus deudas del mes
             </p>
           </div>
         </div>
 
         {/* Runway Pill */}
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.03] border border-white/[0.06] text-xs text-zinc-300 self-start sm:self-auto">
-          <Clock className="w-3.5 h-3.5 text-zinc-400" />
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.03] border border-white/[0.06] text-xs text-neutral-300 self-start sm:self-auto backdrop-blur-md">
+          <Clock className="w-3.5 h-3.5 text-neutral-400" />
           <span>
-            Runway estimado: <strong className="text-zinc-100 font-mono font-bold">{analysis.runwayMonths} {analysis.runwayMonths === 1 ? "mes" : "meses"}</strong>
+            Runway estimado: <strong className="text-white font-mono font-bold">{analysis.runwayMonths} {analysis.runwayMonths === 1 ? "mes" : "meses"}</strong>
           </span>
         </div>
       </div>
@@ -95,42 +95,42 @@ export function CashFlowProjectionCard({ summary }: CashFlowProjectionCardProps)
       {/* Main Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
         {/* Dinero Libre */}
-        <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/[0.08] flex flex-col justify-between">
+        <div className="p-4 rounded-2xl bg-neutral-900/60 border border-white/[0.08] shadow-sm flex flex-col justify-between">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 mb-1">
+            <p className="text-xs font-medium uppercase tracking-wider text-neutral-400 mb-1">
               Dinero Libre Estimado
             </p>
-            <p className="text-2xl sm:text-3xl font-extrabold text-zinc-100 font-mono tabular-nums">
+            <p className="text-2xl sm:text-3xl font-black text-white font-mono tabular-nums tracking-tight">
               {isPrivate ? "$ ••••••" : formatCurrency(Math.max(0, analysis.netFreeCashFlow), "ARS", true)}
             </p>
           </div>
-          <p className="text-[10px] text-zinc-500 mt-2">
+          <p className="text-[10px] text-neutral-400 font-medium mt-2">
             Saldo disponible menos compromisos fijos
           </p>
         </div>
 
         {/* Compromisos fijos mensuales */}
-        <div className="p-4 rounded-2xl bg-zinc-900/40 border border-white/[0.06] flex flex-col justify-between">
+        <div className="p-4 rounded-2xl bg-neutral-900/60 border border-white/[0.08] shadow-sm flex flex-col justify-between">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 mb-1">
+            <p className="text-xs font-medium uppercase tracking-wider text-neutral-400 mb-1">
               Compromisos Fijos del Mes
             </p>
-            <p className="text-xl sm:text-2xl font-extrabold text-rose-400 font-mono tabular-nums">
+            <p className="text-xl sm:text-2xl font-black text-rose-400 font-mono tabular-nums tracking-tight">
               {isPrivate ? "$ ••••••" : formatCurrency(analysis.totalFixedOutflow, "ARS", true)}
             </p>
           </div>
-          <p className="text-[10px] text-zinc-500 mt-2">
+          <p className="text-[10px] text-neutral-400 font-medium mt-2">
             Cuotas ({formatCurrency(analysis.monthlyInstallments, "ARS", true)}) + Suscripciones ({formatCurrency(analysis.monthlySubscriptions, "ARS", true)})
           </p>
         </div>
 
         {/* Consejo / Status */}
-        <div className="p-4 rounded-2xl bg-zinc-900/40 border border-white/[0.06] flex flex-col justify-between">
+        <div className="p-4 rounded-2xl bg-neutral-900/60 border border-white/[0.08] shadow-sm flex flex-col justify-between">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 mb-1 flex items-center gap-1.5">
+            <p className="text-xs font-medium uppercase tracking-wider text-neutral-400 mb-1 flex items-center gap-1.5">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Diagnóstico
             </p>
-            <p className="text-xs text-zinc-300 font-medium leading-relaxed">
+            <p className="text-xs text-neutral-300 font-medium leading-relaxed">
               {statusConfig.description}
             </p>
           </div>
@@ -156,24 +156,24 @@ export function CashFlowProjectionCard({ summary }: CashFlowProjectionCardProps)
               return (
                 <div
                   key={evt.id}
-                  className={`p-3 rounded-2xl border transition-all ${
+                  className={`p-3.5 rounded-2xl border transition-all backdrop-blur-md ${
                     evt.isIncome
-                      ? "bg-emerald-500/[0.04] border-emerald-500/20"
+                      ? "bg-emerald-500/[0.05] border-emerald-500/20 shadow-sm"
                       : isUrgent
-                      ? "bg-rose-500/[0.04] border-rose-500/20 shadow-[0_4px_15px_rgba(244,63,94,0.08)]"
-                      : "bg-white/[0.02] border-white/[0.05]"
+                      ? "bg-rose-500/[0.05] border-rose-500/20 shadow-[0_4px_15px_rgba(244,63,94,0.1)]"
+                      : "bg-neutral-900/60 border-white/[0.08] shadow-sm"
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1.5">
                     <span
                       className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded-full ${
                         isToday
-                          ? "bg-amber-500/20 text-amber-300"
+                          ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
                           : evt.isIncome
-                          ? "bg-emerald-500/20 text-emerald-400"
+                          ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
                           : isUrgent
-                          ? "bg-rose-500/20 text-rose-400"
-                          : "bg-white/[0.06] text-zinc-400"
+                          ? "bg-rose-500/20 text-rose-400 border border-rose-500/30"
+                          : "bg-white/[0.06] text-neutral-400 border border-white/[0.08]"
                       }`}
                     >
                       {isToday
@@ -182,16 +182,16 @@ export function CashFlowProjectionCard({ summary }: CashFlowProjectionCardProps)
                         ? "Vence mañana"
                         : `en ${evt.daysRemaining} días`}
                     </span>
-                    <span className="text-[10px] text-zinc-500">{evt.formattedDate}</span>
+                    <span className="text-[10px] text-neutral-400 font-mono">{evt.formattedDate}</span>
                   </div>
 
-                  <p className="text-xs font-semibold text-zinc-200 truncate" title={evt.title}>
+                  <p className="text-xs font-semibold text-neutral-200 truncate" title={evt.title}>
                     {evt.title}
                   </p>
 
                   <p
-                    className={`text-sm font-extrabold font-mono mt-1 ${
-                      evt.isIncome ? "text-emerald-400" : "text-zinc-100"
+                    className={`text-sm font-black font-mono tabular-nums tracking-tight mt-1 ${
+                      evt.isIncome ? "text-emerald-400" : "text-white"
                     }`}
                   >
                     {evt.isIncome ? "+" : "-"}{isPrivate ? "$ •••" : formatCurrency(evt.amount, "ARS", true)}

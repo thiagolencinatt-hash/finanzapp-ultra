@@ -22,19 +22,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div
-      className={`flex min-h-dvh ${
+      className={`relative flex min-h-dvh bg-[#090D14] text-neutral-100 ${
         isDesktopMode
           ? "desktop-view-forced min-w-[960px] overflow-x-auto"
           : "w-full max-w-full overflow-x-hidden"
       }`}
-      style={{ background: "hsl(var(--background))" }}
     >
+      {/* Resplandor ambiental de alta gama (Radial Glow Esmeralda) */}
+      <div
+        className="w-72 h-72 rounded-full bg-emerald-500/10 blur-[120px] pointer-events-none absolute -top-10 left-1/2 -translate-x-1/2 z-0"
+        aria-hidden="true"
+      />
+
       {/* Desktop Sidebar (visible en modo desktop o en pantallas grandes) */}
       <Sidebar forceVisible={isDesktopMode} />
 
       {/* Main content */}
       <main
-        className={`flex-1 flex flex-col min-w-0 ${
+        className={`flex-1 flex flex-col min-w-0 relative z-10 ${
           isDesktopMode ? "pb-8" : "pb-24 sm:pb-28 lg:pb-8"
         }`}
       >
