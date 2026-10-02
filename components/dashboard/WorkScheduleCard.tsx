@@ -262,14 +262,15 @@ export function WorkScheduleCard() {
 
   return (
     <>
-      <div className="relative rounded-3xl p-5 sm:p-7 bg-gradient-to-b from-neutral-900/80 to-neutral-950/80 backdrop-blur-2xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_0_0_rgba(255,255,255,0.08)] overflow-hidden">
-        {/* Glow sutil */}
-        <div className="absolute -top-16 -left-16 w-52 h-52 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
+      <div className="relative rounded-3xl p-5 sm:p-7 bg-[#101419]/90 backdrop-blur-2xl border border-white/10 shadow-[0_16px_36px_-4px_rgba(0,0,0,0.75),inset_0_1px_0_rgba(255,255,255,0.1)] overflow-hidden">
+        {/* Glow sutil Stitch */}
+        <div className="absolute -top-16 -left-16 w-52 h-52 rounded-full bg-indigo-500/15 blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-16 -right-16 w-52 h-52 rounded-full bg-emerald-400/10 blur-3xl pointer-events-none" />
 
         {/* Encabezado Mobile-First sin superposición */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-9 h-9 rounded-2xl bg-blue-500/15 border border-blue-500/25 text-blue-400 flex items-center justify-center shrink-0">
+            <div className="w-9 h-9 rounded-2xl bg-indigo-500/15 border border-indigo-500/25 text-indigo-400 flex items-center justify-center shrink-0 shadow-[0_0_12px_rgba(99,102,241,0.2)]">
               <CalendarDays className="w-4 h-4 stroke-[2.4]" />
             </div>
             <div className="min-w-0">
@@ -397,34 +398,93 @@ export function WorkScheduleCard() {
           </div>
         )}
 
-        {/* Vista Semanal Completa: Lunes a Domingo (GEL-043) */}
+        {/* Vista Semanal Completa: Lunes a Domingo (Google Stitch GEL-045) */}
         {shifts.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center justify-between text-xs text-neutral-400 font-medium uppercase tracking-wider px-1">
-              <span>Cronograma Semanal (Lunes a Domingo)</span>
-              <span className="text-[10px] lowercase font-mono">7 días</span>
+              <span className="flex items-center gap-1.5 text-primary font-mono text-[11px]">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                Cronograma & Turnos
+              </span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/10 text-neutral-400">
+                7 DÍAS
+              </span>
             </div>
 
+            {/* 3D Weekly Shift Matrix (Horizontal Scrollable Carousel) */}
+            <div className="flex gap-2.5 overflow-x-auto no-scrollbar py-2 -mx-2 px-2">
+              {weeklySchedule.map((item, idx) => {
+                const { dayDef, dateStr, formattedDate, isToday, shift, isRestDay } = item;
+
+                if (isRestDay) {
+                  return (
+                    <div
+                      key={`car-${dateStr || idx}`}
+                      className="min-w-[120px] rounded-2xl p-3 bg-gradient-to-b from-indigo-950/40 to-neutral-900 border border-indigo-400/40 backdrop-blur-xl flex flex-col justify-between shadow-[0_0_20px_rgba(208,188,255,0.15)] relative overflow-hidden shrink-0"
+                    >
+                      <div className="absolute -top-6 -right-6 w-14 h-14 bg-indigo-400/20 rounded-full blur-md" />
+                      <div className="flex justify-between items-center font-mono text-[11px] text-indigo-300 font-bold relative z-10">
+                        <span>{dayDef.short.toUpperCase()} {formattedDate.split(" ")[0]}</span>
+                        <span className="text-sm">🏖️</span>
+                      </div>
+                      <div className="my-2 relative z-10">
+                        <span className="text-xs font-bold text-white block">Franco</span>
+                        <span className="text-[10px] font-mono text-indigo-200/70">Descanso</span>
+                      </div>
+                      <span className="text-[9px] font-mono text-indigo-300 font-bold bg-indigo-500/20 py-0.5 rounded text-center relative z-10 border border-indigo-400/20">
+                        {isToday ? "HOY · LIBRE" : "Desconexión"}
+                      </span>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div
+                    key={`car-${shift?.id || dateStr || idx}`}
+                    className={`min-w-[110px] rounded-2xl p-3 bg-neutral-900/80 border ${
+                      isToday ? "border-emerald-400/40 shadow-[0_0_15px_rgba(78,222,163,0.15)]" : "border-white/5"
+                    } backdrop-blur-xl flex flex-col justify-between shadow-sm shrink-0`}
+                  >
+                    <div className="flex justify-between items-center font-mono text-[11px] text-neutral-400">
+                      <span>{dayDef.short.toUpperCase()} {formattedDate.split(" ")[0]}</span>
+                      <span className={`w-1.5 h-1.5 rounded-full ${shift?.night_hours ? "bg-indigo-400" : "bg-emerald-400"}`} />
+                    </div>
+                    <div className="my-2">
+                      <span className="text-xs font-semibold text-white block truncate">
+                        {shift?.night_hours ? "Nocturno" : "Diurno"}
+                      </span>
+                      <span className="text-[10px] font-mono text-neutral-400 font-medium">
+                        {shift?.start_time} - {shift?.end_time}
+                      </span>
+                    </div>
+                    <span className={`text-[9px] font-mono ${
+                      shift?.night_hours ? "text-indigo-300 bg-indigo-500/15" : "text-emerald-400 bg-emerald-400/10"
+                    } px-1 py-0.5 rounded text-center`}>
+                      {shift?.total_hours}hs computadas
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Lista detallada con compañeros */}
             <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
               {weeklySchedule.map((item, idx) => {
                 const { dayDef, dateStr, formattedDate, isToday, shift, isRestDay } = item;
 
                 if (isRestDay) {
-                  // Tarjeta distintiva de FRANCO SEMANAL (GEL-043)
+                  // Tarjeta distintiva de FRANCO SEMANAL (GEL-043 / GEL-045)
                   return (
                     <div
                       key={dateStr || idx}
-                      className={`p-4 rounded-2xl bg-neutral-900/70 border ${
-                        isToday 
-                          ? "border-indigo-500/40 shadow-[0_0_15px_rgba(99,102,241,0.15)] ring-1 ring-indigo-500/30" 
-                          : "border-white/10"
-                      } flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-all`}
+                      className={`p-4 rounded-2xl bg-gradient-to-b from-indigo-950/40 to-neutral-900 border border-indigo-400/40 shadow-[0_0_20px_rgba(208,188,255,0.15)] relative overflow-hidden backdrop-blur-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-all`}
                     >
-                      <div className="flex items-center gap-2.5">
+                      <div className="absolute -top-6 -right-6 w-16 h-16 bg-indigo-400/20 rounded-full blur-md" />
+                      <div className="flex items-center gap-2.5 relative z-10">
                         <span className="font-semibold text-white text-sm">
                           {dayDef.name}
                         </span>
-                        <span className="text-xs text-neutral-400 font-mono">
+                        <span className="text-xs text-indigo-300 font-mono">
                           {formattedDate}
                         </span>
                         {isToday && (
@@ -434,7 +494,7 @@ export function WorkScheduleCard() {
                         )}
                       </div>
 
-                      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 text-xs font-semibold self-start sm:self-auto shadow-sm">
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-semibold self-start sm:self-auto shadow-sm relative z-10">
                         <span>🏖️</span>
                         <span>Franco semanal (Día de descanso)</span>
                       </div>
@@ -442,15 +502,15 @@ export function WorkScheduleCard() {
                   );
                 }
 
-                // Tarjeta de Día Laborable Pulida (GEL-043)
+                // Tarjeta de Día Laborable Pulida (GEL-043 / GEL-045)
                 return (
                   <div
                     key={shift?.id || dateStr || idx}
-                    className={`p-4 rounded-2xl bg-neutral-900/70 border ${
+                    className={`p-4 rounded-2xl bg-neutral-900/80 border ${
                       isToday
-                        ? "border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.12)] ring-1 ring-emerald-500/30"
-                        : "border-white/10"
-                    } hover:border-white/20 transition-all shadow-sm space-y-2.5`}
+                        ? "border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.15)] ring-1 ring-emerald-500/30"
+                        : "border-white/5"
+                    } hover:border-white/15 backdrop-blur-xl transition-all shadow-sm space-y-2.5`}
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       {/* Izquierda: Nombre del día y fecha */}
@@ -477,7 +537,7 @@ export function WorkScheduleCard() {
                           {shift?.total_hours} hs
                         </span>
                         {shift && shift.night_hours > 0 && (
-                          <span className="text-[11px] font-mono font-bold text-amber-300 px-2 py-0.5 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center gap-1">
+                          <span className="text-[11px] font-mono font-bold text-indigo-300 px-2 py-0.5 rounded-lg bg-indigo-500/15 border border-indigo-500/30 flex items-center gap-1">
                             🌙 {shift.night_hours} hs
                           </span>
                         )}
@@ -496,23 +556,23 @@ export function WorkScheduleCard() {
                     {/* Derecha / Abajo: Chips de compañeros que coinciden en el turno */}
                     {shift && Array.isArray(shift.coworkers_overlap) && shift.coworkers_overlap.length > 0 && (
                       <div className="pt-2 border-t border-white/[0.05]">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="text-[11px] text-neutral-400 flex items-center gap-1 mr-1">
-                            <Users className="w-3 h-3 text-blue-400" />
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-[11px] font-mono text-neutral-400 flex items-center gap-1 mr-1">
+                            <Users className="w-3 h-3 text-indigo-400" />
                             Coinciden:
                           </span>
                           {shift.coworkers_overlap.map((coworker, cIdx) => (
                             <div
                               key={cIdx}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-white/[0.03] border border-white/[0.06] text-xs text-neutral-300"
+                              className="bg-[#0b0e13]/80 border border-white/10 px-2.5 py-1 rounded-full shadow-inner inline-flex items-center gap-1.5"
                               title={coworker.their_shift ? `Turno de ${coworker.name}: ${coworker.their_shift}` : undefined}
                             >
-                              <span className="w-4 h-4 rounded-full bg-blue-500/20 text-blue-300 font-bold text-[9px] flex items-center justify-center">
+                              <div className="w-5 h-5 rounded-full bg-emerald-400/20 border border-emerald-400/40 flex items-center justify-center text-[10px] font-bold text-emerald-300">
                                 {coworker.name.charAt(0).toUpperCase()}
-                              </span>
-                              <span className="font-semibold text-white">{coworker.name}</span>
-                              <span className="text-neutral-400 text-[10px]">
-                                ({coworker.overlap_hours} hs)
+                              </div>
+                              <span className="font-semibold text-white text-xs">{coworker.name}</span>
+                              <span className="text-[10px] font-mono text-emerald-400 font-semibold">
+                                • {coworker.overlap_hours}hs compartidas
                               </span>
                             </div>
                           ))}

@@ -30,62 +30,91 @@ export function BalanceCard({
   // Eliminado estado optimista (GEL-025)
   // El balance ahora proviene estrictamente de las props (Supabase SSoT)
   const netFlow = income30d - expense30d;
+  const realFreeMoney = Math.max(0, totalBalance - monthlyInstallments);
 
   return (
     <>
       <div
-        className="relative rounded-3xl p-5 sm:p-7 lg:p-8 overflow-hidden bg-gradient-to-b from-neutral-900/80 to-neutral-950/80 backdrop-blur-2xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_0_0_rgba(255,255,255,0.08)]"
+        className="relative titanium-foil border border-white/10 glass-specular-top rounded-[2rem] p-5 sm:p-7 lg:p-8 overflow-hidden"
       >
-        {/* Luces de acento de fondo */}
+        {/* Specular Iridescent Sheen Gradient Reflection Layer */}
         <div
-          className="absolute -top-16 -right-16 w-56 h-56 rounded-full opacity-20 blur-3xl pointer-events-none"
-          style={{ background: "hsl(var(--primary))" }}
+          className="absolute -right-16 -top-16 w-56 h-56 bg-gradient-to-br from-emerald-400/25 via-indigo-500/15 to-transparent rounded-full blur-2xl pointer-events-none"
         />
         <div
-          className="absolute -bottom-16 -left-16 w-48 h-48 rounded-full opacity-15 blur-3xl pointer-events-none"
-          style={{ background: "hsl(142 71% 45%)" }}
+          className="absolute -left-12 -bottom-12 w-48 h-48 bg-purple-500/10 rounded-full blur-xl pointer-events-none"
         />
 
         <div className="relative z-10">
-          <div className="flex items-center justify-between gap-2 mb-2">
+          {/* Header row of the card */}
+          <div className="flex items-center justify-between gap-2 mb-3">
             <div className="flex items-center gap-2 min-w-0">
-              <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-white/[0.05] text-emerald-400 shrink-0 border border-white/[0.08]">
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-emerald-400/10 text-emerald-400 shrink-0 border border-emerald-400/25 shadow-[0_0_12px_rgba(78,222,163,0.25)]">
                 <DollarSign className="w-4 h-4 font-bold" />
               </div>
-              <p className="text-xs font-medium uppercase tracking-wider text-neutral-400 truncate">
-                Balance General
+              <p className="text-[11px] font-mono font-medium uppercase tracking-wider text-neutral-400 truncate">
+                Saldo Consolidado
               </p>
             </div>
 
-            <button
-              onClick={togglePrivacy}
-              className="p-2 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] text-neutral-400 hover:text-neutral-200 transition-colors cursor-pointer border border-white/[0.05]"
-              title={isPrivate ? "Mostrar números confidenciales" : "Ocultar números confidenciales (Modo Privacidad)"}
-            >
-              {isPrivate ? <EyeOff className="w-4 h-4 text-amber-400" /> : <Eye className="w-4 h-4" />}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={togglePrivacy}
+                className="p-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-neutral-400 hover:text-neutral-200 transition-colors cursor-pointer border border-white/[0.06]"
+                title={isPrivate ? "Mostrar números confidenciales" : "Ocultar números confidenciales (Modo Privacidad)"}
+              >
+                {isPrivate ? <EyeOff className="w-4 h-4 text-amber-400" /> : <Eye className="w-4 h-4" />}
+              </button>
+              {/* 3D Gold Microchip Accent */}
+              <div
+                className="w-8 h-6 rounded-md bg-gradient-to-tr from-amber-600 via-amber-300 to-amber-500 border border-amber-200/50 shadow-md flex items-center justify-center p-0.5 opacity-90 shrink-0"
+                title="Sovereign Vault Security Chip"
+              >
+                <div className="w-full h-full border border-amber-900/40 rounded-sm grid grid-cols-2 gap-0.5">
+                  <span className="border-b border-amber-900/30"></span>
+                  <span className="border-b border-amber-900/30"></span>
+                  <span></span>
+                  <span></span>
+                </div>
+              </div>
+            </div>
           </div>
 
+          {/* Embossed Metallic Balance Figures */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.4 }}
+            className="mb-3"
           >
-            <p className="text-3xl sm:text-4xl lg:text-5xl font-black text-white mb-1 font-mono tabular-nums tracking-tight truncate drop-shadow-md">
-              {isPrivate ? "$ ••••••" : formatCurrency(totalBalance)}
+            <div className="flex items-baseline gap-1.5 flex-wrap">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black font-mono tracking-tight tabular-nums text-transparent bg-clip-text bg-gradient-to-b from-white via-neutral-100 to-neutral-400 drop-shadow-sm">
+                {isPrivate ? "$ ••••••" : formatCurrency(totalBalance)}
+              </h1>
+              <span className="font-mono text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                ARS
+              </span>
+            </div>
+            <p className="text-xs text-neutral-400 mt-1 font-medium">
+              Saldo total acumulado en todas tus cuentas
             </p>
           </motion.div>
 
-          <p className="text-xs text-neutral-400 mb-5 font-medium">
-            Saldo total acumulado en todas tus cuentas
-          </p>
-
+          {/* Glowing Pill Badge: "Real Free Money" con efecto ping */}
+          <div className="relative z-10 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-950/80 border border-emerald-400/30 backdrop-blur-md shadow-[0_0_14px_rgba(78,222,163,0.15)] mb-4">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+            <span className="font-mono text-xs text-neutral-400">Real Free Money:</span>
+            <span className="font-mono text-xs font-bold text-emerald-400">
+              {isPrivate ? "$ ••••••" : formatCurrency(realFreeMoney, "ARS", true)}
+            </span>
+            <span className="text-[10px] text-neutral-500">disp. tras fijos</span>
+          </div>
 
           {/* Botones de acción principales grandes para pulgar móvil */}
           <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-4 sm:mb-5">
             <button
               onClick={() => setFormType("income")}
-              className="flex items-center justify-center gap-2 py-3 px-3 rounded-2xl text-xs sm:text-sm font-bold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 shadow-[0_8px_20px_rgba(16,185,129,0.1)] transition-all cursor-pointer active:scale-[0.97]"
+              className="flex items-center justify-center gap-2 py-3 px-3 rounded-2xl text-xs sm:text-sm font-bold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/25 shadow-[0_8px_20px_rgba(16,185,129,0.12)] transition-all cursor-pointer active:scale-[0.97]"
               title="Registrar nuevo ingreso (sueldo, extra, etc)"
             >
               <PlusCircle className="w-4 h-4 text-emerald-400 stroke-[2.5]" />
@@ -93,7 +122,7 @@ export function BalanceCard({
             </button>
             <button
               onClick={() => setFormType("expense")}
-              className="flex items-center justify-center gap-2 py-3 px-3 rounded-2xl text-xs sm:text-sm font-bold text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 shadow-[0_8px_20px_rgba(244,63,94,0.1)] transition-all cursor-pointer active:scale-[0.97]"
+              className="flex items-center justify-center gap-2 py-3 px-3 rounded-2xl text-xs sm:text-sm font-bold text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 shadow-[0_8px_20px_rgba(244,63,94,0.12)] transition-all cursor-pointer active:scale-[0.97]"
               title="Registrar nuevo gasto"
             >
               <MinusCircle className="w-4 h-4 text-rose-400 stroke-[2.5]" />

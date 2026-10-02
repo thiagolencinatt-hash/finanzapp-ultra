@@ -87,45 +87,32 @@ export function BottomNav() {
   return (
     <>
       <nav
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 pb-safe bg-[#090D14]/90 backdrop-blur-2xl border-t border-white/10 shadow-[0_-8px_30px_rgba(0,0,0,0.6)] select-none"
+        aria-label="Navegación Principal"
+        className="lg:hidden fixed bottom-6 left-0 right-0 w-[calc(100%-2rem)] max-w-md mx-auto z-50 bg-neutral-900/70 backdrop-blur-2xl rounded-full border border-white/10 shadow-2xl ring-1 ring-white/10 px-2 py-1.5 flex justify-around items-center select-none"
       >
-        <div className="grid grid-cols-4 items-center px-1.5 h-[64px]">
-          {TABS.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = (pathname === "/" && activeTab === tab.id);
+        {TABS.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = pathname === "/" && activeTab === tab.id;
 
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => handleSelectTab(tab.id)}
-                className={cn(
-                  "flex flex-col items-center justify-center h-[52px] py-1 px-1 rounded-2xl transition-all duration-200 active:scale-90 touch-manipulation cursor-pointer relative",
-                  isActive
-                    ? `${tab.color} font-bold`
-                    : "text-neutral-400 hover:text-neutral-200"
-                )}
-              >
-                <div
-                  className={cn(
-                    "p-1.5 rounded-xl transition-all",
-                    isActive ? tab.activeBg + " border" : "bg-transparent"
-                  )}
-                >
-                  <Icon className="w-5 h-5 stroke-[2.2]" />
-                </div>
-                <span className="text-[11px] font-semibold tracking-tight mt-0.5">
-                  {tab.label}
-                </span>
-
-                {/* Micro indicador activo */}
-                {isActive && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-current absolute bottom-0.5 shadow-sm" />
-                )}
-              </button>
-            );
-          })}
-        </div>
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => handleSelectTab(tab.id)}
+              className={cn(
+                "flex flex-col items-center justify-center transition-all duration-150 ease-out active:scale-95 touch-manipulation cursor-pointer relative",
+                isActive
+                  ? "bg-emerald-400/15 text-emerald-400 rounded-full px-3.5 py-1.5 shadow-[0_0_16px_rgba(78,222,163,0.25)] border border-emerald-400/30 font-bold"
+                  : "text-neutral-400 hover:text-neutral-200 px-3 py-1.5"
+              )}
+            >
+              <Icon className="w-5 h-5 stroke-[2.2]" />
+              <span className="font-mono uppercase tracking-wider text-[10px] mt-0.5">
+                {tab.label}
+              </span>
+            </button>
+          );
+        })}
       </nav>
 
       {/* Modal de Carga Rápida */}

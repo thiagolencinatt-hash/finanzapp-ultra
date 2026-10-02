@@ -165,14 +165,15 @@ export function SalaryCard({ initialSalary = 0, onSalaryUpdated }: SalaryCardPro
 
   return (
     <>
-      <div className="relative rounded-3xl p-5 sm:p-7 bg-gradient-to-b from-neutral-900/80 to-neutral-950/80 backdrop-blur-2xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_0_0_rgba(255,255,255,0.08)] overflow-hidden">
-        {/* Glow sutil */}
-        <div className="absolute -top-16 -right-16 w-52 h-52 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
+      <div className="relative rounded-3xl p-5 sm:p-7 bg-[#101419]/90 backdrop-blur-2xl border border-white/10 shadow-[0_16px_36px_-4px_rgba(0,0,0,0.75),inset_0_1px_0_rgba(255,255,255,0.1)] overflow-hidden">
+        {/* Glow sutil Stitch */}
+        <div className="absolute -top-16 -right-16 w-52 h-52 rounded-full bg-emerald-400/10 blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-indigo-500/10 blur-3xl pointer-events-none" />
 
         {/* Encabezado */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-9 h-9 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 flex items-center justify-center shrink-0">
+            <div className="w-9 h-9 rounded-2xl bg-emerald-400/15 border border-emerald-400/25 text-emerald-400 flex items-center justify-center shrink-0 shadow-[0_0_12px_rgba(78,222,163,0.2)]">
               <Briefcase className="w-4 h-4 stroke-[2.4]" />
             </div>
             <div className="min-w-0">
@@ -207,74 +208,77 @@ export function SalaryCard({ initialSalary = 0, onSalaryUpdated }: SalaryCardPro
 
         {/* Cifra Principal: Sueldo en Mano */}
         <div className="mb-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-neutral-400 mb-1">
+          <p className="text-xs font-mono font-medium uppercase tracking-wider text-neutral-400 mb-1">
             Sueldo en Mano (Neto)
           </p>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl sm:text-4xl lg:text-5xl font-black text-white font-mono tabular-nums tracking-tight drop-shadow-md">
+            <span className="text-3xl sm:text-4xl lg:text-5xl font-black font-mono tabular-nums tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white via-neutral-100 to-neutral-400 drop-shadow-sm">
               {isPrivate ? "$ ••••••" : formatCurrency(currentNetSalary, "ARS", true)}
             </span>
-            <span className="text-xs text-neutral-400 font-medium">/ mes</span>
+            <span className="text-xs font-mono text-emerald-400 font-semibold">/ mes</span>
           </div>
         </div>
 
-        {/* Banner del 5to Día Hábil (Cuenta regresiva exacta) */}
-        <div className="p-3.5 rounded-2xl bg-emerald-500/[0.06] border border-emerald-500/20 flex items-center justify-between gap-3 mb-4 shadow-sm">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-              <Calendar className="w-4 h-4" />
+        {/* Salary & Countdown HUD Bento Matrix (Google Stitch GEL-045) */}
+        <div className="space-y-2.5">
+          {/* 5to Día Hábil Countdown con badge circular */}
+          <div className="rounded-2xl p-4 bg-gradient-to-r from-neutral-900/90 to-neutral-950/90 border border-emerald-400/20 backdrop-blur-xl relative overflow-hidden flex items-center justify-between shadow-sm">
+            <div className="relative z-10 min-w-0 pr-3">
+              <div className="flex items-center gap-1.5 text-emerald-400 font-mono text-[11px] uppercase tracking-wider mb-0.5">
+                <Calendar className="w-3.5 h-3.5" />
+                <span>5to Día Hábil Countdown</span>
+              </div>
+              <h4 className="text-base sm:text-lg font-bold text-white tracking-tight">
+                {countdown.isToday ? "¡Cobras Hoy!" : `Cobro en ${countdown.daysRemaining} ${countdown.daysRemaining === 1 ? "día" : "días"}`}
+              </h4>
+              <p className="font-mono text-xs text-neutral-400 truncate">
+                Estimado: {countdown.dateString} · Acreditación directa
+              </p>
             </div>
-            <div>
-              <p className="text-xs font-bold text-white flex items-center gap-1.5">
-                5to Día Hábil: <span className="text-emerald-400">{countdown.dateString}</span>
-              </p>
-              <p className="text-[11px] text-neutral-400">
-                {countdown.isToday
-                  ? "¡Hoy es día de acreditación de haberes! 🎉"
-                  : `Faltan ${countdown.daysRemaining} ${countdown.daysRemaining === 1 ? "día" : "días"} para el cobro legal`}
-              </p>
+            <div className="relative z-10 text-right shrink-0">
+              <div className="w-12 h-12 rounded-full border-2 border-emerald-400/30 border-t-emerald-400 flex items-center justify-center shadow-[0_0_12px_rgba(78,222,163,0.25)]">
+                <span className="font-mono text-xs font-bold text-emerald-400">
+                  {countdown.isToday ? "HOY" : `${countdown.daysRemaining * 24}h`}
+                </span>
+              </div>
             </div>
           </div>
 
-          <span className={`px-2.5 py-1 rounded-full text-xs font-mono font-bold shrink-0 ${
-            countdown.isToday
-              ? "bg-emerald-500 text-black shadow-md shadow-emerald-500/30"
-              : "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
-          }`}>
-            {countdown.isToday ? "¡COBRAS HOY!" : `${countdown.daysRemaining}d`}
-          </span>
-        </div>
-
-        {/* Desglose de Valores de Hora (Normal vs Nocturna LCT) */}
-        <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
-          {/* Hora Normal */}
-          <div className="p-3.5 rounded-2xl bg-neutral-900/60 border border-white/[0.08] shadow-sm">
-            <div className="flex items-center gap-1.5 text-neutral-400 mb-1">
-              <Clock className="w-3.5 h-3.5 text-blue-400" />
-              <span className="text-xs font-medium uppercase tracking-wider">Hora Normal</span>
+          {/* Tarjetas Bento Compactas: Hora Diurna vs Turno Noche */}
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+            {/* Hora Diurna */}
+            <div className="rounded-2xl p-3.5 bg-neutral-900/50 border border-white/5 backdrop-blur-xl flex flex-col justify-between shadow-sm">
+              <span className="font-mono text-xs text-neutral-400 flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5 text-emerald-400" />
+                Hora Diurna
+              </span>
+              <div className="my-1.5">
+                <span className="text-base sm:text-lg font-black font-mono text-white tabular-nums">
+                  {isPrivate ? "$ •••" : formatCurrency(rates.hourlyRateNormal, "ARS", true)}
+                </span>
+                <span className="font-mono text-xs text-neutral-400">/h</span>
+              </div>
+              <span className="text-[10px] font-mono text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded w-fit border border-emerald-400/20">
+                Base CCT ({currentHours}hs)
+              </span>
             </div>
-            <p className="text-lg sm:text-xl font-black text-white font-mono tabular-nums tracking-tight">
-              {isPrivate ? "$ •••" : formatCurrency(rates.hourlyRateNormal, "ARS", true)}
-              <span className="text-xs text-neutral-400 font-normal"> /h</span>
-            </p>
-            <p className="text-[10px] text-neutral-400 mt-0.5">
-              Base: {currentHours} hs mensuales
-            </p>
-          </div>
 
-          {/* Hora Nocturna (+13.33% LCT Art. 200) */}
-          <div className="p-3.5 rounded-2xl bg-neutral-900/60 border border-white/[0.08] shadow-sm">
-            <div className="flex items-center gap-1.5 text-neutral-400 mb-1">
-              <Moon className="w-3.5 h-3.5 text-amber-400" />
-              <span className="text-xs font-medium uppercase tracking-wider">Hora Nocturna</span>
+            {/* Turno Noche con LCT Art. 200 */}
+            <div className="rounded-2xl p-3.5 bg-neutral-900/50 border border-indigo-500/20 backdrop-blur-xl flex flex-col justify-between shadow-sm">
+              <span className="font-mono text-xs text-secondary flex items-center gap-1">
+                <Moon className="w-3.5 h-3.5 text-indigo-400" />
+                Turno Noche
+              </span>
+              <div className="my-1.5">
+                <span className="text-base sm:text-lg font-black font-mono text-indigo-300 tabular-nums">
+                  {isPrivate ? "$ •••" : formatCurrency(rates.hourlyRateNight, "ARS", true)}
+                </span>
+                <span className="font-mono text-xs text-neutral-400">/h</span>
+              </div>
+              <span className="text-[10px] font-mono text-indigo-300 bg-indigo-500/20 px-1.5 py-0.5 rounded w-fit border border-indigo-500/30">
+                +13.33% LCT Art. 200
+              </span>
             </div>
-            <p className="text-lg sm:text-xl font-black text-amber-300 font-mono tabular-nums tracking-tight">
-              {isPrivate ? "$ •••" : formatCurrency(rates.hourlyRateNight, "ARS", true)}
-              <span className="text-xs text-neutral-400 font-normal"> /h</span>
-            </p>
-            <p className="text-[10px] text-amber-400/80 font-medium mt-0.5">
-              +13.3% LCT (21:00 a 06:00)
-            </p>
           </div>
         </div>
       </div>

@@ -255,36 +255,33 @@ function DashboardContent() {
                 </div>
               </ErrorBoundary>
 
-              {/* Botón Destacado de Mercado Pago (PDF / IA / Capturas) */}
+              {/* Botón 3D Mercado Pago Escáner (Google Stitch GEL-045) */}
               <div className="animate-slide-up">
                 <button
                   type="button"
                   onClick={() => setShowMPModal(true)}
-                  className="w-full text-left p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-sky-500/10 via-neutral-900/80 to-neutral-950/80 backdrop-blur-2xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.06)] hover:border-sky-500/40 hover:bg-neutral-900/90 transition-all cursor-pointer group active:scale-[0.99] flex items-center justify-between gap-3 sm:gap-4"
+                  className="w-full relative group overflow-hidden rounded-2xl p-0.5 bg-gradient-to-r from-emerald-400 via-teal-300 to-indigo-400 shadow-[0_12px_28px_-6px_rgba(16,185,129,0.35)] transition-all duration-200 active:scale-[0.98] cursor-pointer"
                 >
-                  <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-sky-500/20 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0 group-hover:scale-105 transition-transform shadow-[0_4px_15px_rgba(14,165,233,0.2)]">
-                      <span className="text-xl sm:text-2xl">📲</span>
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-sm sm:text-base font-extrabold text-white group-hover:text-sky-300 transition-colors truncate">
-                          Cargar Extracto o Comprobante de Mercado Pago
-                        </h3>
-                        <span className="hidden sm:inline-block px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-md bg-sky-500/20 text-sky-300 border border-sky-500/30 shrink-0 font-mono">
-                          PDF / IA
+                  <div className="relative flex items-center justify-between px-4 py-3.5 rounded-[14px] bg-[#101419]/90 backdrop-blur-2xl">
+                    {/* Icon with 3D ambient backlight glow */}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="relative flex items-center justify-center w-11 h-11 rounded-xl bg-emerald-400/20 border border-emerald-400/40 shadow-[0_0_16px_rgba(78,222,163,0.4)] shrink-0">
+                        <UploadCloud className="w-5 h-5 text-emerald-400" />
+                      </div>
+                      <div className="flex flex-col text-left min-w-0">
+                        <span className="text-sm sm:text-base text-white font-bold tracking-tight truncate">
+                          Escanear Comprobante MP
+                        </span>
+                        <span className="text-[11px] sm:text-xs font-mono text-neutral-400 truncate">
+                          OCR instantáneo &amp; categorización IA
                         </span>
                       </div>
-                      <p className="text-xs text-neutral-400 mt-0.5 truncate">
-                        Acepta PDF de Mercado Pago, capturas de pantalla o planillas Excel
-                      </p>
                     </div>
-                  </div>
-
-                  <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.05] group-hover:bg-sky-500/20 border border-white/[0.08] group-hover:border-sky-500/30 text-xs font-bold text-neutral-300 group-hover:text-sky-200 transition-all shrink-0">
-                    <UploadCloud className="w-4 h-4 text-sky-400" />
-                    <span className="hidden xs:inline">Cargar</span>
-                    <ChevronRight className="w-4 h-4 text-neutral-500 group-hover:translate-x-0.5 transition-transform" />
+                    {/* Trailing Action Pill */}
+                    <div className="flex items-center gap-1 bg-emerald-400/10 border border-emerald-400/30 px-3 py-1.5 rounded-full text-emerald-400 font-mono text-[10px] font-bold shadow-[0_0_10px_rgba(78,222,163,0.15)] shrink-0">
+                      <span>SCAN</span>
+                      <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                    </div>
                   </div>
                 </button>
               </div>
