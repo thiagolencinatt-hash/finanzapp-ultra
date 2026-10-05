@@ -17,6 +17,7 @@ import {
   SlidersHorizontal
 } from "lucide-react";
 import { toast } from "sonner";
+import { getWorkCycleRange, getSavedCutoffDay } from "@/lib/utils/payroll-calculator";
 import type { WorkShift, CoworkerOverlap } from "@/lib/types";
 
 export function WorkScheduleCard() {
@@ -29,6 +30,7 @@ export function WorkScheduleCard() {
 
   // Jornada semanal pactada (por defecto 44 hs LCT Argentina o configurable)
   const [targetWeeklyHours, setTargetWeeklyHours] = useState<number>(44);
+  const [cutoffDay, setCutoffDay] = useState<number>(25);
 
   // Estados de escaneo IA
   const [scannedShifts, setScannedShifts] = useState<WorkShift[]>([]);
@@ -36,7 +38,7 @@ export function WorkScheduleCard() {
   const [selectedEmployee, setSelectedEmployee] = useState<string>("");
   const [lastUploadedFile, setLastUploadedFile] = useState<File | null>(null);
 
-  // Cargar jornada pactada de localStorage
+  // Cargar jornada pactada y corte de localStorage
   useEffect(() => {
     try {
       const stored = localStorage.getItem("finanzapp_target_weekly_hours");
@@ -44,10 +46,21 @@ export function WorkScheduleCard() {
         const val = Number(stored);
         if (val > 0) setTargetWeeklyHours(val);
       }
+      setCutoffDay(getSavedCutoffDay());
     } catch {
       // ignore
     }
+
+    const handlePayrollUpdated = () => {
+      setCutoffDay(getSavedCutoffDay());
+    };
+    window.addEventListener("finance-payroll-updated", handlePayrollUpdated);
+    return () => window.removeEventListener("finance-payroll-updated", handlePayrollUpdated);
   }, []);
+
+  const cycle = useMemo(() => {
+    return getWorkCycleRange(new Date(), cutoffDay);
+  }, [cutoffDay]);
 
   const handleTargetChange = (val: number) => {
     setTargetWeeklyHours(val);
@@ -274,11 +287,16 @@ export function WorkScheduleCard() {
               <CalendarDays className="w-4 h-4 stroke-[2.4]" />
             </div>
             <div className="min-w-0">
-              <h3 className="text-sm sm:text-base font-extrabold text-white truncate">
-                Mis Horarios de Trabajo
-              </h3>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-sm sm:text-base font-extrabold text-white truncate">
+                  Mis Horarios de Trabajo
+                </h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                  Ciclo: {cycle.shortLabel}
+                </span>
+              </div>
               <p className="text-xs text-neutral-400 truncate">
-                Planilla semanal, nocturnidad y compañeros de turno
+                Planilla semanal, cómputo al día {cycle.cutoffDay} y compañeros de turno
               </p>
             </div>
           </div>
@@ -592,9 +610,9 @@ export function WorkScheduleCard() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in">
           <div className="fixed inset-0" onClick={() => !scanning && !saving && setShowModal(false)} />
 
-          <div className="relative w-full max-w-lg max-h-[88dvh] flex flex-col rounded-3xl bg-neutral-950 border border-white/10 shadow-[0_25px_70px_rgba(0,0,0,0.9)] overflow-hidden z-10 animate-slide-up pb-safe">
+          <div className="relative w-full max-w-lg max-h-[85dvh] flex flex-col rounded-3xl bg-neutral-950 border border-white/10 shadow-[0_25px_70px_rgba(0,0,0,0.9)] overflow-hidden z-10 animate-slide-up">
             {/* Header del Modal */}
-            <div className="sticky top-0 bg-neutral-900/95 backdrop-blur-md z-10 px-5 py-4 border-b border-white/10 flex items-center justify-between">
+            <div className="sticky top-0 bg-neutral-900/95 backdrop-blur-md z-10 px-5 py-4 border-b border-white/10 flex items-center justify-between shrink-0">
               <div>
                 <h3 className="text-lg font-bold text-white flex items-center gap-2">
                   Planilla de Horarios & Turnos
@@ -616,8 +634,8 @@ export function WorkScheduleCard() {
               </button>
             </div>
 
-            {/* Contenido del Modal */}
-            <div className="p-5 overflow-y-auto space-y-4">
+            {/* Contenido del Modal con Scroll */}
+            <div className="flex-1 overflow-y-auto overscroll-contain p-5 space-y-4 pb-12 pr-1">
               {scannedShifts.length === 0 ? (
                 <div className="space-y-4 text-center">
                   <div className="p-6 sm:p-8 rounded-2xl border-2 border-dashed border-white/15 bg-white/[0.02] hover:bg-white/[0.05] transition-all flex flex-col items-center justify-center">
@@ -734,30 +752,32 @@ export function WorkScheduleCard() {
                       </div>
                     ))}
                   </div>
-
-                  {/* Botones de acción modal flexibles y sin superposición */}
-                  <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 w-full pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setScannedShifts([])}
-                      className="w-full sm:w-auto min-h-[46px] px-4 py-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 text-xs font-bold text-neutral-300 transition-all cursor-pointer flex items-center justify-center gap-2"
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                      <span>Escanear otra foto</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleSaveShifts}
-                      disabled={saving}
-                      className="w-full sm:w-auto flex-1 min-h-[46px] px-4 py-2.5 rounded-xl bg-blue-500 text-black font-extrabold text-xs uppercase tracking-wider hover:bg-blue-400 transition-all cursor-pointer active:scale-95 shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
-                    >
-                      {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4 stroke-[3]" />}
-                      <span>Confirmar y Guardar Horarios</span>
-                    </button>
-                  </div>
                 </div>
               )}
             </div>
+
+            {/* Sticky Action Footer (GEL-047 No-Overlapping Ergonomics) */}
+            {scannedShifts.length > 0 && (
+              <div className="sticky bottom-0 bg-neutral-900/95 backdrop-blur-md pt-3 pb-3 px-5 border-t border-white/10 flex items-center justify-between gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setScannedShifts([])}
+                  className="px-4 py-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 text-xs font-bold text-neutral-300 transition-all cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  <span>Escanear otra</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveShifts}
+                  disabled={saving}
+                  className="px-5 py-2.5 rounded-xl bg-blue-500 text-black font-extrabold text-xs uppercase tracking-wider hover:bg-blue-400 transition-all cursor-pointer active:scale-95 shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
+                >
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4 stroke-[3]" />}
+                  <span>Guardar Horarios</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

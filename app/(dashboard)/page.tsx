@@ -24,8 +24,10 @@ import {
   Wallet,
   Clock,
   Sparkles,
-  Radar
+  Radar,
+  CreditCard
 } from "lucide-react";
+import { formatCurrency } from "@/lib/utils/currency";
 
 import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
 import { CashFlowProjectionCard } from "@/components/dashboard/CashFlowProjectionCard";
@@ -36,6 +38,7 @@ import { LaborAuditorCard } from "@/components/dashboard/LaborAuditorCard";
 import { FinancialAuditorChat } from "@/components/ai/FinancialAuditorChat";
 import { SubscriptionRadarCard } from "@/components/dashboard/SubscriptionRadarCard";
 import { SmartRemindersBanner } from "@/components/dashboard/SmartRemindersBanner";
+import { InstallmentsGoalsModal } from "@/components/dashboard/InstallmentsGoalsModal";
 
 type ModularTab = "finanzas" | "trabajo" | "asistente" | "radar";
 
@@ -48,6 +51,7 @@ function DashboardContent() {
   const [showQuickModal, setShowQuickModal] = useState(false);
   const [showMPModal, setShowMPModal] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showInstallmentsGoalsModal, setShowInstallmentsGoalsModal] = useState(false);
   const [dateSubtitle, setDateSubtitle] = useState("");
   const [greeting, setGreeting] = useState("¡Hola");
   const [mounted, setMounted] = useState(false);
@@ -198,7 +202,7 @@ function DashboardContent() {
       {loading ? (
         <DashboardSkeleton />
       ) : (
-        <div className="flex-1 px-4 pt-3 pb-36 space-y-4 max-w-5xl mx-auto w-full">
+        <div className="flex-1 px-4 pt-3 pb-44 space-y-5 sm:space-y-6 max-w-5xl mx-auto w-full">
           {/* Switcher de Pestañas Modular (60 FPS & Cero Saturación) */}
           <div className="flex items-center justify-between p-1.5 rounded-2xl bg-neutral-900/80 border border-white/10 backdrop-blur-xl gap-1 overflow-x-auto no-scrollbar shadow-sm">
             {MODULAR_TABS.map((tab) => {
@@ -226,7 +230,7 @@ function DashboardContent() {
           {/* 1. PESTAÑA: FINANZAS (Balance, Dinero Libre, MP y Movimientos) */}
           {/* =============================================================== */}
           {activeTab === "finanzas" && (
-            <div className="space-y-4 animate-fade-in">
+            <div className="space-y-5 sm:space-y-6 animate-fade-in">
               <SmartRemindersBanner onNavigateTab={(t) => switchTab(t as ModularTab)} />
 
               {/* Coach IA Smart Tip */}
@@ -307,51 +311,57 @@ function DashboardContent() {
                 </div>
               </div>
 
-              {/* Metas de Ahorro */}
-              <FreemiumGate action="manage_goals" className="animate-slide-up">
-                <ErrorBoundary fallbackTitle="Error en metas" fallbackMessage="Las metas no pudieron renderizarse.">
-                  <DashboardGoalsSection
-                    goals={summary?.savings_goals || []}
-                    salary={summary?.configured_salary || summary?.income_30d || 980000}
-                    onRefresh={loadSummary}
-                  />
-                </ErrorBoundary>
-              </FreemiumGate>
-
-              {/* Sección Avanzada (Cuotas) */}
-              <FreemiumGate action="manage_installments" className="animate-slide-up">
-                <div>
-                  <button
-                    type="button"
-                    onClick={() => setShowAdvanced(!showAdvanced)}
-                    className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-bold transition-all cursor-pointer bg-neutral-900/60 border border-white/[0.08] text-neutral-400 hover:text-white hover:bg-neutral-900/90 shadow-sm"
-                  >
-                    {showAdvanced ? (
-                      <>
-                        <ChevronUp className="w-4 h-4" />
-                        Ocultar compras en cuotas
-                      </>
-                    ) : (
-                      <>
-                        <ChevronDown className="w-4 h-4" />
-                        Ver compras en cuotas activas
-                      </>
-                    )}
-                  </button>
-
-                  {showAdvanced && (
-                    <div className="space-y-5 mt-5 animate-slide-up">
-                      <ErrorBoundary fallbackTitle="Error en cuotas" fallbackMessage="Las cuotas no pudieron renderizarse.">
-                        <DashboardInstallmentsSection
-                          installments={summary?.active_installments || []}
-                          monthlyTotal={summary?.total_installments_monthly || 0}
-                          onRefresh={loadSummary}
-                        />
-                      </ErrorBoundary>
+              {/* Acceso Dedicado: Mis Cuotas & Metas Financieras (GEL-047) */}
+              <div className="animate-slide-up">
+                <div 
+                  onClick={() => setShowInstallmentsGoalsModal(true)}
+                  className="group relative rounded-3xl p-5 sm:p-6 bg-gradient-to-r from-neutral-900/90 via-[#101419]/90 to-neutral-950/90 border border-white/10 hover:border-amber-500/35 shadow-[0_12px_32px_rgba(0,0,0,0.4)] backdrop-blur-2xl transition-all cursor-pointer active:scale-[0.99] overflow-hidden"
+                >
+                  <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-amber-500/10 blur-3xl pointer-events-none" />
+                  
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <div className="w-12 h-12 rounded-2xl bg-amber-500/15 border border-amber-500/25 text-amber-400 flex items-center justify-center shrink-0 shadow-[0_0_16px_rgba(245,158,11,0.2)]">
+                        <CreditCard className="w-6 h-6 stroke-[2.2]" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="text-base sm:text-lg font-bold text-white group-hover:text-amber-300 transition-colors">
+                            Mis Cuotas &amp; Metas Financieras
+                          </h3>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                            GESTIÓN DEDICADA
+                          </span>
+                        </div>
+                        <p className="text-xs text-neutral-400 mt-0.5">
+                          Administra tus compras a plazo, vencimientos y objetivos de ahorro
+                        </p>
+                      </div>
                     </div>
-                  )}
+
+                    <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/[0.06]">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <div className="px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-left">
+                          <span className="text-[10px] font-mono text-neutral-400 block uppercase">Cuotas</span>
+                          <span className="text-xs font-mono font-bold text-amber-300">
+                            {summary?.active_installments?.length || 0} activas · {formatCurrency(summary?.total_installments_monthly || 0, "ARS", true)}/mes
+                          </span>
+                        </div>
+                        <div className="px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-left">
+                          <span className="text-[10px] font-mono text-neutral-400 block uppercase">Metas</span>
+                          <span className="text-xs font-mono font-bold text-emerald-400">
+                            {summary?.savings_goals?.length || 0} activas
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="w-8 h-8 rounded-xl bg-amber-500/10 group-hover:bg-amber-500 text-amber-400 group-hover:text-black flex items-center justify-center transition-all shrink-0">
+                        <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </FreemiumGate>
+              </div>
             </div>
           )}
 
@@ -359,7 +369,7 @@ function DashboardContent() {
           {/* 2. PESTAÑA: TRABAJO (Horarios, Franco, Cobro y Auditor Laboral) */}
           {/* =============================================================== */}
           {activeTab === "trabajo" && (
-            <div className="space-y-4 animate-fade-in">
+            <div className="space-y-5 sm:space-y-6 animate-fade-in">
               <SmartRemindersBanner onNavigateTab={(t) => switchTab(t as ModularTab)} />
 
               {/* Tarjeta de Sueldo & 5to Día Hábil */}
@@ -392,7 +402,7 @@ function DashboardContent() {
           {/* 3. PESTAÑA: ASISTENTE (Chat NotebookLM + Audio Resumen Semanal) */}
           {/* =============================================================== */}
           {activeTab === "asistente" && (
-            <div className="space-y-4 animate-fade-in">
+            <div className="space-y-5 sm:space-y-6 animate-fade-in">
               <ErrorBoundary fallbackTitle="Error en Asistente IA" fallbackMessage="El chat con IA no pudo cargarse.">
                 <div className="animate-slide-up">
                   <FinancialAuditorChat onDataRefresh={loadSummary} />
@@ -405,7 +415,7 @@ function DashboardContent() {
           {/* 4. PESTAÑA: RADAR (Suscripciones, Débitos, Aumentos y Alertas) */}
           {/* =============================================================== */}
           {activeTab === "radar" && (
-            <div className="space-y-4 animate-fade-in">
+            <div className="space-y-5 sm:space-y-6 animate-fade-in">
               <SmartRemindersBanner onNavigateTab={(t) => switchTab(t as ModularTab)} />
 
               {/* Radar de Suscripciones & Débitos Automáticos (FEATURE 4) */}
@@ -417,6 +427,18 @@ function DashboardContent() {
             </div>
           )}
         </div>
+      )}
+
+      {showInstallmentsGoalsModal && (
+        <InstallmentsGoalsModal
+          isOpen={showInstallmentsGoalsModal}
+          onClose={() => setShowInstallmentsGoalsModal(false)}
+          installments={summary?.active_installments || []}
+          monthlyTotal={summary?.total_installments_monthly || 0}
+          goals={summary?.savings_goals || []}
+          salary={summary?.configured_salary || summary?.income_30d || 980000}
+          onRefresh={loadSummary}
+        />
       )}
 
       {showQuickModal && (

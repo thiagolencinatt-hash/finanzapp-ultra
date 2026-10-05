@@ -1169,6 +1169,107 @@ export async function addSubscription(
   return fallbackSub;
 }
 
+export async function updateSubscription(
+  userId: string,
+  subId: string,
+  patch: Partial<Subscription>
+): Promise<Subscription | null> {
+  try {
+    const supabase = await createClient();
+    const updateRow: any = {
+      updated_at: new Date().toISOString(),
+    };
+    if (patch.name !== undefined) updateRow.name = patch.name;
+    if (patch.amount !== undefined) updateRow.amount = Number(patch.amount);
+    if (patch.billing_cycle !== undefined) updateRow.billing_cycle = patch.billing_cycle;
+    if (patch.renewal_day !== undefined) updateRow.billing_day = Number(patch.renewal_day);
+    if (patch.is_active !== undefined) updateRow.is_active = patch.is_active;
+
+    const { data, error } = await supabase
+      .from("subscriptions")
+      .update(updateRow)
+      .eq("id", subId)
+      .eq("user_id", userId)
+      .select()
+      .maybeSingle();
+
+    if (!error && data) {
+      const store = await localStore.getUserStore(userId);
+      if (store.subscriptions) {
+        const idx = store.subscriptions.findIndex((s) => s.id === subId);
+        if (idx !== -1) {
+          store.subscriptions[idx] = {
+            ...store.subscriptions[idx],
+            ...patch,
+            updated_at: data.updated_at,
+          };
+          await localStore.saveUserStore(userId);
+        }
+      }
+      return {
+        id: data.id,
+        user_id: data.user_id,
+        name: data.name,
+        amount: Number(data.amount) || 0,
+        currency: "ARS",
+        billing_cycle: data.billing_cycle || "monthly",
+        renewal_day: Number(data.billing_day) || 1,
+        is_active: data.is_active !== false,
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+      };
+    }
+  } catch (err) {
+    console.warn("[supabase-store] updateSubscription fallback:", err);
+  }
+
+  // Fallback local store
+  const store = await localStore.getUserStore(userId);
+  if (store.subscriptions) {
+    const idx = store.subscriptions.findIndex((s) => s.id === subId);
+    if (idx !== -1) {
+      store.subscriptions[idx] = {
+        ...store.subscriptions[idx],
+        ...patch,
+        updated_at: new Date().toISOString(),
+      };
+      await localStore.saveUserStore(userId);
+      return store.subscriptions[idx];
+    }
+  }
+  return null;
+}
+
+export async function deleteSubscription(userId: string, subId: string): Promise<boolean> {
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase
+      .from("subscriptions")
+      .delete()
+      .eq("id", subId)
+      .eq("user_id", userId);
+
+    if (!error) {
+      const store = await localStore.getUserStore(userId);
+      if (store.subscriptions) {
+        store.subscriptions = store.subscriptions.filter((s) => s.id !== subId);
+        await localStore.saveUserStore(userId);
+      }
+      return true;
+    }
+  } catch (err) {
+    console.warn("[supabase-store] deleteSubscription fallback:", err);
+  }
+
+  const store = await localStore.getUserStore(userId);
+  if (store.subscriptions) {
+    store.subscriptions = store.subscriptions.filter((s) => s.id !== subId);
+    await localStore.saveUserStore(userId);
+    return true;
+  }
+  return false;
+}
+
 // 8. RESUMEN COMPLETO (FINANCIAL SUMMARY)
 export async function getSummary(
   userId: string,

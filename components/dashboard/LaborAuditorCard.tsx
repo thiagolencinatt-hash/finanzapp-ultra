@@ -13,12 +13,14 @@ import {
   TrendingUp
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
+import { getWorkCycleRange, getSavedCutoffDay } from "@/lib/utils/payroll-calculator";
 import type { SalaryRecord, WorkShift } from "@/lib/types";
 
 export function LaborAuditorCard() {
   const [salaryRecord, setSalaryRecord] = useState<SalaryRecord | null>(null);
   const [shifts, setShifts] = useState<WorkShift[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cutoffDay, setCutoffDay] = useState<number>(25);
 
   const loadData = async () => {
     setLoading(true);
@@ -49,24 +51,40 @@ export function LaborAuditorCard() {
   };
 
   useEffect(() => {
+    setCutoffDay(getSavedCutoffDay());
     loadData();
-    const handleRefresh = () => loadData();
+    const handleRefresh = () => {
+      setCutoffDay(getSavedCutoffDay());
+      loadData();
+    };
     window.addEventListener("finance-refresh", handleRefresh);
-    return () => window.removeEventListener("finance-refresh", handleRefresh);
+    window.addEventListener("finance-payroll-updated", handleRefresh);
+    return () => {
+      window.removeEventListener("finance-refresh", handleRefresh);
+      window.removeEventListener("finance-payroll-updated", handleRefresh);
+    };
   }, []);
 
-  // Calcular horas trabajadas en el período del mes corriente
+  const cycle = useMemo(() => {
+    return getWorkCycleRange(new Date(), cutoffDay);
+  }, [cutoffDay]);
+
+  // Calcular horas trabajadas en el ciclo de corte laboral (ej. del 26 del mes anterior al 25 de este mes)
   const audit = useMemo(() => {
-    const now = new Date();
-    const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    // Filtrar turnos estrictamente dentro del rango de corte
+    const cycleShifts = shifts.filter((s) => {
+      if (s.is_rest_day || s.start_time === "Franco") return false;
+      if (!s.shift_date) return false;
+      return s.shift_date >= cycle.startDateStr && s.shift_date <= cycle.endDateStr;
+    });
 
-    // Filtrar turnos del mes actual (o todos los turnos registrados si son de esta misma carga mensual)
-    const monthShifts = shifts.filter(
-      (s) => !s.is_rest_day && s.start_time !== "Franco" && (s.shift_date.startsWith(currentYearMonth) || shifts.length <= 31)
-    );
+    // Si los turnos cargados corresponden a un lote de hasta 31 días pero fuera del rango exacto ISO, usarlos como fallback
+    const effectiveShifts = cycleShifts.length > 0
+      ? cycleShifts
+      : shifts.filter((s) => !s.is_rest_day && s.start_time !== "Franco");
 
-    const totalWorkedHours = monthShifts.reduce((acc, s) => acc + (Number(s.total_hours) || 0), 0);
-    const totalNightHours = monthShifts.reduce((acc, s) => acc + (Number(s.night_hours) || 0), 0);
+    const totalWorkedHours = effectiveShifts.reduce((acc, s) => acc + (Number(s.total_hours) || 0), 0);
+    const totalNightHours = effectiveShifts.reduce((acc, s) => acc + (Number(s.night_hours) || 0), 0);
 
     const liquidatedHours = Number(salaryRecord?.total_hours) || 160;
     const hourlyNormal = Number(salaryRecord?.hourly_rate_normal) || (salaryRecord?.net_salary ? salaryRecord.net_salary / liquidatedHours : 0);
@@ -78,7 +96,7 @@ export function LaborAuditorCard() {
     const pendingValue = hasPendingHours ? diff * hourlyNormal : 0;
 
     return {
-      monthShiftsCount: monthShifts.length,
+      monthShiftsCount: effectiveShifts.length,
       totalWorkedHours,
       totalNightHours,
       liquidatedHours,
@@ -88,9 +106,10 @@ export function LaborAuditorCard() {
       pendingValue,
       hourlyNormal,
       hourlyNight,
-      period: salaryRecord?.period || "Mes actual",
+      period: salaryRecord?.period || cycle.periodName,
+      cycleLabel: cycle.label,
     };
-  }, [shifts, salaryRecord]);
+  }, [shifts, salaryRecord, cycle]);
 
   return (
     <div className="relative rounded-3xl p-5 sm:p-7 bg-gradient-to-b from-neutral-900/80 to-neutral-950/80 backdrop-blur-2xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_0_0_rgba(255,255,255,0.08)] overflow-hidden">
@@ -117,7 +136,7 @@ export function LaborAuditorCard() {
               </span>
             </h3>
             <p className="text-xs text-neutral-400 truncate">
-              Cotejo automático: Planilla de turnos vs Recibo liquidado
+              Cotejo ciclo ({audit.cycleLabel}): Planilla vs Recibo liquidado
             </p>
           </div>
         </div>

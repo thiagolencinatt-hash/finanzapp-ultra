@@ -265,9 +265,9 @@ export function BankStatementModal({ isOpen, onClose, onSuccess, initialBank }: 
       {/* Backdrop click to close */}
       <div className="fixed inset-0" onClick={onClose} />
 
-      {/* Modal Dialog: max-h-[82dvh] con margen superior para no cortarse con la barra de estado */}
+      {/* Modal Dialog: max-h-[85dvh] flex flex-col */}
       <div 
-        className="relative w-full max-w-3xl max-h-[82dvh] sm:max-h-[85vh] mt-12 sm:mt-0 flex flex-col rounded-t-3xl sm:rounded-3xl bg-zinc-950 border-t border-x sm:border border-white/[0.1] shadow-[0_25px_70px_rgba(0,0,0,0.95)] overflow-hidden z-10"
+        className="relative w-full max-w-3xl max-h-[85dvh] flex flex-col rounded-t-3xl sm:rounded-3xl bg-zinc-950 border-t border-x sm:border border-white/[0.1] shadow-[0_25px_70px_rgba(0,0,0,0.95)] overflow-hidden z-10"
       >
         {/* Handle pill para móvil */}
         <div className="w-12 h-1.5 bg-neutral-600 rounded-full mx-auto mt-3 mb-1 sm:hidden shrink-0" />
@@ -300,7 +300,7 @@ export function BankStatementModal({ isOpen, onClose, onSuccess, initialBank }: 
         </div>
 
         {/* Content Body */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 pb-12 pr-1 space-y-5 custom-scrollbar">
           {!parsedData ? (
             /* Upload State */
             <div className="space-y-4">
