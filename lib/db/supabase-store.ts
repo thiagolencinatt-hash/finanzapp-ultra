@@ -101,13 +101,22 @@ export async function getAccounts(userId: string): Promise<Account[]> {
           currency: a.currency || "ARS",
           color: a.color || "#10B981",
           icon: a.icon || "Wallet",
-          is_active: true,
+          is_active: a.is_active !== false,
           created_at: a.created_at || new Date().toISOString(),
           updated_at: a.updated_at || a.created_at || new Date().toISOString(),
         }));
       }
 
-      return data.map((a) => ({
+      // Deduplicar defensivamente cuentas repetidas con el mismo nombre normalizado
+      const seen = new Set<string>();
+      const deduplicated = data.filter((a) => {
+        const norm = (a.name || "").trim().toLowerCase();
+        if (seen.has(norm)) return false;
+        seen.add(norm);
+        return true;
+      });
+
+      return deduplicated.map((a) => ({
         id: a.id,
         user_id: a.user_id,
         name: a.name,
@@ -116,7 +125,7 @@ export async function getAccounts(userId: string): Promise<Account[]> {
         currency: a.currency || "ARS",
         color: a.color || "#10B981",
         icon: a.icon || "Wallet",
-        is_active: true,
+        is_active: a.is_active !== false,
         created_at: a.created_at,
         updated_at: a.updated_at || a.created_at,
       }));
@@ -393,8 +402,14 @@ export async function addTransaction(
 
 export async function addTransactionsBatch(
   userId: string,
-  txs: Array<Partial<Transaction>>
-): Promise<{ success: boolean; count: number }> {
+  txs: Array<Partial<Transaction>>,
+  options?: {
+    accountId?: string;
+    initialBalance?: number | null;
+    finalBalance?: number | null;
+    period?: string | null;
+  }
+): Promise<{ success: boolean; count: number; reconciledBalance?: number }> {
   if (!txs || txs.length === 0) return { success: true, count: 0 };
   const supabase = await createClient();
   const isValidUUID = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
@@ -410,8 +425,11 @@ export async function addTransactionsBatch(
     const finalAccountId = tx.account_id && isValidUUID(tx.account_id) ? tx.account_id : defaultAccountId;
     const categoryId = tx.category_id || (tx as any).category || "General";
 
-    const delta = type === "income" ? amount : -amount;
-    accountBalanceDeltas[finalAccountId] = (accountBalanceDeltas[finalAccountId] || 0) + delta;
+    // Si es transferencia interna, no altera el saldo neto de la cuenta
+    if (type !== "transfer") {
+      const delta = type === "income" ? amount : -amount;
+      accountBalanceDeltas[finalAccountId] = (accountBalanceDeltas[finalAccountId] || 0) + delta;
+    }
 
     const row: Record<string, any> = {
       user_id: userId,
@@ -432,8 +450,47 @@ export async function addTransactionsBatch(
     throw new Error(error.message || "Error al insertar lote de transacciones");
   }
 
-  // Actualizar balances de las cuentas involucradas
+  // Conciliación de Saldo Real Auditado (GEL-046)
+  let reconciledAccountId: string | null = null;
+  const hasAuditedFinalBalance = options?.finalBalance !== undefined && options?.finalBalance !== null && !isNaN(options.finalBalance);
+
+  if (hasAuditedFinalBalance) {
+    if (options?.accountId && isValidUUID(options.accountId)) {
+      reconciledAccountId = options.accountId;
+    } else {
+      // Buscar cuenta Mercado Pago del usuario o cuenta principal
+      const { data: userAccounts } = await supabase
+        .from("accounts")
+        .select("id, name")
+        .eq("user_id", userId);
+      const mpAcc = (userAccounts || []).find((a) =>
+        a.name.toLowerCase().includes("mercado") || a.name.toLowerCase().includes("pago")
+      );
+      reconciledAccountId = mpAcc ? mpAcc.id : defaultAccountId;
+    }
+
+    if (reconciledAccountId) {
+      try {
+        await supabase
+          .from("accounts")
+          .update({
+            balance: options!.finalBalance!,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", reconciledAccountId);
+        console.log(`[supabase-store] Cuenta ${reconciledAccountId} reconciliada con éxito a saldo auditado: $${options!.finalBalance}`);
+      } catch (reconcileErr) {
+        console.warn("[supabase-store] Error reconciliando cuenta con saldo final:", reconcileErr);
+      }
+    }
+  }
+
+  // Actualizar balances por delta para cuentas no reconciliadas directamente por saldo auditado
   for (const [accId, delta] of Object.entries(accountBalanceDeltas)) {
+    if (hasAuditedFinalBalance && accId === reconciledAccountId) {
+      // Ya anclada directamente al saldo final auditado
+      continue;
+    }
     try {
       const { data: acc } = await supabase
         .from("accounts")
@@ -449,7 +506,11 @@ export async function addTransactionsBatch(
     }
   }
 
-  return { success: true, count: data?.length || insertRows.length };
+  return {
+    success: true,
+    count: data?.length || insertRows.length,
+    reconciledBalance: hasAuditedFinalBalance ? options!.finalBalance! : undefined,
+  };
 }
 
 
@@ -1124,12 +1185,11 @@ export async function getSummary(
       ]);
 
     let totalBalance = accounts
-      .filter((a) => a.is_active)
+      .filter((a) => a.is_active !== false)
       .reduce((sum, a) => sum + (Number(a.balance) || 0), 0);
       
-    // Anti-zero protection: si el balance es 0 pero hay transacciones, 
-    // recalcular el balance desde las transacciones (en caso de que accounts esté desfasado o vacío).
-    if (totalBalance === 0 && transactions.length > 0) {
+    // Fallback exclusivo si NO existen cuentas registradas en la base de datos pero sí hay transacciones
+    if (accounts.length === 0 && transactions.length > 0) {
       totalBalance = transactions.reduce((sum, t) => {
         return t.type === "income" ? sum + Number(t.amount) : sum - Number(t.amount);
       }, 0);

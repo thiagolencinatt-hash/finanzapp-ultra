@@ -36,6 +36,9 @@ export function BankStatementModal({ isOpen, onClose, onSuccess, initialBank }: 
     transactions: ParsedStatementTransaction[];
     totalIncome: number;
     totalExpense: number;
+    initialBalance?: number | null;
+    finalBalance?: number | null;
+    period?: string | null;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -110,6 +113,9 @@ export function BankStatementModal({ isOpen, onClose, onSuccess, initialBank }: 
         transactions: data.transactions,
         totalIncome: data.totalIncome || 0,
         totalExpense: data.totalExpense || 0,
+        initialBalance: data.initialBalance !== undefined ? data.initialBalance : null,
+        finalBalance: data.finalBalance !== undefined ? data.finalBalance : null,
+        period: data.period || null,
       });
 
       // Auto-seleccionar la cuenta que coincida con el banco detectado o initialBank
@@ -138,6 +144,9 @@ export function BankStatementModal({ isOpen, onClose, onSuccess, initialBank }: 
               transactions: localResult.transactions,
               totalIncome: localResult.totalIncome,
               totalExpense: localResult.totalExpense,
+              initialBalance: localResult.initialBalance || null,
+              finalBalance: localResult.finalBalance || null,
+              period: localResult.period || null,
             });
             toast.success(`¡Detectado ${localResult.detectedBank}! Se encontraron ${localResult.transactions.length} movimientos.`);
             return;
@@ -218,7 +227,13 @@ export function BankStatementModal({ isOpen, onClose, onSuccess, initialBank }: 
       const res = await fetch("/api/transactions/batch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transactions: payload }),
+        body: JSON.stringify({
+          transactions: payload,
+          accountId: selectedAccountId,
+          initialBalance: parsedData.initialBalance,
+          finalBalance: parsedData.finalBalance,
+          period: parsedData.period,
+        }),
       });
 
       const data = await res.json();
@@ -389,6 +404,43 @@ export function BankStatementModal({ isOpen, onClose, onSuccess, initialBank }: 
                   <TrendingDown className="w-5 h-5 text-rose-400" />
                 </div>
               </div>
+
+              {/* Banner de Conciliación de Saldo Auditado (GEL-046) */}
+              {parsedData.finalBalance !== undefined && parsedData.finalBalance !== null && (
+                <div className="p-3.5 sm:p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in shadow-[0_0_20px_rgba(16,185,129,0.1)]">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.3)]">
+                      <Sparkles className="w-5 h-5 text-emerald-400" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs uppercase font-extrabold text-emerald-400 tracking-wider">
+                          Conciliación Oficial de Saldo
+                        </p>
+                        {parsedData.period && (
+                          <span className="text-[10px] font-mono text-zinc-400 bg-white/[0.06] px-2 py-0.5 rounded-full border border-white/[0.08]">
+                            {parsedData.period}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs sm:text-sm text-zinc-200 mt-0.5">
+                        {parsedData.initialBalance !== null && parsedData.initialBalance !== undefined ? (
+                          <span>
+                            Saldo inicial: <strong className="font-mono text-zinc-300">{formatCurrency(parsedData.initialBalance)}</strong> •{" "}
+                          </span>
+                        ) : null}
+                        Saldo final oficial:{" "}
+                        <strong className="font-mono text-emerald-300 font-extrabold text-sm sm:text-base">
+                          {formatCurrency(parsedData.finalBalance ?? 0)}
+                        </strong>
+                      </p>
+                    </div>
+                  </div>
+                  <span className="self-start sm:self-auto text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 whitespace-nowrap">
+                    ✓ Balance Anclado
+                  </span>
+                </div>
+              )}
 
               {/* Account Selector */}
               <div className="p-3.5 rounded-2xl bg-zinc-900/40 border border-white/[0.06] flex flex-col sm:flex-row sm:items-center justify-between gap-3">

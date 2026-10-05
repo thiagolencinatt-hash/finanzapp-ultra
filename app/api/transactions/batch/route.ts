@@ -15,6 +15,14 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const transactions = body?.transactions as Array<Partial<Transaction>>;
+    const accountId = body?.accountId as string | undefined;
+    const initialBalance = typeof body?.initialBalance === "number"
+      ? body.initialBalance
+      : body?.initialBalance ? parseFloat(body.initialBalance) : undefined;
+    const finalBalance = typeof body?.finalBalance === "number"
+      ? body.finalBalance
+      : body?.finalBalance ? parseFloat(body.finalBalance) : undefined;
+    const period = body?.period as string | undefined;
 
     if (!Array.isArray(transactions) || transactions.length === 0) {
       return NextResponse.json(
@@ -30,12 +38,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const result = await addTransactionsBatch(user.id, transactions);
+    const result = await addTransactionsBatch(user.id, transactions, {
+      accountId,
+      initialBalance: typeof initialBalance === "number" && !isNaN(initialBalance) ? initialBalance : undefined,
+      finalBalance: typeof finalBalance === "number" && !isNaN(finalBalance) ? finalBalance : undefined,
+      period,
+    });
 
     return NextResponse.json({
       success: true,
       count: result.count,
-      message: `${result.count} movimientos importados correctamente.`,
+      reconciledBalance: result.reconciledBalance,
+      message: `${result.count} movimientos importados correctamente${result.reconciledBalance !== undefined ? ` y saldo conciliado en $${result.reconciledBalance}` : ""}.`,
     });
   } catch (err: any) {
     console.error("[POST /api/transactions/batch error]:", err);

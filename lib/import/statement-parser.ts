@@ -17,6 +17,9 @@ export interface StatementParseResult {
   totalIncome: number;
   totalExpense: number;
   validCount: number;
+  initialBalance?: number | null;
+  finalBalance?: number | null;
+  period?: string | null;
   error?: string;
 }
 
