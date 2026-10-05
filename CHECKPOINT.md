@@ -1,25 +1,25 @@
-# Checkpoint - FinanzApp Ultra
+# Checkpoint - FinanzApp Ultra (GEL-047)
 
-**Fecha:** 2026-09-28
-**Estado:** Producción Lista (30/30 rutas generadas con 0 errores)
+**Fecha:** 2026-10-05
+**Estado:** Producción Lista (Build OK · 0 errores TypeScript · Commit be1f965)
 
-## Resumen de Sesión & Logros Implementados
-1. **Importador Inteligente de Extractos Bancarios (Multibanco CSV / Excel):**
-   - Motor parser en `lib/import/statement-parser.ts` compatible con Mercado Pago, Santander, Galicia, BBVA, Brubank, Lemon Cash y formatos genéricos.
-   - Endpoint `POST /api/transactions/batch` e inserción masiva en `lib/db/supabase-store.ts` con actualización atómica de balance de cuentas.
-   - Modal interactivo `BankStatementModal.tsx` con drag & drop, detector de banco, sumatoria de ingresos/gastos y tabla editable con checkboxes.
-2. **Escáner OCR de Tickets & Facturas con IA:**
-   - Endpoint `POST /api/scan-receipt` con modelos Gemini y extracción estructurada (comercio, fecha, monto total, categoría y tipo).
-   - Botón directo "Escanear Ticket o Factura con IA" en `TransactionForm.tsx` con soporte para cámara móvil (`capture="environment"`) y fotos.
-3. **Proyección de Dinero Libre Real & Timeline de Vencimientos (Cash Flow):**
-   - Utilidad `lib/utils/cash-flow.ts` para cálculo de dinero libre real, runway en meses y timeline cronológico a 30 días.
-   - Componente visual `CashFlowProjectionCard.tsx` integrado en el Dashboard con estados de salud y badges de vencimiento.
-4. **Modo Privacidad Global (Eye Toggle) & Tabular Figures:**
-   - `PrivacyProvider.tsx` con atajo de teclado global `P` y botón de ojo en Header y BalanceCard.
-   - Cifras financieras con `font-mono tabular-nums` y enmascaramiento `$ ••••••`.
-5. **Paleta de Comandos Global (Ctrl+K / Cmd+K) & Deshacer (Undo Toast):**
-   - Modal `CommandPalette.tsx` para búsqueda y atajos rápidos a todas las acciones y vistas.
-   - Botón "Deshacer" con toast de 6 segundos en eliminación de movimientos tanto en `TransactionForm` como en `TransactionsPage`.
-6. **Verificación & Calidad:**
-   - `npx tsc --noEmit` superado con 0 errores de tipos.
-   - `npm run build` completado exitosamente con 30/30 rutas estáticas y dinámicas optimizadas.
+## Logros GEL-047: Ciclo Laboral al 25, Horas Semanales, Descongestión UI & Cuotas/Radar
+1. **Motor Laboral (Ciclo de Corte al 25):**
+   - Implementado `getWorkCycleRange()` en `lib/utils/payroll-calculator.ts` con corte al día 25 por defecto (cómputo del día 26 al 25).
+   - `SalaryCard.tsx` y `LaborAuditorCard.tsx` filtran y auditan horas estrictamente dentro del ciclo de corte activo.
+   - Modal de ajuste de sueldo con soporte para **Horas Semanales** (ej. 44 hs x 4.333 para base mensual) y **Horas Mensuales fijas**.
+2. **Fecha de Cobro Configurable & Banner Interactivo:**
+   - `SmartRemindersBanner.tsx` interactivo con modal para configurar regla de cobro: 5to día hábil legal, día fijo del mes (ej. día 10), o N-ésimo día hábil.
+   - Sincronizado en tiempo real con la cuenta regresiva de cobro mediante evento global.
+3. **Ergonomía Móvil y Descongestión UI:**
+   - Padding inferior extendido a `pb-44` en todas las vistas de dashboard (espacio garantizado sobre el Floating Dock).
+   - Ritmo visual ampliado a `space-y-5 sm:space-y-6`.
+   - Modales adaptados a `max-h-[85dvh] flex flex-col`, scroll body con `overflow-y-auto overscroll-contain pb-12 pr-1`, y botonera fija inferior `sticky bottom-0 bg-neutral-900/95 backdrop-blur-md pt-3 pb-3 border-t border-white/10`.
+4. **Radar de Suscripciones Interactivo (CRUD):**
+   - `SubscriptionRadarCard.tsx` con modal para editar monto, día de débito, nombre y notas, o eliminar suscripciones.
+   - Botón "+ Agregar Suscripción / Gasto Fijo" y persistencia en `/api/subscriptions` (GET, POST, PUT, DELETE).
+5. **Módulo Dedicado de Cuotas & Metas:**
+   - Descongestionada la pestaña Finanzas; reemplazados bloques densos por tarjeta de acceso dedicada: "💳 Mis Cuotas & Metas Financieras".
+   - `InstallmentsGoalsModal.tsx` con registro directo de compras en cuotas (monto por cuota auto-calculado) y botón interactivo "Marcar cuota como pagada".
+6. **Reconciliación Mercado Pago:**
+   - Anclaje auditado a saldo final oficial sin distorsión por deltas históricos.
