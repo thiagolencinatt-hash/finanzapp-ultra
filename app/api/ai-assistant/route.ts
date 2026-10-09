@@ -15,7 +15,10 @@ import {
   addChatMessage,
   getSalaryRecords,
   getWorkShifts,
+  getSubscriptions,
+  getInstallments,
 } from "@/lib/db/supabase-store";
+import { getWorkCycleRange } from "@/lib/utils/payroll-calculator";
 
 // Rate Limiter — 30 solicitudes por minuto por IP
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -122,12 +125,20 @@ export async function POST(req: NextRequest) {
       };
     }
 
-    const [salaryRecords, workShifts] = await Promise.all([
+    const [salaryRecords, workShifts, subscriptions, allInstallments] = await Promise.all([
       getSalaryRecords(user.id).catch(() => []),
       getWorkShifts(user.id).catch(() => []),
+      getSubscriptions(user.id).catch(() => []),
+      getInstallments(user.id).catch(() => []),
     ]);
 
-    const financialContext = buildFinancialContext(summary, salaryRecords, workShifts);
+    const financialContext = buildFinancialContext(
+      summary,
+      salaryRecords,
+      workShifts,
+      subscriptions,
+      allInstallments
+    );
     const isGeminiConfigured = Boolean(process.env.GEMINI_API_KEY && !process.env.GEMINI_API_KEY.includes("your-gemini"));
 
     if (isGeminiConfigured) {
@@ -443,33 +454,75 @@ async function executeTool(
 function buildFinancialContext(
   summary: FinancialSummary,
   salaryRecords?: any[],
-  workShifts?: any[]
+  workShifts?: any[],
+  subscriptions?: any[],
+  allInstallments?: any[]
 ): string {
   const accountsList = (summary.accounts || [])
-    .map((a) => `  - ${a.name}: $${a.balance?.toLocaleString("es-AR")} ${a.currency}`)
+    .map((a) => `  - ${a.name}: $${(Number(a.balance) || 0).toLocaleString("es-AR")} ${a.currency || "ARS"}`)
     .join("\n");
 
   const goalsList = (summary.savings_goals || [])
-    .map((g) => `  - ${g.name}: $${g.current_amount?.toLocaleString("es-AR")} / $${g.target_amount?.toLocaleString("es-AR")}`)
+    .map((g) => `  - ${g.name}: $${(Number(g.current_amount) || 0).toLocaleString("es-AR")} / $${(Number(g.target_amount) || 0).toLocaleString("es-AR")}`)
     .join("\n");
 
-  const installmentsList = (summary.active_installments || [])
-    .map((i) => `  - ${i.description} (${i.account_name || "Tarjeta"}): $${i.installment_amount?.toLocaleString("es-AR")}/mes (${i.paid_installments}/${i.total_installments} pagadas)`)
-    .join("\n");
+  // RAG: Ciclo Laboral y Financiero al 25
+  const cycle = getWorkCycleRange(new Date(), 25);
+  const currentDay = new Date().getDate();
 
-  const freeIncome =
-    (summary.configured_salary || 800000) -
-    (summary.expense_30d || 0) -
-    (summary.total_installments_monthly || 0) -
-    (summary.total_subscriptions_monthly || 0);
+  // RAG: Cuotas pendientes del ciclo actual (corte del 26 al 25)
+  const rawInstallments = (allInstallments && allInstallments.length > 0)
+    ? allInstallments
+    : (summary.active_installments || []);
+
+  const pendingInstallments = rawInstallments.filter(
+    (i: any) => (Number(i.paid_installments) || 0) < (Number(i.total_installments) || 1)
+  );
+
+  const installmentsList = pendingInstallments.map((i: any) => {
+    const paid = Number(i.paid_installments) || 0;
+    const total = Number(i.total_installments) || 1;
+    const instAmount = Number(i.installment_amount) || 0;
+    const totalAmount = Number(i.total_amount) || 0;
+    const remAmount = Math.max(0, (total - paid) * instAmount);
+    return `  - ${i.description || i.item_name} (${i.account_name || "Tarjeta"}): Cuota ${paid + 1} de ${total} de $${instAmount.toLocaleString("es-AR")} (Deuda remanente: $${remAmount.toLocaleString("es-AR")} de $${totalAmount.toLocaleString("es-AR")})`;
+  }).join("\n");
+
+  const totalInstallmentsMonthly = pendingInstallments.reduce(
+    (sum: number, i: any) => sum + (Number(i.installment_amount) || 0),
+    0
+  );
+
+  // RAG: Suscripciones y Débitos Automáticos del Radar
+  const activeSubs = (subscriptions || []).filter((s: any) => s.is_active !== false);
+  const subsList = activeSubs.map((s: any) => {
+    const dueDay = s.billing_day || s.renewal_day || 1;
+    const isPast = dueDay < currentDay;
+    const status = isPast ? "Ya debitada este mes" : "Pendiente de débito";
+    return `  - ${s.name}: $${(Number(s.amount) || 0).toLocaleString("es-AR")}/mes (Débito día ${dueDay} - [${status}])`;
+  }).join("\n");
+
+  const pendingSubsAmount = activeSubs
+    .filter((s: any) => (s.billing_day || s.renewal_day || 1) >= currentDay)
+    .reduce((sum: number, s: any) => sum + (Number(s.amount) || 0), 0);
+
+  const totalSubsMonthly = activeSubs.reduce(
+    (sum: number, s: any) => sum + (Number(s.amount) || 0),
+    0
+  );
+
+  // CÁLCULO MATEMÁTICO EXACTO DE DINERO LIBRE REAL ("REAL FREE MONEY")
+  const totalBalance = Number(summary.total_balance) || 0;
+  const configuredSalary = Number(summary.configured_salary) || Number(summary.income_30d) || 800000;
+  const realFreeMoney = totalBalance - totalInstallmentsMonthly - pendingSubsAmount;
 
   const latestSalary = salaryRecords?.[0];
   const salaryContext = latestSalary
     ? `RECIBO DE HABERES (${latestSalary.period}):
-  - Sueldo en mano neto: $${latestSalary.net_salary?.toLocaleString("es-AR")} ARS
+  - Sueldo en mano neto: $${(Number(latestSalary.net_salary) || 0).toLocaleString("es-AR")} ARS
   - Horas base pactadas: ${latestSalary.total_hours} hs
-  - Valor hora normal: $${latestSalary.hourly_rate_normal?.toLocaleString("es-AR")} ARS/h
-  - Valor hora nocturna (LCT): $${latestSalary.hourly_rate_night?.toLocaleString("es-AR")} ARS/h`
+  - Valor hora normal: $${(Number(latestSalary.hourly_rate_normal) || 0).toLocaleString("es-AR")} ARS/h
+  - Valor hora nocturna (LCT): $${(Number(latestSalary.hourly_rate_night) || 0).toLocaleString("es-AR")} ARS/h`
     : `RECIBO DE HABERES: Sin recibo registrado aún.`;
 
   const shiftsContext = (workShifts && workShifts.length > 0)
@@ -478,25 +531,32 @@ function buildFinancialContext(
     : `CRONOGRAMA DE TURNOS: Sin turnos cargados.`;
 
   return `
-ESTADO DE CUENTAS:
+ESTADO DE CUENTAS EN TIEMPO REAL:
 ${accountsList || "  - Sin cuentas registradas"}
-TOTAL SALDO: $${(summary.total_balance || 0).toLocaleString("es-AR")} ARS
-SUELDO DECLARADO: $${(summary.configured_salary || 800000).toLocaleString("es-AR")} ARS
-INGRESOS ULTIMOS 30 DIAS: $${(summary.income_30d || 0).toLocaleString("es-AR")} ARS
-GASTOS ULTIMOS 30 DIAS: $${(summary.expense_30d || 0).toLocaleString("es-AR")} ARS
-COMPROMISO MENSUAL EN CUOTAS: $${(summary.total_installments_monthly || 0).toLocaleString("es-AR")} ARS
-GASTO FIJO MENSUAL SUSCRIPCIONES: $${(summary.total_subscriptions_monthly || 0).toLocaleString("es-AR")} ARS
-SUELDO LIBRE ESTIMADO: $${freeIncome.toLocaleString("es-AR")} ARS
+TOTAL SALDO LÍQUIDO DISPONIBLE: $${totalBalance.toLocaleString("es-AR")} ARS
+
+CICLO ACTIVO DE FACTURACIÓN Y CORTE: ${cycle.label} (Corte al día ${cycle.cutoffDay})
+SUELDO DECLARADO: $${configuredSalary.toLocaleString("es-AR")} ARS
+INGRESOS ÚLTIMOS 30 DÍAS: $${(summary.income_30d || 0).toLocaleString("es-AR")} ARS
+GASTOS ÚLTIMOS 30 DÍAS: $${(summary.expense_30d || 0).toLocaleString("es-AR")} ARS
+
+COMPROMISOS FINANCIEROS DEL CICLO:
+- Total Cuotas del Ciclo: $${totalInstallmentsMonthly.toLocaleString("es-AR")} ARS
+- Suscripciones Pendientes de Cobro este Mes: $${pendingSubsAmount.toLocaleString("es-AR")} ARS (Total del mes: $${totalSubsMonthly.toLocaleString("es-AR")} ARS)
+DINERO LIBRE REAL MATEMÁTICO (Saldo Líquido - Cuotas - Suscripciones pendientes): $${realFreeMoney.toLocaleString("es-AR")} ARS
 
 ${salaryContext}
 
 ${shiftsContext}
 
+RADAR DE SUSCRIPCIONES Y DÉBITOS ACTIVOS:
+${subsList || "  - Sin suscripciones registradas"}
+
+CUOTAS ACTIVAS DEL CICLO:
+${installmentsList || "  - Sin compras en cuotas pendientes"}
+
 METAS DE AHORRO ACTIVAS:
 ${goalsList || "  - Sin metas de ahorro aún"}
-
-CUOTAS ACTIVAS:
-${installmentsList || "  - Sin compras en cuotas pendientes"}
 `;
 }
 

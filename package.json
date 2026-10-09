@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "migrate:supabase": "tsx scripts/migrate-json-to-supabase.ts"
+    "migrate:supabase": "tsx scripts/migrate-json-to-supabase.ts",
+    "migrate:schema": "tsx scripts/apply-supabase-migration.ts"
   },
   "dependencies": {
     "@google/genai": "^2.19.0",
