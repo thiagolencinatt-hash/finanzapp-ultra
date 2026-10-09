@@ -32,12 +32,17 @@ export async function POST(req: NextRequest) {
 
     // Pago rápido de cuota (FASE 4)
     if (body.action === "pay_due" || body.action === "pay") {
-      const { id, account_id } = body;
+      const { id, account_id, record_transaction } = body;
       if (!id) {
         return NextResponse.json({ error: "ID de cuota requerido" }, { status: 400 });
       }
 
-      const result = await payInstallmentDue(user.id, id, account_id);
+      const result = await payInstallmentDue(
+        user.id,
+        id,
+        account_id,
+        record_transaction !== false
+      );
       return NextResponse.json(result);
     }
 
@@ -53,14 +58,19 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req);
-    const { id, action, account_id } = await req.json();
+    const { id, action, account_id, record_transaction } = await req.json();
 
     if (!id) {
       return NextResponse.json({ error: "ID requerido" }, { status: 400 });
     }
 
     if (action === "pay" || action === "pay_due") {
-      const result = await payInstallmentDue(user.id, id, account_id);
+      const result = await payInstallmentDue(
+        user.id,
+        id,
+        account_id,
+        record_transaction !== false
+      );
       return NextResponse.json(result);
     }
 

@@ -8,14 +8,13 @@ import {
   X, 
   Check, 
   Loader2, 
-  Trash2, 
   Calendar, 
   CheckCircle2, 
-  TrendingDown,
   ShoppingBag,
-  Sparkles,
   DollarSign,
-  AlertCircle
+  AlertCircle,
+  Building2,
+  Wallet
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 import { toast } from "sonner";
@@ -48,6 +47,11 @@ export function InstallmentsGoalsModal({
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [payingId, setPayingId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Estado del Diálogo Interactivo de Confirmación de Pago
+  const [confirmingPayInst, setConfirmingPayInst] = useState<Installment | null>(null);
+  const [payAccountId, setPayAccountId] = useState<string>("");
+  const [deductFromBalance, setDeductFromBalance] = useState<boolean>(true);
 
   // Formulario de nueva cuota
   const [description, setDescription] = useState("");
@@ -135,14 +139,39 @@ export function InstallmentsGoalsModal({
     }
   };
 
-  // Marcar una cuota como pagada
-  const handlePayInstallment = async (inst: Installment) => {
+  // Abrir diálogo de confirmación interactiva de pago de cuota
+  const openPayDialog = (inst: Installment) => {
+    setConfirmingPayInst(inst);
+    // Priorizar Mercado Pago o la primera billetera/banco disponible
+    const preferredAcc =
+      accounts.find((a) => a.id === inst.account_id) ||
+      accounts.find((a) => a.name.toLowerCase().includes("mercado pago")) ||
+      accounts.find((a) => a.type === "digital_wallet" || a.type === "bank") ||
+      accounts[0];
+
+    if (preferredAcc) {
+      setPayAccountId(preferredAcc.id);
+    }
+    setDeductFromBalance(true);
+  };
+
+  // Confirmar y procesar el pago de la cuota con impacto financiero
+  const handleConfirmPayInstallment = async () => {
+    if (!confirmingPayInst) return;
+    const inst = confirmingPayInst;
     setPayingId(inst.id);
+
     try {
+      const selectedAcc = accounts.find((a) => a.id === payAccountId);
       const res = await fetch("/api/installments", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: inst.id, action: "pay" }),
+        body: JSON.stringify({
+          id: inst.id,
+          action: "pay",
+          account_id: deductFromBalance ? (payAccountId || undefined) : undefined,
+          record_transaction: deductFromBalance,
+        }),
       });
 
       if (!res.ok) {
@@ -154,11 +183,18 @@ export function InstallmentsGoalsModal({
       const totalInst = inst.total_installments || 1;
 
       if (nextPaid >= totalInst) {
-        toast.success(`🎉 ¡Felicidades! Completaste el 100% de "${inst.description}". Compra liquidada.`);
+        toast.success(`🎉 ¡Felicidades! Liquidaste el 100% de "${inst.description}". Compra liquidada.`);
       } else {
-        toast.success(`¡Cuota ${nextPaid} de ${totalInst} marcada como pagada!`);
+        if (deductFromBalance && selectedAcc) {
+          toast.success(
+            `¡Cuota ${nextPaid} de ${totalInst} pagada! Debitado ${formatCurrency(inst.installment_amount, inst.currency, true)} de ${selectedAcc.name}.`
+          );
+        } else {
+          toast.success(`¡Cuota ${nextPaid} de ${totalInst} marcada como pagada!`);
+        }
       }
 
+      setConfirmingPayInst(null);
       onRefresh();
       window.dispatchEvent(new CustomEvent("finance-refresh"));
     } catch (err: any) {
@@ -354,7 +390,7 @@ export function InstallmentsGoalsModal({
                         type="date"
                         value={firstDueDate}
                         onChange={(e) => setFirstDueDate(e.target.value)}
-                        className="w-full px-3 py-2.5 rounded-xl bg-neutral-950 border border-white/10 text-white font-mono text-xs focus:outline-none focus:border-amber-500"
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-white/10 text-white font-mono text-xs focus:outline-none focus:border-amber-500"
                       />
                     </div>
 
@@ -367,7 +403,7 @@ export function InstallmentsGoalsModal({
                         value={cardName}
                         onChange={(e) => setCardName(e.target.value)}
                         placeholder="Ej: Visa Santander, MP Tarjeta"
-                        className="w-full px-3 py-2.5 rounded-xl bg-neutral-950 border border-white/10 text-white text-xs focus:outline-none focus:border-amber-500"
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-white/10 text-white text-xs focus:outline-none focus:border-amber-500"
                       />
                     </div>
                   </div>
@@ -475,7 +511,7 @@ export function InstallmentsGoalsModal({
 
                             <button
                               type="button"
-                              onClick={() => handlePayInstallment(inst)}
+                              onClick={() => openPayDialog(inst)}
                               disabled={isPaying || paid >= total}
                               className="px-3.5 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-xs font-bold text-emerald-300 transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
                             >
@@ -523,6 +559,127 @@ export function InstallmentsGoalsModal({
           </button>
         </div>
       </div>
+
+      {/* Diálogo Interactivo de Confirmación de Pago de Cuota (Impacto Financiero Real) */}
+      {confirmingPayInst && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+          <div
+            className="fixed inset-0"
+            onClick={() => !payingId && setConfirmingPayInst(null)}
+          />
+          <div className="relative w-full max-w-md rounded-3xl bg-neutral-950 border border-emerald-500/35 shadow-[0_25px_70px_rgba(0,0,0,0.95)] p-5 sm:p-6 space-y-4 z-10 animate-slide-up">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shadow-[0_0_12px_rgba(16,185,129,0.25)] shrink-0">
+                  <CheckCircle2 className="w-5 h-5 stroke-[2.4]" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">
+                    Confirmar Pago de Cuota
+                  </h3>
+                  <p className="text-xs text-neutral-400">
+                    Cuota {(confirmingPayInst.paid_installments || 0) + 1} de{" "}
+                    {confirmingPayInst.total_installments}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => !payingId && setConfirmingPayInst(null)}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-400 hover:text-white bg-white/[0.04] transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Tarjeta de Resumen de Pago */}
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/[0.08] via-neutral-900 to-neutral-950 border border-emerald-500/20 space-y-1">
+              <p className="text-xs text-neutral-400 font-medium truncate">
+                {confirmingPayInst.description}
+              </p>
+              <div className="flex items-baseline justify-between">
+                <span className="text-xs font-semibold text-neutral-300">
+                  Monto a Pagar:
+                </span>
+                <span className="text-xl sm:text-2xl font-black font-mono text-emerald-400 tabular-nums">
+                  {formatCurrency(
+                    confirmingPayInst.installment_amount,
+                    confirmingPayInst.currency,
+                    true
+                  )}
+                </span>
+              </div>
+            </div>
+
+            {/* Checkbox: Debitar del saldo real */}
+            <div className="space-y-3 pt-1">
+              <label className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.08] cursor-pointer hover:bg-white/[0.05] transition-colors">
+                <input
+                  type="checkbox"
+                  checked={deductFromBalance}
+                  onChange={(e) => setDeductFromBalance(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded text-emerald-500 focus:ring-emerald-500/30 bg-neutral-900 border-white/20 accent-emerald-500"
+                />
+                <div className="text-xs space-y-0.5">
+                  <span className="font-bold text-white block">
+                    Debitar del saldo y registrar movimiento
+                  </span>
+                  <span className="text-neutral-400 block text-[11px]">
+                    Impacta en tu saldo real y se agrega al historial de transacciones.
+                  </span>
+                </div>
+              </label>
+
+              {/* Selector de cuenta si está tildado el débito */}
+              {deductFromBalance && (
+                <div className="space-y-1.5 animate-fade-in">
+                  <label className="block text-xs font-bold text-neutral-300 uppercase tracking-wider">
+                    Cuenta de Débito
+                  </label>
+                  <select
+                    value={payAccountId}
+                    onChange={(e) => setPayAccountId(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-900 border border-white/10 text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
+                  >
+                    {accounts.map((acc) => (
+                      <option key={acc.id} value={acc.id}>
+                        {acc.name} — Saldo: {formatCurrency(acc.balance, acc.currency || "ARS", true)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* Botones de Acción */}
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-white/[0.08]">
+              <button
+                type="button"
+                onClick={() => setConfirmingPayInst(null)}
+                disabled={Boolean(payingId)}
+                className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-xs font-bold text-neutral-300 transition-all cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmPayInstallment}
+                disabled={Boolean(payingId)}
+                className="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs uppercase tracking-wider transition-all cursor-pointer active:scale-95 shadow-lg shadow-emerald-500/25 flex items-center gap-1.5"
+              >
+                {payingId ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Check className="w-4 h-4 stroke-[3]" />
+                )}
+                <span>
+                  {deductFromBalance ? "Confirmar y Debitar" : "Marcar Pagada"}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

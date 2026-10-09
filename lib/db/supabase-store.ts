@@ -711,7 +711,8 @@ export async function addInstallment(
 export async function payInstallmentDue(
   userId: string,
   installmentId: string,
-  accountId?: string
+  accountId?: string,
+  recordTransaction: boolean = true
 ): Promise<{ success: boolean; installment: Installment; transactionId?: string }> {
   const installments = await getInstallments(userId);
   const inst = installments.find((i) => i.id === installmentId);
@@ -728,14 +729,18 @@ export async function payInstallmentDue(
   const newPaidCount = inst.paid_installments + 1;
   const isFullyPaid = newPaidCount >= inst.total_installments;
 
-  // Registrar gasto en transacciones
-  const tx = await addTransaction(userId, {
-    account_id: targetAccountId,
-    type: "expense",
-    amount: inst.installment_amount,
-    description: `Pago cuota ${newPaidCount}/${inst.total_installments}: ${inst.description} (${inst.account_name || "Tarjeta"})`,
-    date: new Date().toISOString(),
-  });
+  let txId: string | undefined = undefined;
+  if (recordTransaction) {
+    // Registrar gasto en transacciones y actualizar balance
+    const tx = await addTransaction(userId, {
+      account_id: targetAccountId,
+      type: "expense",
+      amount: inst.installment_amount,
+      description: `Pago cuota ${newPaidCount}/${inst.total_installments}: ${inst.description} (${inst.account_name || "Tarjeta"})`,
+      date: new Date().toISOString(),
+    });
+    txId = tx.id;
+  }
 
   // Actualizar la cuota
   const updatedInst: Installment = {
@@ -769,7 +774,7 @@ export async function payInstallmentDue(
   return {
     success: true,
     installment: updatedInst,
-    transactionId: tx.id,
+    transactionId: txId,
   };
 }
 
@@ -1492,6 +1497,7 @@ export async function saveWorkShifts(
       night_hours: Number(s.night_hours) || 0,
       coworkers_overlap: Array.isArray(s.coworkers_overlap) ? s.coworkers_overlap : [],
       notes: s.notes || null,
+      is_rest_day: Boolean(s.is_rest_day) || s.start_time?.toLowerCase().includes("franco") || s.notes?.toLowerCase().includes("franco") || false,
     }));
 
     const { data, error } = await supabase

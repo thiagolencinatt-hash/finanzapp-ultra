@@ -122,6 +122,42 @@ CREATE TABLE IF NOT EXISTS public.chat_messages (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 10. TABLA DE REGISTROS DE SUELDO Y HABERES LABORALES (GEL-042/GEL-047)
+CREATE TABLE IF NOT EXISTS public.salary_records (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+  period TEXT NOT NULL,
+  net_salary NUMERIC NOT NULL DEFAULT 0,
+  gross_salary NUMERIC,
+  total_hours NUMERIC NOT NULL DEFAULT 160,
+  hourly_rate_normal NUMERIC NOT NULL DEFAULT 0,
+  hourly_rate_night NUMERIC NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_salary_records_user_created ON public.salary_records(user_id, created_at DESC);
+
+-- 11. TABLA DE TURNOS LABORALES Y HORARIOS (GEL-042/GEL-047)
+CREATE TABLE IF NOT EXISTS public.work_shifts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+  shift_date DATE NOT NULL,
+  day_name TEXT,
+  start_time TEXT NOT NULL,
+  end_time TEXT NOT NULL,
+  total_hours NUMERIC NOT NULL DEFAULT 0,
+  night_hours NUMERIC NOT NULL DEFAULT 0,
+  coworkers_overlap JSONB DEFAULT '[]'::jsonb,
+  notes TEXT,
+  is_rest_day BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT work_shifts_user_date_key UNIQUE (user_id, shift_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_work_shifts_user_date ON public.work_shifts(user_id, shift_date ASC);
+
 -- ==============================================================================
 -- ROW LEVEL SECURITY (RLS) - AISLAMIENTO TOTAL POR USUARIO
 -- ==============================================================================
@@ -134,6 +170,8 @@ ALTER TABLE public.goals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.budgets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.salary_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.work_shifts ENABLE ROW LEVEL SECURITY;
 
 -- Políticas de acceso para profiles
 CREATE POLICY "Users can manage own profile" ON public.profiles
@@ -144,7 +182,7 @@ DO $$
 DECLARE
   tbl TEXT;
 BEGIN
-  FOREACH tbl IN ARRAY ARRAY['accounts', 'categories', 'transactions', 'installments', 'goals', 'budgets', 'subscriptions', 'chat_messages']
+  FOREACH tbl IN ARRAY ARRAY['accounts', 'categories', 'transactions', 'installments', 'goals', 'budgets', 'subscriptions', 'chat_messages', 'salary_records', 'work_shifts']
   LOOP
     EXECUTE format('
       DROP POLICY IF EXISTS "Users can manage own %1$s" ON public.%1$s;
