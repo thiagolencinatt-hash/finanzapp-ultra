@@ -363,3 +363,148 @@ export function calculateNightHours(startTime: string, endTime: string): number 
 
   return Math.round((nightMinutes / 60) * 10) / 10;
 }
+
+/**
+ * Parámetros para auditar la discrepancia entre la planilla de turnos y el recibo de haberes (GEL-051).
+ */
+export interface LaborDiscrepancyParams {
+  actualTotalHours: number;
+  actualNightHours: number;
+  liquidatedDayHours: number;
+  liquidatedNightHours: number;
+  hourlyRateNormal: number;
+  periodName?: string;
+  cycleLabel?: string;
+}
+
+export interface LaborDiscrepancyResult {
+  actualTotalHours: number;
+  actualNightHours: number;
+  actualDayHours: number;
+  liquidatedDayHours: number;
+  liquidatedNightHours: number;
+  liquidatedTotalHours: number;
+  diffTotalHours: number;
+  diffNightHours: number;
+  hourlyRateNormal: number;
+  hourlyRateNight: number;
+  nightSurchargeRate: number; // +13.33% LCT Art. 200
+  baseAmountDiff: number; // Pesos por horas base no liquidadas
+  nightAmountDiff: number; // Pesos por adicional nocturno faltante
+  totalClaimAmount: number; // Monto total en ARS a favor del trabajador
+  isExact: boolean;
+  hasDiscrepancy: boolean;
+  status: "correct" | "favor" | "in_progress";
+}
+
+/**
+ * Calcula la discrepancia económica exacta en pesos ($ ARS) considerando:
+ * - Horas diurnas vs liquidadas
+ * - Horas nocturnas reales vs liquidadas
+ * - Recargo nocturno (+13.33% LCT Art. 200)
+ */
+export function calculateLaborDiscrepancy(params: LaborDiscrepancyParams): LaborDiscrepancyResult {
+  const actualTotal = Math.max(0, Number(params.actualTotalHours) || 0);
+  const actualNight = Math.max(0, Number(params.actualNightHours) || 0);
+  const actualDay = Math.max(0, actualTotal - actualNight);
+
+  const liqDay = Math.max(0, Number(params.liquidatedDayHours) || 0);
+  const liqNight = Math.max(0, Number(params.liquidatedNightHours) || 0);
+  const liqTotal = liqDay + liqNight;
+
+  const rateNormal = Math.max(0, Number(params.hourlyRateNormal) || 0);
+  const rateNight = Math.round((rateNormal * 1.1333) * 100) / 100;
+  const nightSurchargeRate = Math.round((rateNormal * 0.1333) * 100) / 100;
+
+  // Horas base totales omitidas en recibo
+  const diffTotalHours = Math.round((actualTotal - liqTotal) * 10) / 10;
+  const baseAmountDiff = diffTotalHours > 0 ? Math.round(diffTotalHours * rateNormal * 100) / 100 : 0;
+
+  // Horas nocturnas sin adicional del 13.33%
+  const diffNightHours = Math.round(Math.max(0, actualNight - liqNight) * 10) / 10;
+  const nightAmountDiff = Math.round(diffNightHours * nightSurchargeRate * 100) / 100;
+
+  const totalClaimAmount = Math.round((baseAmountDiff + nightAmountDiff) * 100) / 100;
+  const hasDiscrepancy = totalClaimAmount >= 1;
+  const isExact = actualTotal > 0 && Math.abs(diffTotalHours) < 0.1 && diffNightHours < 0.1;
+
+  let status: "correct" | "favor" | "in_progress" = "in_progress";
+  if (hasDiscrepancy) {
+    status = "favor";
+  } else if (isExact) {
+    status = "correct";
+  }
+
+  return {
+    actualTotalHours: actualTotal,
+    actualNightHours: actualNight,
+    actualDayHours: actualDay,
+    liquidatedDayHours: liqDay,
+    liquidatedNightHours: liqNight,
+    liquidatedTotalHours: liqTotal,
+    diffTotalHours,
+    diffNightHours,
+    hourlyRateNormal: rateNormal,
+    hourlyRateNight: rateNight,
+    nightSurchargeRate,
+    baseAmountDiff,
+    nightAmountDiff,
+    totalClaimAmount,
+    isExact,
+    hasDiscrepancy,
+    status,
+  };
+}
+
+/**
+ * Genera un texto formal preformateado para WhatsApp o email a Recursos Humanos / Liquidaciones.
+ */
+export function generateLaborClaimMessage(params: {
+  employeeName?: string;
+  period: string;
+  cycleLabel: string;
+  actualTotalHours: number;
+  actualNightHours: number;
+  liquidatedDayHours: number;
+  liquidatedNightHours: number;
+  liquidatedTotalHours: number;
+  diffTotalHours: number;
+  diffNightHours: number;
+  hourlyRateNormal: number;
+  baseAmountDiff: number;
+  nightAmountDiff: number;
+  totalClaimAmount: number;
+}): string {
+  const formatPesos = (val: number) => {
+    return new Intl.NumberFormat("es-AR", {
+      style: "currency",
+      currency: "ARS",
+      minimumFractionDigits: 2,
+    }).format(val);
+  };
+
+  return `*SOLICITUD DE REVISIÓN DE LIQUIDACIÓN DE HABERES*
+*Período:* ${params.period} (Cómputo: ${params.cycleLabel})
+
+Estimado equipo de Recursos Humanos / Liquidaciones,
+
+Me comunico a fin de solicitar la revisión de la liquidación de haberes correspondiente al período indicado, tras cotejar las planillas de turnos efectivamente cumplidos contra el recibo emitido:
+
+*1. Resumen de Cómputo de Horas:*
+• Horas totales trabajadas (Planilla): ${params.actualTotalHours} hs
+• Horas totales liquidadas (Recibo): ${params.liquidatedTotalHours} hs (Diurnas: ${params.liquidatedDayHours} hs | Nocturnas: ${params.liquidatedNightHours} hs)
+• Diferencia de horas base: ${params.diffTotalHours > 0 ? `+${params.diffTotalHours} hs a favor` : `${params.diffTotalHours} hs`}
+
+*2. Adicional Nocturno (Art. 200 LCT):*
+• Horas nocturnas cumplidas (21:00 a 06:00): ${params.actualNightHours} hs
+• Horas nocturnas liquidadas: ${params.liquidatedNightHours} hs
+• Recargo nocturno faltante (+13.33% LCT): +${params.diffNightHours} hs
+
+*3. Diferencia Económica Estimada:*
+• Valor hora normal base: ${formatPesos(params.hourlyRateNormal)}
+${params.baseAmountDiff > 0 ? `• Horas base no liquidadas (+${params.diffTotalHours} hs): ${formatPesos(params.baseAmountDiff)}\n` : ""}${params.nightAmountDiff > 0 ? `• Recargo nocturnidad faltante (+${params.diffNightHours} hs): ${formatPesos(params.nightAmountDiff)}\n` : ""}• *MONTO TOTAL A FAVOR POR COBRAR: ${formatPesos(params.totalClaimAmount)}*
+
+Agradezco desde ya la verificación de estos puntos y la regularización de la diferencia en la liquidación complementaria. Quedo a entera disposición para acercar las constancias y registros de turnos.
+
+Saludos cordiales.`;
+}
